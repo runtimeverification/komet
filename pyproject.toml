@@ -10,6 +10,9 @@ authors = [
     "Runtime Verification, Inc. <contact@runtimeverification.com>",
 ]
 
+[tool.poetry.plugins.kdist]
+soroban-semantics = "ksoroban.kdist.plugin"
+
 [tool.poetry.dependencies]
 python = "^3.10"
 pykwasm = { git = "https://github.com/runtimeverification/wasm-semantics.git", tag = "v0.1.48", subdirectory = "pykwasm" }
