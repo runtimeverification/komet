@@ -1,0 +1,24 @@
+name: 'Master Push'
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+
+  release:
+    name: 'Publish Release'
+    runs-on: [self-hosted, linux, flyweight]
+    steps:
+      - name: 'Check out code'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.push.head.sha }}
+          fetch-depth: 0
+      - name: 'Make release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          VERSION=v$(cat package/version)
+          gh release create ${VERSION} --target ${{ github.sha }}
