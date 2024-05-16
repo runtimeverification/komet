@@ -898,7 +898,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyk"
-version = "7.0.56"
+version = "7.0.67"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -919,13 +919,13 @@ xdg-base-dirs = "^6.0.1"
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/k.git"
-reference = "v7.0.56"
-resolved_reference = "5e0c6e00d4925d0c0eab3b579fe378dc14ef2878"
+reference = "v7.0.67"
+resolved_reference = "8c5e00d10e600132f51f2958d4f624bc86669cbf"
 subdirectory = "pyk"
 
 [[package]]
 name = "pykwasm"
-version = "0.1.50"
+version = "0.1.52"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -936,13 +936,13 @@ develop = false
 cytoolz = "^0.12.1"
 numpy = "^1.24.2"
 py-wasm = {git = "https://github.com/runtimeverification/py-wasm.git", tag = "0.2.1"}
-pyk = {git = "https://github.com/runtimeverification/k.git", tag = "v7.0.56", subdirectory = "pyk"}
+pyk = {git = "https://github.com/runtimeverification/k.git", tag = "v7.0.67", subdirectory = "pyk"}
 
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/wasm-semantics.git"
-reference = "v0.1.50"
-resolved_reference = "d52eabe8190a244fd799751f3c54d66f4c80ba14"
+reference = "v0.1.52"
+resolved_reference = "b104b92501208a293c59933f8513134be66df6b8"
 subdirectory = "pykwasm"
 
 [[package]]
@@ -1193,20 +1193,20 @@ files = [
 
 [[package]]
 name = "zipp"
-version = "3.18.1"
+version = "3.18.2"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "zipp-3.18.1-py3-none-any.whl", hash = "sha256:206f5a15f2af3dbaee80769fb7dc6f249695e940acca08dfb2a4769fe61e538b"},
-    {file = "zipp-3.18.1.tar.gz", hash = "sha256:2884ed22e7d8961de1c9a05142eb69a247f120291bc0206a00a7642f09b5b715"},
+    {file = "zipp-3.18.2-py3-none-any.whl", hash = "sha256:dce197b859eb796242b0622af1b8beb0a722d52aa2f57133ead08edd5bf5374e"},
+    {file = "zipp-3.18.2.tar.gz", hash = "sha256:6278d9ddbcfb1f1089a88fde84481528b07b0e10474e09dcfe53dad4069fa059"},
 ]
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
-testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
+testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "f760682ce346014943da1e52f8efec213ed995c73f2c936eb3a3182e64bba1b6"
+content-hash = "da30c53e383458c3f7af70729aca0c7c8885b369c4397814d0b61bd63b017a59"
