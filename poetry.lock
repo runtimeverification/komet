@@ -898,7 +898,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyk"
-version = "7.0.112"
+version = "7.0.120"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -912,6 +912,7 @@ filelock = "^3.9.0"
 graphviz = "^0.20.1"
 psutil = "5.9.5"
 pybind11 = "^2.10.3"
+pytest = "*"
 textual = "^0.27.0"
 tomli = "^2.0.1"
 xdg-base-dirs = "^6.0.1"
@@ -919,13 +920,13 @@ xdg-base-dirs = "^6.0.1"
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/k.git"
-reference = "v7.0.112"
-resolved_reference = "e12cbe44f5e39c7daf84b62e538d59b8fa31bc28"
+reference = "v7.0.120"
+resolved_reference = "e070a2048b7e6ce45748426c4868d593113af050"
 subdirectory = "pyk"
 
 [[package]]
 name = "pykwasm"
-version = "0.1.59"
+version = "0.1.60"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -936,13 +937,13 @@ develop = false
 cytoolz = "^0.12.1"
 numpy = "^1.24.2"
 py-wasm = {git = "https://github.com/runtimeverification/py-wasm.git", tag = "0.2.1"}
-pyk = {git = "https://github.com/runtimeverification/k.git", tag = "v7.0.112", subdirectory = "pyk"}
+pyk = {git = "https://github.com/runtimeverification/k.git", tag = "v7.0.120", subdirectory = "pyk"}
 
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/wasm-semantics.git"
-reference = "v0.1.59"
-resolved_reference = "300550f22fbb1f7b8eddf9c5df4cd334eaf73fbd"
+reference = "v0.1.60"
+resolved_reference = "1371b5a28a553cd8dfce335ebb44a5c5758e98f7"
 subdirectory = "pykwasm"
 
 [[package]]
@@ -1145,13 +1146,13 @@ files = [
 
 [[package]]
 name = "typing-extensions"
-version = "4.12.1"
+version = "4.12.2"
 description = "Backported and Experimental Type Hints for Python 3.8+"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "typing_extensions-4.12.1-py3-none-any.whl", hash = "sha256:6024b58b69089e5a89c347397254e35f1bf02a907728ec7fee9bf0fe837d203a"},
-    {file = "typing_extensions-4.12.1.tar.gz", hash = "sha256:915f5e35ff76f56588223f15fdd5938f9a1cf9195c0de25130c627e4d597f6d1"},
+    {file = "typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d"},
+    {file = "typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"},
 ]
 
 [[package]]
@@ -1208,4 +1209,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ae6bd0ec077a40e75adceec02360075939bc722f59d60a9822eafca5fc830f7c"
+content-hash = "83888a47f25a8046589252208011abdcac7415acc2aac7a40d6822e3b9c7e7ad"
