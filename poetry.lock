@@ -493,6 +493,39 @@ files = [
 pyreadline3 = {version = "*", markers = "sys_platform == \"win32\" and python_version >= \"3.8\""}
 
 [[package]]
+name = "hypothesis"
+version = "6.104.0"
+description = "A library for property-based testing"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "hypothesis-6.104.0-py3-none-any.whl", hash = "sha256:4aaa38b57625abae0d377b2460b80a5847504dcce22985e3381e4373079d45d0"},
+    {file = "hypothesis-6.104.0.tar.gz", hash = "sha256:f3f376491380aab841d706c562034c0118616dca7ce23e07b1a744c99f38d26b"},
+]
+
+[package.dependencies]
+attrs = ">=22.2.0"
+exceptiongroup = {version = ">=1.0.0", markers = "python_version < \"3.11\""}
+sortedcontainers = ">=2.1.0,<3.0.0"
+
+[package.extras]
+all = ["backports.zoneinfo (>=0.2.1)", "black (>=19.10b0)", "click (>=7.0)", "crosshair-tool (>=0.0.55)", "django (>=3.2)", "dpcontracts (>=0.4)", "hypothesis-crosshair (>=0.0.4)", "lark (>=0.10.1)", "libcst (>=0.3.16)", "numpy (>=1.17.3)", "pandas (>=1.1)", "pytest (>=4.6)", "python-dateutil (>=1.4)", "pytz (>=2014.1)", "redis (>=3.0.0)", "rich (>=9.0.0)", "tzdata (>=2024.1)"]
+cli = ["black (>=19.10b0)", "click (>=7.0)", "rich (>=9.0.0)"]
+codemods = ["libcst (>=0.3.16)"]
+crosshair = ["crosshair-tool (>=0.0.55)", "hypothesis-crosshair (>=0.0.4)"]
+dateutil = ["python-dateutil (>=1.4)"]
+django = ["django (>=3.2)"]
+dpcontracts = ["dpcontracts (>=0.4)"]
+ghostwriter = ["black (>=19.10b0)"]
+lark = ["lark (>=0.10.1)"]
+numpy = ["numpy (>=1.17.3)"]
+pandas = ["pandas (>=1.1)"]
+pytest = ["pytest (>=4.6)"]
+pytz = ["pytz (>=2014.1)"]
+redis = ["redis (>=3.0.0)"]
+zoneinfo = ["backports.zoneinfo (>=0.2.1)", "tzdata (>=2024.1)"]
+
+[[package]]
 name = "importlib-metadata"
 version = "7.2.1"
 description = "Read metadata from Python packages"
@@ -538,13 +571,13 @@ colors = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "kframework"
-version = "7.1.21"
+version = "7.1.30"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "kframework-7.1.21-py3-none-any.whl", hash = "sha256:f5f0e8c25e23a85b50bbe5eceec236697b031f4d9a21fdd87145c9d223b99db2"},
-    {file = "kframework-7.1.21.tar.gz", hash = "sha256:c78a3434cbd3c4cfdffdae608d3efe8991871b66bd1504b2453aa5595d378d9c"},
+    {file = "kframework-7.1.30-py3-none-any.whl", hash = "sha256:7f8de5d3b797593145aa69d92d89ce169e46a1254bb0d48354f1faedaeb1dcdd"},
+    {file = "kframework-7.1.30.tar.gz", hash = "sha256:d3a07d7dd8b8af7e3e336254035ec3e08f12002e94d927a5bde2cef2c2b3225a"},
 ]
 
 [package.dependencies]
@@ -552,6 +585,7 @@ cmd2 = ">=2.4.2,<3.0.0"
 coloredlogs = ">=15.0.1,<16.0.0"
 filelock = ">=3.9.0,<4.0.0"
 graphviz = ">=0.20.1,<0.21.0"
+hypothesis = ">=6.103.1,<7.0.0"
 psutil = "5.9.5"
 pybind11 = ">=2.10.3,<3.0.0"
 pytest = "*"
@@ -921,7 +955,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pykwasm"
-version = "0.1.69"
+version = "0.1.70"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -930,15 +964,15 @@ develop = false
 
 [package.dependencies]
 cytoolz = "^0.12.1"
-kframework = "7.1.21"
+kframework = "7.1.30"
 numpy = "^1.24.2"
 py-wasm = {git = "https://github.com/runtimeverification/py-wasm.git", tag = "0.2.1"}
 
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/wasm-semantics.git"
-reference = "v0.1.69"
-resolved_reference = "0b443cc714dd30766e37bae17e6500b936e71f44"
+reference = "v0.1.70"
+resolved_reference = "91f83ca3248fc85f64a46e31d31940d5442f8ba8"
 subdirectory = "pykwasm"
 
 [[package]]
@@ -1073,18 +1107,29 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "setuptools"
-version = "70.1.0"
+version = "70.1.1"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "setuptools-70.1.0-py3-none-any.whl", hash = "sha256:d9b8b771455a97c8a9f3ab3448ebe0b29b5e105f1228bba41028be116985a267"},
-    {file = "setuptools-70.1.0.tar.gz", hash = "sha256:01a1e793faa5bd89abc851fa15d0a0db26f160890c7102cd8dce643e886b47f5"},
+    {file = "setuptools-70.1.1-py3-none-any.whl", hash = "sha256:a58a8fde0541dab0419750bcc521fbdf8585f6e5cb41909df3a472ef7b81ca95"},
+    {file = "setuptools-70.1.1.tar.gz", hash = "sha256:937a48c7cdb7a21eb53cd7f9b59e525503aa8abaf3584c730dc5f7a5bec3a650"},
 ]
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "pyproject-hooks (!=1.1)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (>=1,<2)", "sphinx-reredirects", "sphinxcontrib-towncrier"]
 testing = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "importlib-metadata", "ini2toml[lite] (>=0.14)", "jaraco.develop (>=7.21)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "jaraco.test", "mypy (==1.10.0)", "packaging (>=23.2)", "pip (>=19.1)", "pyproject-hooks (!=1.1)", "pytest (>=6,!=8.1.1)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-home (>=0.5)", "pytest-mypy", "pytest-perf", "pytest-ruff (>=0.3.2)", "pytest-subprocess", "pytest-timeout", "pytest-xdist (>=3)", "tomli", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel"]
+
+[[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+description = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
+optional = false
+python-versions = "*"
+files = [
+    {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
+    {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
+]
 
 [[package]]
 name = "textual"
@@ -1204,4 +1249,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d282342e57dae15c65214b62d970a49c63dd8d6e6addf698c61d136617b54d75"
+content-hash = "9088e699adb46767fcbb02615e8e0604292e085d4c5ab6b06f8bf45934a15a2a"
