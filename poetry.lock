@@ -571,13 +571,13 @@ colors = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "kframework"
-version = "7.1.41"
+version = "7.1.44"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "kframework-7.1.41-py3-none-any.whl", hash = "sha256:89bfa4ead36ca5e4b08e7bd6eb9f789534f78fd17fcdc52747f24a0d6161fe2f"},
-    {file = "kframework-7.1.41.tar.gz", hash = "sha256:0b3efdb6952e0607006766a5f84b4fcb49ea703092a34a3188886fe935163303"},
+    {file = "kframework-7.1.44-py3-none-any.whl", hash = "sha256:4ded11b61e1b79c23bd75d8e2a2895a49c5a0188692b11a394f1975ce0ee7d06"},
+    {file = "kframework-7.1.44.tar.gz", hash = "sha256:5f932b796a8b8421744b42968daddf4fd815e2b278a9873717377202536094ac"},
 ]
 
 [package.dependencies]
@@ -892,7 +892,7 @@ numpy = ">=1.16.0,<2"
 toolz = {version = ">0.9.0,<1", markers = "implementation_name == \"pypy\""}
 
 [package.extras]
-dev = ["Sphinx (>=1.6.5,<2)", "bumpversion (>=0.5.3,<1)", "flake8 (==3.6.0)", "hypothesis (>=6.88.1,<7)", "ipython", "isort (>=4.3.9,<5)", "mypy (==1.6.1)", "pytest (>=7.4.3,<8)", "pytest-watch (>=4.1.0,<5)", "pytest-watch (>=4.2.0,<5)", "pytest-xdist (>=3.2.0,<4)", "sphinx_rtd_theme (>=0.1.9)", "tox (>=4.11.3,<5)", "twine", "wheel"]
+dev = ["bumpversion (>=0.5.3,<1)", "ipython", "pytest-watch (>=4.1.0,<5)", "twine", "wheel"]
 doc = ["Sphinx (>=1.6.5,<2)", "sphinx_rtd_theme (>=0.1.9)"]
 lint = ["flake8 (==3.6.0)", "isort (>=4.3.9,<5)", "mypy (==1.6.1)"]
 test = ["hypothesis (>=6.88.1,<7)", "pytest (>=7.4.3,<8)", "pytest-watch (>=4.2.0,<5)", "pytest-xdist (>=3.2.0,<4)", "tox (>=4.11.3,<5)"]
@@ -955,7 +955,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pykwasm"
-version = "0.1.75"
+version = "0.1.76"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -964,15 +964,15 @@ develop = false
 
 [package.dependencies]
 cytoolz = "^0.12.1"
-kframework = "7.1.41"
+kframework = "7.1.44"
 numpy = "^1.24.2"
 py-wasm = {git = "https://github.com/runtimeverification/py-wasm.git", tag = "0.2.1"}
 
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/wasm-semantics.git"
-reference = "v0.1.75"
-resolved_reference = "f1f40f558bbd352fde41b263b523681604afcb3f"
+reference = "v0.1.76"
+resolved_reference = "c272c7b5cf772ed3f21541136683b2d86c40769d"
 subdirectory = "pykwasm"
 
 [[package]]
@@ -1249,4 +1249,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c711912dd0a31573819118ebe4198e17b837a6fab61627f76ae18e67e34273f0"
+content-hash = "03f83d5cd3a982541018f6f98a4a213197790c5602dfd162f63dd888b6f5f8c5"
