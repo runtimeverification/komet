@@ -9,7 +9,17 @@ module HOST-OBJECT-SYNTAX
     imports STRING-SYNTAX
     imports LIST
     imports MAP
+```
 
+## ScVal
+
+[Documentation: ScVal](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#scval)
+
+`ScVal` is a union of various datatypes used in the context of smart contracts for passing values to and from contracts and
+storing data on the host side. 
+
+
+```k
     syntax ScVal 
      ::= SCBool(Bool)                              [symbol(SCVal:Bool)]
         | "Void"                                   [symbol(SCVal:Void)]
@@ -21,11 +31,29 @@ module HOST-OBJECT-SYNTAX
         | ScMap(Map)                               [symbol(SCVal:Map)]
         | ScAddress(Address)                       [symbol(SCVal:Address)]
 
-    syntax HostVal ::= HostVal(Int)     [symbol(HostVal)]
-
     syntax Address ::= AccountId | ContractId
     syntax AccountId  ::= Account(Bytes)          [symbol(AccountId)]
     syntax ContractId ::= Contract(Bytes)         [symbol(ContractId)]
+
+```
+
+## HostVal
+
+[Documentation: HostVal](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#host-value-type)
+
+`HostVal` is used to pass values to and from Wasm contracts. It is a 64-bit representation of `ScVal`.
+
+Bit-packed Representation:
+
+  * Tag (Low 8 bits): The lower 8 bits make up the tag. The tag value determines how the remaining 56 bits are to be interpreted.
+  * Body (High 56 bits): The body can be split into two parts:
+    * Minor Component (Low 24 bits): The lower 24 bits of the body.
+    * Major Component (High 32 bits): The upper 32 bits of the body.
+
+Some HostVal instances, known as small values, are self-contained and carry all the information necessary to convert them to ScVal. Other HostVal instances contain a handle in their major component to a ScVal stored on the host side.
+
+```k
+    syntax HostVal ::= HostVal(Int)     [symbol(HostVal)]
 
 endmodule
 
@@ -66,14 +94,17 @@ module HOST-OBJECT
     
     syntax HostVal ::= fromHandleAndTag(Int, Int)                [function, total, symbol(fromHandleAndTag)]
                      | fromMajorMinorAndTag(Int, Int, Int)       [function, total, symbol(fromMajorMinorAndTag)]
+                     | fromBodyAndTag(Int, Int)                  [function, total, symbol(fromBodyAndTag)]
  // --------------------------------------------------------------------------------
-    rule fromHandleAndTag(H, T) => fromMajorMinorAndTag(H, 0, T)
-    rule fromMajorMinorAndTag(MAJ, MIN, TAG) => HostVal((((MAJ <<Int 24) |Int MIN) <<Int 8) |Int TAG)
+    rule fromHandleAndTag(H, T)              => fromMajorMinorAndTag(H, 0, T)
+    rule fromMajorMinorAndTag(MAJ, MIN, TAG) => fromBodyAndTag((MAJ <<Int 24) |Int MIN, TAG)
+    rule fromBodyAndTag(BODY, TAG)           => HostVal((BODY <<Int 8) |Int TAG)
 
     syntax WasmStringToken ::= #unparseWasmString ( String )         [function, total, hook(STRING.string2token)]
                              | #quoteUnparseWasmString ( String )   [function, total]
     rule #quoteUnparseWasmString(S) => #unparseWasmString("\"" +String S +String "\"")
 
+  // https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#tag-values
     syntax Int ::= getTag(ScVal)   [function, total]
  // -----------------------------------------------------
     rule getTag(SCBool(true))  => 0
@@ -81,21 +112,26 @@ module HOST-OBJECT
     rule getTag(Void)          => 2
     rule getTag(U32(_))        => 4 
     rule getTag(I32(_))        => 5
-    rule getTag(U64(_))        => 64
-    rule getTag(I64(_))        => 65
+    rule getTag(U64(I))        => 6     requires          I <=Int #maxU64small
+    rule getTag(U64(I))        => 64    requires notBool( I <=Int #maxU64small )
+    rule getTag(I64(_))        => 65    // I64small is not implemented
     rule getTag(ScVec(_))      => 75
     rule getTag(ScMap(_))      => 76
     rule getTag(ScAddress(_))  => 77
+
+    // 64-bit integers that fit in 56 bits
+    syntax Int ::= "#maxU64small"     [macro]
+                 | "#maxI64small"     [macro]
+                 | "#minI64small"     [macro]
+ // -----------------------------------------
+    rule #maxU64small => 72057594037927935
+    rule #maxI64small => 36028797018963967
+    rule #minI64small => -36028797018963968
 
     syntax ScVal ::= ScValOrDefault(KItem, ScVal)   [function, total, symbol(ScValOrDefault)]
  // ---------------------------------------------------------
     rule ScValOrDefault(X:ScVal, _:ScVal) => X
     rule ScValOrDefault(_,       D:ScVal) => D    [owise]
-
-    syntax Int ::= IntOrDefault(KItem, Int)   [function, total, symbol(IntOrDefault)]
- // ---------------------------------------------------------
-    rule IntOrDefault(X:Int, _:Int) => X
-    rule IntOrDefault(_,     D:Int) => D    [owise]
 
     syntax HostVal ::= HostValOrDefault(KItem, HostVal)   [function, total, symbol(HostValOrDefault)]
  // ---------------------------------------------------------
@@ -111,7 +147,6 @@ module HOST-OBJECT
     rule _OBJS {{ _I }} orDefault (D:ScVal) => D
       [owise]
 
-
     syntax HostVal ::= List "{{" Int "}}" "orDefault" HostVal     
         [function, total, symbol(HostVal:getOrDefault)]
  // ---------------------------------------------------------
@@ -121,34 +156,54 @@ module HOST-OBJECT
     rule _OBJS {{ _I }} orDefault (D:HostVal) => D
       [owise]
 
+```
 
-    syntax ScVal ::= convertSmall(HostVal)      [function, total, symbol(convertSmall)]
+## Conversion between `HostVal` and `ScVal`
+
+
+```k
+    syntax ScVal ::= fromSmall(HostVal)      [function, total, symbol(fromSmall)]
  // -----------------------------------------------------------------------------------
-    rule convertSmall(VAL) => SCBool(false)
-      requires getTag(VAL) ==Int 0
+    rule fromSmall(VAL) => SCBool(false)           requires getTag(VAL) ==Int 0
 
-    rule convertSmall(VAL) => SCBool(true)
-      requires getTag(VAL) ==Int 1
+    rule fromSmall(VAL) => SCBool(true)            requires getTag(VAL) ==Int 1
 
-    rule convertSmall(VAL) => Void
-      requires getTag(VAL) ==Int 2
+    rule fromSmall(VAL) => Void                    requires getTag(VAL) ==Int 2
 
-    rule convertSmall(VAL) => U32(getMajor(VAL))
-      requires getTag(VAL) ==Int 4
+    rule fromSmall(VAL) => U32(getMajor(VAL))      requires getTag(VAL) ==Int 4
 
-    rule convertSmall(VAL) => I32(#signed(i32, getMajor(VAL)))
+    rule fromSmall(VAL) => I32(#signed(i32, getMajor(VAL)))
       requires getTag(VAL) ==Int 5
        andBool definedSigned(i32, getMajor(VAL))
       [preserves-definedness]
 
-    rule convertSmall(VAL) => U64(getBody(VAL))
-      requires getTag(VAL) ==Int 6
+    rule fromSmall(VAL) => U64(getBody(VAL))       requires getTag(VAL) ==Int 6
 
-    rule convertSmall(_) => Void    [owise]
+    // return `Void` for invalid values
+    rule fromSmall(_) => Void    [owise]
 
-    syntax Bool ::= convertSmallImplemented(HostVal)    [function, total, symbol(convertSmallImplemented)]
- // ------------------------------------------------------------------------------------------------------
-    rule convertSmallImplemented(VAL) => 0 <=Int getTag(VAL) andBool getTag(VAL) <=Int 6
+    syntax Bool ::= fromSmallValid(HostVal)
+        [function, total, symbol(fromSmallValid)]
+ // ---------------------------------------------------------------------------------
+    rule fromSmallValid(VAL) => fromSmall(VAL) =/=K Void orBool getTag(VAL) ==Int 2
+
+
+    syntax HostVal ::= toSmall(ScVal)      [function, total, symbol(toSmall)]
+ // ---------------------------------------------------------------------------------
+    rule toSmall(SCBool(false)) => fromMajorMinorAndTag(0, 0, 0)
+    rule toSmall(SCBool(true))  => fromMajorMinorAndTag(0, 0, 1)
+    rule toSmall(Void)          => fromMajorMinorAndTag(0, 0, 2)
+    rule toSmall(U32(I))        => fromMajorMinorAndTag(I, 0, 4)
+    rule toSmall(I32(I))        => fromMajorMinorAndTag(#unsigned(i32, I), 0, 5)
+      requires definedUnsigned(i32, I)
+    rule toSmall(U64(I))        => fromBodyAndTag(I, 6)     requires I <=Int #maxU64small
+    rule toSmall(_)             => HostVal(-1)              [owise]      
+
+    syntax Bool ::= toSmallValid(ScVal)
+        [function, total, symbol(toSmallValid)]
+ // ---------------------------------------------------------------------------------
+    rule toSmallValid(VAL) => toSmall(VAL) =/=K HostVal(-1)
+
 
 endmodule
 ```

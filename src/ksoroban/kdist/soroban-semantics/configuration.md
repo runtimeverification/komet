@@ -157,23 +157,10 @@ These internal commands manages the call stack when calling and returning from a
 ```k
     syntax InternalCmd ::= allocObject(ScVal)             [symbol(allocObject)]
  // ---------------------------------------------------------------------------
-    rule [allocObject-bool]:
-        <k> allocObject(SCBool(_) #as SCV) => .K ... </k>
-        <hostStack> STACK => fromMajorMinorAndTag(0, 0, getTag(SCV)) : STACK </hostStack>
-
-    rule [allocObject-void]:
-        <k> allocObject(Void #as SCV) => .K ... </k>
-        <hostStack> STACK => fromMajorMinorAndTag(0, 0, getTag(SCV)) : STACK </hostStack>
-
-    rule [allocObject-u32]:
-        <k> allocObject(U32(I) #as SCV) => .K ... </k>
-        <hostStack> STACK => fromMajorMinorAndTag(I, 0, getTag(SCV)) : STACK </hostStack>
-
-    rule [allocObject-i32]:
-        <k> allocObject(I32(I) #as SCV) => .K ... </k>
-        <hostStack> STACK => fromMajorMinorAndTag(#unsigned(i32, I), 0, getTag(SCV)) : STACK </hostStack>
-      requires definedUnsigned(i32, I)
-      [preserves-definedness]
+    rule [allocObject-small]:
+        <k> allocObject(SCV) => .K ... </k>
+        <hostStack> STACK => toSmall(SCV) : STACK </hostStack>
+      requires toSmallValid(SCV)
 
     rule [allocObject]:
         <k> allocObject(SCV) => .K ... </k>
@@ -270,9 +257,9 @@ These internal commands manages the call stack when calling and returning from a
 
     rule [HostVal2ScVal-small]:
         <k> HostVal2ScVal(VAL, _RELS) => .K ... </k>
-        <hostStack> S => convertSmall(VAL) : S </hostStack>
+        <hostStack> S => fromSmall(VAL) : S </hostStack>
       requires notBool isObject(VAL)
-       andBool convertSmallImplemented(VAL)
+       andBool fromSmallValid(VAL)
 
 ```
 
