@@ -19,11 +19,11 @@ module CONFIG
             <function> .WasmString </function>
             <args> .List </args>
             <wasm/>
-            <relativeObjects> .List </relativeObjects>
+            <relativeObjects> .List </relativeObjects> // List of HostVals with absolute handles to host objects
             <contractModIdx> .Int </contractModIdx>
           </callState>
           <hostStack> .HostStack </hostStack>
-          <hostObjects> .List </hostObjects>
+          <hostObjects> .List </hostObjects> // List of ScVals
           <callStack> .List </callStack>
           <interimStates> .List </interimStates>
         </host>  
