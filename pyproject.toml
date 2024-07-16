@@ -4,11 +4,14 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "ksoroban"
-version = "0.1.5"
+version = "0.1.6"
 description = "K tooling for the Soroban platform"
 authors = [
     "Runtime Verification, Inc. <contact@runtimeverification.com>",
 ]
+
+[tool.poetry.scripts]
+ksoroban = "ksoroban.ksoroban:main"
 
 [tool.poetry.plugins.kdist]
 soroban-semantics = "ksoroban.kdist.plugin"
