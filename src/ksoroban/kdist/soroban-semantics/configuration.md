@@ -46,7 +46,7 @@ module CONFIG
       </soroban>
 
     syntax HostStack ::= List{HostStackVal, ":"}  [symbol(hostStackList)]
-    syntax HostStackVal ::= ScVal | HostVal
+    syntax HostStackVal ::= ScVal | HostVal | Bytes
 
 
     syntax InternalCmd ::= #callResult(ValStack, List)   [symbol(#callResult)]
