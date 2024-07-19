@@ -188,6 +188,11 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
         <k> allocObject(SCV) => addObject(SCV) ... </k>
       [owise]
 
+    // Allows using `allocObject` in the `<instrs>` cell
+    rule [allocObject-instr]:
+        <instrs> allocObject(SCV) => #waitCommands ... </instrs>
+        <k> (.K => allocObject(SCV)) ... </k>
+
     syntax InternalCmd ::= addObject(ScVal)                                  [symbol(addObject)]
  // --------------------------------------------------------------------------------------------
     rule [addObject]:

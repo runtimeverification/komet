@@ -30,6 +30,7 @@ storing data on the host side.
         | ScVec(List)                              [symbol(SCVal:Vec)]
         | ScMap(Map)                               [symbol(SCVal:Map)]
         | ScAddress(Address)                       [symbol(SCVal:Address)]
+        | Symbol(String)                           [symbol(SCVal:Symbol)]
 
     syntax Address ::= AccountId | ContractId
     syntax AccountId  ::= Account(Bytes)          [symbol(AccountId)]
@@ -118,6 +119,9 @@ module HOST-OBJECT
     rule getTag(ScVec(_))      => 75
     rule getTag(ScMap(_))      => 76
     rule getTag(ScAddress(_))  => 77
+    rule getTag(Symbol(BS))    => 14    requires lengthString(BS) <=Int 9
+    rule getTag(Symbol(BS))    => 74    requires lengthString(BS) >Int  9
+
 
     // 64-bit integers that fit in 56 bits
     syntax Int ::= "#maxU64small"     [macro]
@@ -179,6 +183,9 @@ module HOST-OBJECT
 
     rule fromSmall(VAL) => U64(getBody(VAL))       requires getTag(VAL) ==Int 6
 
+    rule fromSmall(VAL) => Symbol(decode6bit(getBody(VAL)))
+                                                   requires getTag(VAL) ==Int 14
+
     // return `Void` for invalid values
     rule fromSmall(_) => Void    [owise]
 
@@ -197,6 +204,7 @@ module HOST-OBJECT
     rule toSmall(I32(I))        => fromMajorMinorAndTag(#unsigned(i32, I), 0, 5)
       requires definedUnsigned(i32, I)
     rule toSmall(U64(I))        => fromBodyAndTag(I, 6)     requires I <=Int #maxU64small
+    rule toSmall(Symbol(S))     => fromBodyAndTag(encode6bit(S), 14)  requires lengthString(S) <=Int 9
     rule toSmall(_)             => HostVal(-1)              [owise]      
 
     syntax Bool ::= toSmallValid(ScVal)
@@ -205,5 +213,58 @@ module HOST-OBJECT
     rule toSmallValid(VAL) => toSmall(VAL) =/=K HostVal(-1)
 
 
+    syntax String ::= decode6bit(Int)       [function, total, symbol(decode6bit)]
+ // --------------------------------------------------------------------------------
+    rule decode6bit(I) => decode6bit(I >>Int 6) +String decode6bitChar(I &Int 63)   requires 0 <Int I
+    rule decode6bit(_) => ""                                                        [owise] 
+
+    syntax String ::= decode6bitChar(Int)   [function, total, symbol(decode6bitChar)]
+ // ---------------------------------------------------------------------------------
+    rule decode6bitChar(I) => "_"                            requires 1  ==Int I
+    rule decode6bitChar(I) => chrChar(48 +Int I -Int 2)      requires 2  <=Int I andBool I <=Int 11
+    rule decode6bitChar(I) => chrChar(65 +Int I -Int 12)     requires 12 <=Int I andBool I <=Int 37
+    rule decode6bitChar(I) => chrChar(97 +Int I -Int 38)     requires 38 <=Int I andBool I <=Int 63
+    rule decode6bitChar(_) => ""                             [owise]
+
+    syntax Int ::= encode6bit(String)           [function, total, symbol(encode6bit)]
+ // --------------------------------------------------------------------------------
+    rule encode6bit(S)
+      => (encode6bit(tail(S)) <<Int 6) +Int encode6bitChar(ordChar(head(S)))
+      requires 0 <Int lengthString(S)
+    rule encode6bit(_) => 0
+      [owise] 
+
+    syntax Int ::= encode6bitChar(Int)   [function, total, symbol(encode6bitChar)]
+ // ---------------------------------------------------------------------------------
+    rule encode6bitChar(I) => 1                              requires 9  ==Int I // '_' == I
+    rule encode6bitChar(I) => 2  +Int I -Int 48              requires 48 <=Int I andBool I <=Int 57  // '0' <= I <= '9'
+    rule encode6bitChar(I) => 12 +Int I -Int 65              requires 65 <=Int I andBool I <=Int 90  // 'A' <= I <= 'Z' 
+    rule encode6bitChar(I) => 38 +Int I -Int 97              requires 97 <=Int I andBool I <=Int 122 // 'a' <= I <= 'z'
+    rule encode6bitChar(_) => 0                              [owise]
+
+
+    syntax Bool ::= validSymbol(String)          [function, total, symbol(validSymbol)]
+                  | validSymbolChar(String)      [function, total, symbol(validSymbolChar)]
+ // --------------------------------------------------------------------------------
+    rule validSymbol(S) => true
+      requires lengthString(S) ==Int 0
+    rule validSymbol(S) => validSymbolChar(head(S)) andBool validSymbol(tail(S))
+      requires 0 <Int lengthString(S) andBool lengthString(S) <=Int 32 
+    rule validSymbol(S) => validSymbolChar(head(S)) andBool validSymbol(tail(S))
+      requires 32 <Int lengthString(S) 
+    
+    rule validSymbolChar(I) => I ==String "_"                              // '_'
+                        orBool ("0" <=String I andBool I <=String "9")     // '0'..'9'
+                        orBool ("A" <=String I andBool I <=String "Z")     // 'A'..'Z'
+                        orBool ("a" <=String I andBool I <=String "z")     // 'a'..'z'
+
+    syntax String ::= head(String)    [function, total, symbol(headString)]
+                    | tail(String)    [function, total, symbol(tailString)]
+ // -----------------------------------------------------------------------
+    rule head(S) => ""                                         requires lengthString(S) <=Int 0
+    rule head(S) => substrString(S, 0, 1)                      requires lengthString(S) >Int 0
+    rule tail(S) => ""                                         requires lengthString(S) <=Int 0
+    rule tail(S) => substrString(S, 1, lengthString(S))        requires lengthString(S) >Int 0
+    
 endmodule
 ```

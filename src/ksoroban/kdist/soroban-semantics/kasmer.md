@@ -24,6 +24,8 @@ module KASMER-SYNTAX-COMMON
 
     syntax Steps ::= List{Step, ""} [symbol(kasmerSteps)]
 
+    syntax String ::= str(WasmString)    [function, total]
+
 endmodule
 
 module KASMER
@@ -36,6 +38,9 @@ module KASMER
         <soroban/>
         <exitCode exit=""> 1 </exitCode>
       </kasmer>
+
+    rule str(WS) => unescape(#parseWasmString(WS))
+    rule str(.WasmString) => ""
 
     rule [load-program]:
         <program> (_S:Step _SS:Steps) #as PGM => .Steps </program>
