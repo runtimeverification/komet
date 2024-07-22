@@ -27,6 +27,7 @@ storing data on the host side.
         | I32(Int)                                 [symbol(SCVal:I32)]
         | U64(Int)                                 [symbol(SCVal:U64)]
         | I64(Int)                                 [symbol(SCVal:I64)]
+        | U128(Int)                                [symbol(SCVal:U128)]
         | ScVec(List)                              [symbol(SCVal:Vec)]
         | ScMap(Map)                               [symbol(SCVal:Map)]
         | ScAddress(Address)                       [symbol(SCVal:Address)]
@@ -116,6 +117,8 @@ module HOST-OBJECT
     rule getTag(U64(I))        => 6     requires          I <=Int #maxU64small
     rule getTag(U64(I))        => 64    requires notBool( I <=Int #maxU64small )
     rule getTag(I64(_))        => 65    // I64small is not implemented
+    rule getTag(U128(I))       => 10    requires          I <=Int #maxU64small
+    rule getTag(U128(I))       => 68    requires notBool( I <=Int #maxU64small ) // U64small and U128small have the same width
     rule getTag(ScVec(_))      => 75
     rule getTag(ScMap(_))      => 76
     rule getTag(ScAddress(_))  => 77
@@ -183,6 +186,8 @@ module HOST-OBJECT
 
     rule fromSmall(VAL) => U64(getBody(VAL))       requires getTag(VAL) ==Int 6
 
+    rule fromSmall(VAL) => U128(getBody(VAL))      requires getTag(VAL) ==Int 10
+
     rule fromSmall(VAL) => Symbol(decode6bit(getBody(VAL)))
                                                    requires getTag(VAL) ==Int 14
 
@@ -203,9 +208,10 @@ module HOST-OBJECT
     rule toSmall(U32(I))        => fromMajorMinorAndTag(I, 0, 4)
     rule toSmall(I32(I))        => fromMajorMinorAndTag(#unsigned(i32, I), 0, 5)
       requires definedUnsigned(i32, I)
-    rule toSmall(U64(I))        => fromBodyAndTag(I, 6)     requires I <=Int #maxU64small
+    rule toSmall(U64(I))        => fromBodyAndTag(I, 6)               requires I <=Int #maxU64small
+    rule toSmall(U128(I))       => fromBodyAndTag(I, 10)              requires I <=Int #maxU64small
     rule toSmall(Symbol(S))     => fromBodyAndTag(encode6bit(S), 14)  requires lengthString(S) <=Int 9
-    rule toSmall(_)             => HostVal(-1)              [owise]      
+    rule toSmall(_)             => HostVal(-1)                        [owise]
 
     syntax Bool ::= toSmallValid(ScVal)
         [function, total, symbol(toSmallValid)]
