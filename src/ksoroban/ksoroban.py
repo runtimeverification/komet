@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, FileType
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
@@ -13,6 +14,8 @@ from pyk.kdist import kdist
 from pyk.ktool.kprint import KAstOutput, _kast
 from pyk.ktool.krun import _krun
 from pykwasm.scripts.preprocessor import preprocess
+
+from .kasmer import Kasmer
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -32,6 +35,8 @@ def main() -> None:
         _exec_run(program=args.program, backend=args.backend)
     elif args.command == 'kast':
         _exec_kast(program=args.program, backend=args.backend, output=args.output)
+    elif args.command == 'test':
+        _exec_test(contract=args.contract)
 
     raise AssertionError()
 
@@ -52,6 +57,13 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
         proc_res = _kast(input_file, definition_dir=definition_dir, output=output, check=False)
 
     _exit_with_output(proc_res)
+
+
+def _exec_test(*, contract: Path) -> None:
+    bindings = Kasmer().contract_bindings(Path(contract.name))
+    print(json.dumps(bindings, indent=2))
+
+    sys.exit(0)
 
 
 @contextmanager
@@ -81,6 +93,9 @@ def _argument_parser() -> ArgumentParser:
     kast_parser = command_parser.add_parser('kast', help='parse a concrete test and output it in a supported format')
     _add_common_arguments(kast_parser)
     kast_parser.add_argument('--output', metavar='FORMAT', type=KAstOutput, help='format to output the term in')
+
+    test_parser = command_parser.add_parser('test', help='Test a soroban contract')
+    test_parser.add_argument('contract', type=FileType('r'), help='The contract wasm file')
 
     return parser
 
