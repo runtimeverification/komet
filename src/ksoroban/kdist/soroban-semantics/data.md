@@ -250,7 +250,7 @@ module HOST-OBJECT
       requires lengthString(S) ==Int 0
     rule validSymbol(S) => validSymbolChar(head(S)) andBool validSymbol(tail(S))
       requires 0 <Int lengthString(S) andBool lengthString(S) <=Int 32 
-    rule validSymbol(S) => validSymbolChar(head(S)) andBool validSymbol(tail(S))
+    rule validSymbol(S) => false
       requires 32 <Int lengthString(S) 
     
     rule validSymbolChar(I) => I ==String "_"                              // '_'
