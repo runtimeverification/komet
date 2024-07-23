@@ -60,11 +60,18 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
 
 
 def _exec_test(*, contract: Path) -> None:
+    """Run a soroban test contract given its compiled wasm file.
+
+    This will get the bindings for the contract and run all of the test functions.
+    The test functions are expected to be named with a prefix of 'test_' and return a boolean value.
+
+    Exits successfully when all the tests pass.
+    """
     definition_dir = kdist.get('soroban-semantics.llvm')
     definition_info = SorobanDefinitionInfo(definition_dir)
     kasmer = Kasmer(definition_info)
 
-    contract_kast = definition_info.inner_from_wasm(contract)
+    contract_kast = definition_info.kast_from_wasm(contract)
     conf, subst = kasmer.deploy_test(contract_kast)
 
     bindings = kasmer.contract_bindings(contract)

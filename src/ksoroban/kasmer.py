@@ -35,6 +35,8 @@ if TYPE_CHECKING:
 
 
 class Kasmer:
+    """Reads soroban contracts, and runs tests for them."""
+
     definition_info: SorobanDefinitionInfo
 
     def __init__(self, definition_info: SorobanDefinitionInfo) -> None:
@@ -50,6 +52,7 @@ class Kasmer:
         return Path(path_str)
 
     def contract_bindings(self, wasm_contract: Path) -> list[ContractBinding]:
+        """Reads a soroban wasm contract, and returns a list of the function bindings for it."""
         proc_res = run_process(
             [str(self._soroban_bin), 'contract', 'bindings', 'json', '--wasm', str(wasm_contract)], check=False
         )
@@ -70,6 +73,11 @@ class Kasmer:
         return bindings
 
     def deploy_test(self, contract: KInner) -> tuple[KInner, dict[str, KInner]]:
+        """Takes a wasm soroban contract as a kast term and deploys it in a fresh configuration.
+
+        Returns:
+            A configuration with the contract deployed.
+        """
 
         # Set up the steps that will deploy the contract
         steps = steps_of(
@@ -92,6 +100,12 @@ class Kasmer:
         return conf, subst
 
     def run_test(self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding) -> None:
+        """Given a configuration with a deployed test contract, run the tests for the supplied binding.
+
+        Raises:
+            CalledProcessError if the test fails
+        """
+
         def getarg(arg: str) -> KInner:
             # TODO: Implement actual argument generation.
             #      That's every possible ScVal in Soroban.
@@ -117,6 +131,8 @@ class Kasmer:
 
 @dataclass(frozen=True)
 class ContractBinding:
+    """Represents one of the function bindings for a soroban contract."""
+
     name: str
     inputs: tuple[str, ...]
     outputs: tuple[str, ...]

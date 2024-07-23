@@ -3,12 +3,10 @@ from __future__ import annotations
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from pyk.kast.inner import KSort, Subst
 from pyk.kast.outer import read_kast_definition
 from pyk.konvert import kast_to_kore
 from pyk.ktool.kompile import DefinitionInfo
 from pyk.ktool.krun import KRun
-from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
 
 if TYPE_CHECKING:
@@ -16,11 +14,13 @@ if TYPE_CHECKING:
     from subprocess import CompletedProcess
     from typing import Any
 
-    from pyk.kast.inner import KInner
+    from pyk.kast.inner import KInner, KSort
     from pyk.kast.outer import KDefinition
 
 
 class SorobanDefinitionInfo:
+    """Anything related to the Soroban K definition goes here."""
+
     definition_info: DefinitionInfo
 
     def __init__(self, path: Path) -> None:
@@ -39,25 +39,21 @@ class SorobanDefinitionInfo:
         return KRun(self.path)
 
     def run_process_kast(self, pgm: KInner, sort: KSort | None = None, **kwargs: Any) -> CompletedProcess:
+        """Run the semantics on a kast term.
+
+        This will convert the kast term to kore.
+
+        Args:
+            pgm: The kast term to run
+            sort: The target sort of `pgm`. This should normally be `Steps`, but can be `GeneratedTopCell` if kwargs['term'] is True
+            kwargs: Any arguments to pass to KRun.run_process
+
+        Returns:
+            The CompletedProcess of the interpreter
+        """
         kore_term = kast_to_kore(self.kdefinition, pgm, sort=sort)
         return self.krun.run_process(kore_term, **kwargs)
 
-    def init_config(self, pgm: KInner) -> KInner:
-        config_with_vars = self.kdefinition.init_config(KSort('GeneratedTopCell'))
-
-        final_config = Subst({'$PGM': pgm}).apply(config_with_vars)
-
-        return final_config
-
-    def init_config_from_wasm(self, wasm: Path) -> KInner:
-        wasm_kinner = self.inner_from_wasm(wasm)
-
-        return self.init_config(wasm_kinner)
-
-    def inner_from_wasm(self, wasm: Path) -> KInner:
+    def kast_from_wasm(self, wasm: Path) -> KInner:
+        """Get a kast term from a wasm program."""
         return wasm2kast(open(wasm, 'rb'))
-
-    def wast_from_wasm(self, wasm: Path) -> str:
-        proc_res = run_process(['wasm2wat', str(wasm)])
-
-        return proc_res.stdout
