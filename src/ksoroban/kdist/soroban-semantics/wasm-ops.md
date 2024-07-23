@@ -35,9 +35,8 @@ module WASM-OPERATIONS
     syntax InternalInstr ::= #memLoad ( offset: Int , length: Int )
  // ---------------------------------------------------------------
     rule [memLoad-zero-length]:
-        <instrs> #memLoad(_, LENGTH) => .K ... </instrs>
+        <instrs> #memLoad(_, 0) => .K ... </instrs>
         <hostStack> STACK => .Bytes : STACK </hostStack>
-      requires LENGTH ==Int 0
 
     rule [memLoad]:
          <instrs> #memLoad(OFFSET, LENGTH) => .K ... </instrs>
