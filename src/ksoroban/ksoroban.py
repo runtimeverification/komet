@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import sys
 from argparse import ArgumentParser, FileType
 from contextlib import contextmanager
@@ -65,8 +64,15 @@ def _exec_test(*, contract: Path) -> None:
     definition_info = SorobanDefinitionInfo(definition_dir)
     kasmer = Kasmer(definition_info)
 
+    contract_kast = definition_info.inner_from_wasm(contract)
+    conf, subst = kasmer.deploy_test(contract_kast)
+
     bindings = kasmer.contract_bindings(contract)
-    print(json.dumps(bindings, indent=2))
+
+    for binding in bindings:
+        if not binding.name.startswith('test_'):
+            continue
+        kasmer.run_test(conf, subst, binding)
 
     sys.exit(0)
 

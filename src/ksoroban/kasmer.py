@@ -2,22 +2,33 @@ from __future__ import annotations
 
 import json
 import shutil
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from pyk.kast.inner import KSort
-from pyk.kast.manip import split_config_from
-from pyk.konvert import kore_to_kast
+from pyk.kast.manip import Subst, split_config_from
+from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.ktool.krun import KRunOutput
 from pyk.utils import run_process
 
-from .kast.syntax import deploy_contract, set_account, set_exit_code, steps_of, upload_wasm
+from .kast.syntax import (
+    SC_VOID,
+    account_id,
+    call_tx,
+    contract_id,
+    deploy_contract,
+    sc_bool,
+    sc_u32,
+    set_account,
+    set_exit_code,
+    steps_of,
+    upload_wasm,
+)
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from pyk.kast.inner import KInner
 
     from .utils import SorobanDefinitionInfo
@@ -38,12 +49,25 @@ class Kasmer:
             )
         return Path(path_str)
 
-    def contract_bindings(self, wasm_contract: Path) -> dict[str, Any]:
+    def contract_bindings(self, wasm_contract: Path) -> list[ContractBinding]:
         proc_res = run_process(
             [str(self._soroban_bin), 'contract', 'bindings', 'json', '--wasm', str(wasm_contract)], check=False
         )
-        res = json.loads(proc_res.stdout)
-        return res
+        bindings_list = json.loads(proc_res.stdout)
+        bindings = []
+        for binding_dict in bindings_list:
+            # TODO: Properly read and store the type information in the bindings (ie. type parameters for vecs, tuples, etc.)
+            if binding_dict['type'] != 'function':
+                continue
+            name = binding_dict['name']
+            inputs = []
+            for input_dict in binding_dict['inputs']:
+                inputs.append(input_dict['value']['type'])
+            outputs = []
+            for output_dict in binding_dict['outputs']:
+                outputs.append(output_dict['type'])
+            bindings.append(ContractBinding(name, tuple(inputs), tuple(outputs)))
+        return bindings
 
     def deploy_test(self, contract: KInner) -> tuple[KInner, dict[str, KInner]]:
 
@@ -66,3 +90,33 @@ class Kasmer:
         conf, subst = split_config_from(kast_result)
 
         return conf, subst
+
+    def run_test(self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding) -> None:
+        def getarg(arg: str) -> KInner:
+            # TODO: Implement actual argument generation.
+            #      That's every possible ScVal in Soroban.
+            #      Concrete values for fuzzing/variables for proving.
+            if arg == 'u32':
+                return sc_u32(10)
+            return SC_VOID
+
+        from_acct = account_id(b'test-account')
+        to_acct = contract_id(b'test-contract')
+        name = binding.name
+        args = [getarg(arg) for arg in binding.inputs]
+        result = sc_bool(True)
+
+        steps = steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
+
+        subst['PROGRAM_CELL'] = steps
+        test_config = Subst(subst).apply(conf)
+        test_config_kore = kast_to_kore(self.definition_info.kdefinition, test_config, KSort('GeneratedTopCell'))
+
+        self.definition_info.krun.run_pattern(test_config_kore, check=True)
+
+
+@dataclass(frozen=True)
+class ContractBinding:
+    name: str
+    inputs: tuple[str, ...]
+    outputs: tuple[str, ...]
