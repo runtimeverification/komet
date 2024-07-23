@@ -14,6 +14,7 @@ from pykwasm.wasm2kast import wasm2kast
 if TYPE_CHECKING:
     from pathlib import Path
     from subprocess import CompletedProcess
+    from typing import Any
 
     from pyk.kast.inner import KInner
     from pyk.kast.outer import KDefinition
@@ -37,9 +38,9 @@ class SorobanDefinitionInfo:
     def krun(self) -> KRun:
         return KRun(self.path)
 
-    def run_process_inner(self, pgm: KInner, term: bool = False) -> CompletedProcess:
-        kore_term = kast_to_kore(self.kdefinition, pgm)
-        return self.krun.run_process(kore_term, term=term)
+    def run_process_kast(self, pgm: KInner, sort: KSort | None = None, **kwargs: Any) -> CompletedProcess:
+        kore_term = kast_to_kore(self.kdefinition, pgm, sort=sort)
+        return self.krun.run_process(kore_term, **kwargs)
 
     def init_config(self, pgm: KInner) -> KInner:
         config_with_vars = self.kdefinition.init_config(KSort('GeneratedTopCell'))

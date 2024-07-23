@@ -16,6 +16,7 @@ from pyk.ktool.krun import _krun
 from pykwasm.scripts.preprocessor import preprocess
 
 from .kasmer import Kasmer
+from .utils import SorobanDefinitionInfo
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -36,7 +37,7 @@ def main() -> None:
     elif args.command == 'kast':
         _exec_kast(program=args.program, backend=args.backend, output=args.output)
     elif args.command == 'test':
-        _exec_test(contract=args.contract)
+        _exec_test(contract=Path(args.contract.name))
 
     raise AssertionError()
 
@@ -60,7 +61,11 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
 
 
 def _exec_test(*, contract: Path) -> None:
-    bindings = Kasmer().contract_bindings(Path(contract.name))
+    definition_dir = kdist.get('soroban-semantics.llvm')
+    definition_info = SorobanDefinitionInfo(definition_dir)
+    kasmer = Kasmer(definition_info)
+
+    bindings = kasmer.contract_bindings(contract)
     print(json.dumps(bindings, indent=2))
 
     sys.exit(0)
