@@ -224,30 +224,28 @@ module HOST-OBJECT
     rule decode6bit(I) => decode6bit(I >>Int 6) +String decode6bitChar(I &Int 63)   requires 0 <Int I
     rule decode6bit(_) => ""                                                        [owise] 
 
+    syntax String ::= "sixBitStringTable" [macro]
+ // -------------------------------------------------------------------------------------------
+    rule sixBitStringTable => "_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgyahijklmnopqrstuvwxyz"
+
     syntax String ::= decode6bitChar(Int)   [function, total, symbol(decode6bitChar)]
  // ---------------------------------------------------------------------------------
-    rule decode6bitChar(I) => "_"                            requires 1  ==Int I
-    rule decode6bitChar(I) => chrChar(48 +Int I -Int 2)      requires 2  <=Int I andBool I <=Int 11
-    rule decode6bitChar(I) => chrChar(65 +Int I -Int 12)     requires 12 <=Int I andBool I <=Int 37
-    rule decode6bitChar(I) => chrChar(97 +Int I -Int 38)     requires 38 <=Int I andBool I <=Int 63
-    rule decode6bitChar(_) => ""                             [owise]
+    rule decode6bitChar(I) => substrString(sixBitStringTable, I -Int 1, I)
 
-    syntax Int ::= encode6bit(String)           [function, total, symbol(encode6bit)]
+    syntax Int ::= encode6bit   (     String)           [function, total, symbol(encode6bit)]
+                 | encode6bitAux(Int, String)           [function, total, symbol(encode6bitAux)]
  // --------------------------------------------------------------------------------
-    rule encode6bit(S)
-      => (encode6bit(tail(S)) <<Int 6) +Int encode6bitChar(ordChar(head(S)))
+    rule encode6bit(S) => encode6bitAux(0, S)
+
+    rule encode6bitAux(A, S)
+      => encode6bitAux((A <<Int 6) |Int encode6bitChar(head(S)), tail(S))
       requires 0 <Int lengthString(S)
-    rule encode6bit(_) => 0
+    rule encode6bitAux(A, _) => A
       [owise] 
 
-    syntax Int ::= encode6bitChar(Int)   [function, total, symbol(encode6bitChar)]
+    syntax Int ::= encode6bitChar(String)   [function, total, symbol(encode6bitChar)]
  // ---------------------------------------------------------------------------------
-    rule encode6bitChar(I) => 1                              requires 9  ==Int I // '_' == I
-    rule encode6bitChar(I) => 2  +Int I -Int 48              requires 48 <=Int I andBool I <=Int 57  // '0' <= I <= '9'
-    rule encode6bitChar(I) => 12 +Int I -Int 65              requires 65 <=Int I andBool I <=Int 90  // 'A' <= I <= 'Z' 
-    rule encode6bitChar(I) => 38 +Int I -Int 97              requires 97 <=Int I andBool I <=Int 122 // 'a' <= I <= 'z'
-    rule encode6bitChar(_) => 0                              [owise]
-
+    rule encode6bitChar(I) => findChar(sixBitStringTable, I, 0) +Int 1
 
     syntax Bool ::= validSymbol(String)          [function, total, symbol(validSymbol)]
                   | validSymbolChar(String)      [function, total, symbol(validSymbolChar)]
@@ -258,11 +256,8 @@ module HOST-OBJECT
       requires 0 <Int lengthString(S) andBool lengthString(S) <=Int 32 
     rule validSymbol(S) => false
       requires 32 <Int lengthString(S) 
-    
-    rule validSymbolChar(I) => I ==String "_"                              // '_'
-                        orBool ("0" <=String I andBool I <=String "9")     // '0'..'9'
-                        orBool ("A" <=String I andBool I <=String "Z")     // 'A'..'Z'
-                        orBool ("a" <=String I andBool I <=String "z")     // 'a'..'z'
+
+    rule validSymbolChar(I) => findChar(sixBitStringTable, I, 0) =/=Int -1
 
     syntax String ::= head(String)    [function, total, symbol(headString)]
                     | tail(String)    [function, total, symbol(tailString)]
