@@ -5,6 +5,7 @@ import shutil
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
+from tempfile import mkdtemp
 from typing import TYPE_CHECKING
 
 from pyk.kast.inner import KSort
@@ -30,6 +31,8 @@ from .kast.syntax import (
 )
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from pyk.kast.inner import KInner
 
     from .utils import SorobanDefinitionInfo
@@ -43,14 +46,21 @@ class Kasmer:
     def __init__(self, definition_info: SorobanDefinitionInfo) -> None:
         self.definition_info = definition_info
 
-    @cached_property
-    def _soroban_bin(self) -> Path:
-        path_str = shutil.which('soroban')
+    def _which(self, cmd: str) -> Path:
+        path_str = shutil.which(cmd)
         if path_str is None:
             raise RuntimeError(
-                "Couldn't find 'soroban' executable. Please make sure soroban is installed and on your path."
+                f"Couldn't find {cmd!r} executable. Please make sure {cmd!r} is installed and on your path."
             )
         return Path(path_str)
+
+    @cached_property
+    def _soroban_bin(self) -> Path:
+        return self._which('soroban')
+
+    @cached_property
+    def _cargo_bin(self) -> Path:
+        return self._which('cargo')
 
     def contract_bindings(self, wasm_contract: Path) -> list[ContractBinding]:
         """Reads a soroban wasm contract, and returns a list of the function bindings for it."""
@@ -72,6 +82,37 @@ class Kasmer:
                 outputs.append(output_dict['type'])
             bindings.append(ContractBinding(name, tuple(inputs), tuple(outputs)))
         return bindings
+
+    def contract_manifest(self, contract_path: Path) -> dict[str, Any]:
+        """Get the cargo manifest for a given contract.
+
+        Args:
+            contract_path: The directory where the contract is located.
+
+        Returns:
+            A dictionary representing the json output of `cargo read-manifest` in that contract's directory.
+        """
+        proc_res = run_process([str(self._cargo_bin), 'read-manifest'], cwd=contract_path)
+        return json.loads(proc_res.stdout)
+
+    def build_soroban_contract(self, contract_path: Path, out_dir: Path | None = None) -> Path:
+        """Build a soroban contract.
+
+        Args:
+            contract_path: The path to the soroban contract folder.
+            out_dir: Where to save the compiled wasm. If this isn't passed, then a temporary location is created.
+
+        Returns:
+            The path to the compiled wasm contract.
+        """
+        contract_stem = self.contract_manifest(contract_path)['name']
+        contract_name = f'{contract_stem}.wasm'
+        if out_dir is None:
+            out_dir = Path(mkdtemp(f'ksoroban_{str(contract_path.stem)}'))
+
+        run_process([str(self._soroban_bin), 'contract', 'build', '--out-dir', str(out_dir)], cwd=contract_path)
+
+        return out_dir / contract_name
 
     def kast_from_wasm(self, wasm: Path) -> KInner:
         """Get a kast term from a wasm program."""
@@ -132,6 +173,25 @@ class Kasmer:
         test_config_kore = kast_to_kore(self.definition_info.kdefinition, test_config, KSort('GeneratedTopCell'))
 
         self.definition_info.krun.run_pattern(test_config_kore, check=True)
+
+    def deploy_and_run(self, contract_wasm: Path) -> None:
+        """Run all of the tests in a soroban test contract.
+
+        Args:
+            contract_wasm: The path to the compiled wasm contract.
+
+        Raises:
+            CalledProcessError if any of the tests fail
+        """
+        contract_kast = self.kast_from_wasm(contract_wasm)
+        conf, subst = self.deploy_test(contract_kast)
+
+        bindings = self.contract_bindings(contract_wasm)
+
+        for binding in bindings:
+            if not binding.name.startswith('test_'):
+                continue
+            self.run_test(conf, subst, binding)
 
 
 @dataclass(frozen=True)

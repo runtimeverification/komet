@@ -36,7 +36,8 @@ def main() -> None:
     elif args.command == 'kast':
         _exec_kast(program=args.program, backend=args.backend, output=args.output)
     elif args.command == 'test':
-        _exec_test(contract=Path(args.contract.name))
+        wasm = Path(args.wasm.name) if args.wasm is not None else None
+        _exec_test(wasm=wasm)
 
     raise AssertionError()
 
@@ -59,7 +60,7 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
     _exit_with_output(proc_res)
 
 
-def _exec_test(*, contract: Path) -> None:
+def _exec_test(*, wasm: Path | None) -> None:
     """Run a soroban test contract given its compiled wasm file.
 
     This will get the bindings for the contract and run all of the test functions.
@@ -71,15 +72,13 @@ def _exec_test(*, contract: Path) -> None:
     definition_info = SorobanDefinitionInfo(definition_dir)
     kasmer = Kasmer(definition_info)
 
-    contract_kast = kasmer.kast_from_wasm(contract)
-    conf, subst = kasmer.deploy_test(contract_kast)
+    if wasm is None:
+        # We build the contract here, specifying where it's saved so we know where to find it.
+        # Knowing where the compiled contract is saved by default when building it would eliminate
+        # the need for this step, but at the moment I don't know how to retrieve that information.
+        wasm = kasmer.build_soroban_contract(Path.cwd())
 
-    bindings = kasmer.contract_bindings(contract)
-
-    for binding in bindings:
-        if not binding.name.startswith('test_'):
-            continue
-        kasmer.run_test(conf, subst, binding)
+    kasmer.deploy_and_run(wasm)
 
     sys.exit(0)
 
@@ -112,8 +111,8 @@ def _argument_parser() -> ArgumentParser:
     _add_common_arguments(kast_parser)
     kast_parser.add_argument('--output', metavar='FORMAT', type=KAstOutput, help='format to output the term in')
 
-    test_parser = command_parser.add_parser('test', help='Test a soroban contract')
-    test_parser.add_argument('contract', type=FileType('r'), help='The contract wasm file')
+    test_parser = command_parser.add_parser('test', help='Test the soroban contract in the current working directory')
+    test_parser.add_argument('--wasm', type=FileType('r'), help='Test a specific contract wasm file instead')
 
     return parser
 
