@@ -71,7 +71,7 @@ def _exec_test(*, contract: Path) -> None:
     definition_info = SorobanDefinitionInfo(definition_dir)
     kasmer = Kasmer(definition_info)
 
-    contract_kast = definition_info.kast_from_wasm(contract)
+    contract_kast = kasmer.kast_from_wasm(contract)
     conf, subst = kasmer.deploy_test(contract_kast)
 
     bindings = kasmer.contract_bindings(contract)

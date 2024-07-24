@@ -7,7 +7,6 @@ from pyk.kast.outer import read_kast_definition
 from pyk.konvert import kast_to_kore
 from pyk.ktool.kompile import DefinitionInfo
 from pyk.ktool.krun import KRun
-from pykwasm.wasm2kast import wasm2kast
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,7 +37,7 @@ class SorobanDefinitionInfo:
     def krun(self) -> KRun:
         return KRun(self.path)
 
-    def run_process_kast(self, pgm: KInner, sort: KSort | None = None, **kwargs: Any) -> CompletedProcess:
+    def krun_with_kast(self, pgm: KInner, sort: KSort | None = None, **kwargs: Any) -> CompletedProcess:
         """Run the semantics on a kast term.
 
         This will convert the kast term to kore.
@@ -53,7 +52,3 @@ class SorobanDefinitionInfo:
         """
         kore_term = kast_to_kore(self.kdefinition, pgm, sort=sort)
         return self.krun.run_process(kore_term, **kwargs)
-
-    def kast_from_wasm(self, wasm: Path) -> KInner:
-        """Get a kast term from a wasm program."""
-        return wasm2kast(open(wasm, 'rb'))

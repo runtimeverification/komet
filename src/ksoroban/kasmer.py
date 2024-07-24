@@ -13,6 +13,7 @@ from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.ktool.krun import KRunOutput
 from pyk.utils import run_process
+from pykwasm.wasm2kast import wasm2kast
 
 from .kast.syntax import (
     SC_VOID,
@@ -72,6 +73,10 @@ class Kasmer:
             bindings.append(ContractBinding(name, tuple(inputs), tuple(outputs)))
         return bindings
 
+    def kast_from_wasm(self, wasm: Path) -> KInner:
+        """Get a kast term from a wasm program."""
+        return wasm2kast(open(wasm, 'rb'))
+
     def deploy_test(self, contract: KInner) -> tuple[KInner, dict[str, KInner]]:
         """Takes a wasm soroban contract as a kast term and deploys it in a fresh configuration.
 
@@ -91,7 +96,7 @@ class Kasmer:
         )
 
         # Run the steps and grab the resulting config as a starting place to call transactions
-        proc_res = self.definition_info.run_process_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
+        proc_res = self.definition_info.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
         kore_result = KoreParser(proc_res.stdout).pattern()
         kast_result = kore_to_kast(self.definition_info.kdefinition, kore_result)
 
