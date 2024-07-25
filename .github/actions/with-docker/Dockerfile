@@ -5,9 +5,11 @@ ARG PYTHON_VERSION=3.10
 
 RUN    apt-get -y update             \
     && apt-get -y install            \
+         curl                        \
          graphviz                    \
          python${PYTHON_VERSION}     \
          python${PYTHON_VERSION}-dev \
+         wget                        \
     && apt-get -y clean
 
 ARG USER_ID=9876
@@ -18,5 +20,14 @@ RUN    groupadd -g ${GROUP_ID} user \
 USER user
 WORKDIR /home/user
 
-ENV PATH=/home/user/.local/bin:${PATH}
+ENV PATH="/home/user/.local/bin:${PATH}"
 RUN curl -sSL https://install.python-poetry.org | python3 -
+
+RUN wget -O rustup.sh https://sh.rustup.rs && \
+    chmod +x rustup.sh && \
+    ./rustup.sh --verbose --target wasm32-unknown-unknown -y
+
+ENV PATH="/home/user/.cargo/bin:${PATH}"
+
+RUN cargo install --locked cargo-binstall
+RUN cargo binstall -y stellar-cli

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, FileType
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
@@ -13,6 +13,9 @@ from pyk.kdist import kdist
 from pyk.ktool.kprint import KAstOutput, _kast
 from pyk.ktool.krun import _krun
 from pykwasm.scripts.preprocessor import preprocess
+
+from .kasmer import Kasmer
+from .utils import SorobanDefinitionInfo
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -32,6 +35,9 @@ def main() -> None:
         _exec_run(program=args.program, backend=args.backend)
     elif args.command == 'kast':
         _exec_kast(program=args.program, backend=args.backend, output=args.output)
+    elif args.command == 'test':
+        wasm = Path(args.wasm.name) if args.wasm is not None else None
+        _exec_test(wasm=wasm)
 
     raise AssertionError()
 
@@ -52,6 +58,29 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
         proc_res = _kast(input_file, definition_dir=definition_dir, output=output, check=False)
 
     _exit_with_output(proc_res)
+
+
+def _exec_test(*, wasm: Path | None) -> None:
+    """Run a soroban test contract given its compiled wasm file.
+
+    This will get the bindings for the contract and run all of the test functions.
+    The test functions are expected to be named with a prefix of 'test_' and return a boolean value.
+
+    Exits successfully when all the tests pass.
+    """
+    definition_dir = kdist.get('soroban-semantics.llvm')
+    definition_info = SorobanDefinitionInfo(definition_dir)
+    kasmer = Kasmer(definition_info)
+
+    if wasm is None:
+        # We build the contract here, specifying where it's saved so we know where to find it.
+        # Knowing where the compiled contract is saved by default when building it would eliminate
+        # the need for this step, but at the moment I don't know how to retrieve that information.
+        wasm = kasmer.build_soroban_contract(Path.cwd())
+
+    kasmer.deploy_and_run(wasm)
+
+    sys.exit(0)
 
 
 @contextmanager
@@ -81,6 +110,9 @@ def _argument_parser() -> ArgumentParser:
     kast_parser = command_parser.add_parser('kast', help='parse a concrete test and output it in a supported format')
     _add_common_arguments(kast_parser)
     kast_parser.add_argument('--output', metavar='FORMAT', type=KAstOutput, help='format to output the term in')
+
+    test_parser = command_parser.add_parser('test', help='Test the soroban contract in the current working directory')
+    test_parser.add_argument('--wasm', type=FileType('r'), help='Test a specific contract wasm file instead')
 
     return parser
 
