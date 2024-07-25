@@ -16,11 +16,11 @@ module HOST-OBJECT-SYNTAX
 [Documentation: ScVal](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#scval)
 
 `ScVal` is a union of various datatypes used in the context of smart contracts for passing values to and from contracts and
-storing data on the host side. 
+storing data on the host side.
 
 
 ```k
-    syntax ScVal 
+    syntax ScVal
      ::= SCBool(Bool)                              [symbol(SCVal:Bool)]
         | "Void"                                   [symbol(SCVal:Void)]
         | U32(Int)                                 [symbol(SCVal:U32)]
@@ -28,8 +28,8 @@ storing data on the host side.
         | U64(Int)                                 [symbol(SCVal:U64)]
         | I64(Int)                                 [symbol(SCVal:I64)]
         | U128(Int)                                [symbol(SCVal:U128)]
-        | ScVec(List)                              [symbol(SCVal:Vec)]
-        | ScMap(Map)                               [symbol(SCVal:Map)]
+        | ScVec(List)                              [symbol(SCVal:Vec)]      // List<HostVal>
+        | ScMap(Map)                               [symbol(SCVal:Map)]      // Map<ScVal, HostVal>
         | ScAddress(Address)                       [symbol(SCVal:Address)]
         | Symbol(String)                           [symbol(SCVal:Symbol)]
 
@@ -78,11 +78,11 @@ module HOST-OBJECT
     rule getBody(HostVal(I))  => I >>Int 8
 
     syntax Bool ::= isObject(HostVal)                   [function, total, symbol(isObject)]
-                  | isObjectTag(Int)                [function, total, symbol(isObjectTag)]
+                  | isObjectTag(Int)                    [function, total, symbol(isObjectTag)]
                   | isRelativeObjectHandle(HostVal)     [function, total, symbol(isRelativeObjectHandle)]
  // --------------------------------------------------------------------------------
     rule isObject(V)               => isObjectTag(getTag(V))
-    rule isObjectTag(TAG)          => 64 <=Int TAG andBool TAG <=Int 77  
+    rule isObjectTag(TAG)          => 64 <=Int TAG andBool TAG <=Int 77
     rule isRelativeObjectHandle(V) => getMajor(V) &Int 1 ==Int 0
 
     syntax Int ::= indexToHandle(Int, Bool)       [function, total, symbol(indexToHandle)]
@@ -93,7 +93,7 @@ module HOST-OBJECT
     syntax Int ::= getIndex(HostVal)   [function, total, symbol(getIndex)]
  // ----------------------------------------------------------------------------
     rule getIndex(V) => getMajor(V) >>Int 1
-    
+
     syntax HostVal ::= fromHandleAndTag(Int, Int)                [function, total, symbol(fromHandleAndTag)]
                      | fromMajorMinorAndTag(Int, Int, Int)       [function, total, symbol(fromMajorMinorAndTag)]
                      | fromBodyAndTag(Int, Int)                  [function, total, symbol(fromBodyAndTag)]
@@ -112,7 +112,7 @@ module HOST-OBJECT
     rule getTag(SCBool(true))  => 0
     rule getTag(SCBool(false)) => 1
     rule getTag(Void)          => 2
-    rule getTag(U32(_))        => 4 
+    rule getTag(U32(_))        => 4
     rule getTag(I32(_))        => 5
     rule getTag(U64(I))        => 6     requires          I <=Int #maxU64small
     rule getTag(U64(I))        => 64    requires notBool( I <=Int #maxU64small )
@@ -145,7 +145,7 @@ module HOST-OBJECT
     rule HostValOrDefault(X:HostVal, _:HostVal) => X
     rule HostValOrDefault(_,         D:HostVal) => D    [owise]
 
-    syntax ScVal ::= List "{{" Int "}}" "orDefault" ScVal     
+    syntax ScVal ::= List "{{" Int "}}" "orDefault" ScVal
         [function, total, symbol(List:getOrDefault)]
  // ---------------------------------------------------------
     rule OBJS {{ I }} orDefault (D:ScVal) => ScValOrDefault(OBJS [ I ], D)
@@ -154,7 +154,7 @@ module HOST-OBJECT
     rule _OBJS {{ _I }} orDefault (D:ScVal) => D
       [owise]
 
-    syntax HostVal ::= List "{{" Int "}}" "orDefault" HostVal     
+    syntax HostVal ::= List "{{" Int "}}" "orDefault" HostVal
         [function, total, symbol(HostVal:getOrDefault)]
  // ---------------------------------------------------------
     rule OBJS {{ I }} orDefault (D:HostVal) => HostValOrDefault(OBJS [ I ], D)
@@ -222,7 +222,7 @@ module HOST-OBJECT
     syntax String ::= decode6bit(Int)       [function, total, symbol(decode6bit)]
  // --------------------------------------------------------------------------------
     rule decode6bit(I) => decode6bit(I >>Int 6) +String decode6bitChar(I &Int 63)   requires 0 <Int I
-    rule decode6bit(_) => ""                                                        [owise] 
+    rule decode6bit(_) => ""                                                        [owise]
 
     syntax String ::= "sixBitStringTable" [macro]
  // -------------------------------------------------------------------------------------------
@@ -241,7 +241,7 @@ module HOST-OBJECT
       => encode6bitAux((A <<Int 6) |Int encode6bitChar(head(S)), tail(S))
       requires 0 <Int lengthString(S)
     rule encode6bitAux(A, _) => A
-      [owise] 
+      [owise]
 
     syntax Int ::= encode6bitChar(String)   [function, total, symbol(encode6bitChar)]
  // ---------------------------------------------------------------------------------
@@ -253,9 +253,9 @@ module HOST-OBJECT
     rule validSymbol(S) => true
       requires lengthString(S) ==Int 0
     rule validSymbol(S) => validSymbolChar(head(S)) andBool validSymbol(tail(S))
-      requires 0 <Int lengthString(S) andBool lengthString(S) <=Int 32 
+      requires 0 <Int lengthString(S) andBool lengthString(S) <=Int 32
     rule validSymbol(S) => false
-      requires 32 <Int lengthString(S) 
+      requires 32 <Int lengthString(S)
 
     rule validSymbolChar(I) => findChar(sixBitStringTable, I, 0) =/=Int -1
 
@@ -266,6 +266,6 @@ module HOST-OBJECT
     rule head(S) => substrString(S, 0, 1)                      requires lengthString(S) >Int 0
     rule tail(S) => ""                                         requires lengthString(S) <=Int 0
     rule tail(S) => substrString(S, 1, lengthString(S))        requires lengthString(S) >Int 0
-    
+
 endmodule
 ```

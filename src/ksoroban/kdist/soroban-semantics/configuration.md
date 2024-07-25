@@ -26,7 +26,7 @@ module CONFIG
           <hostObjects> .List </hostObjects> // List of ScVals
           <callStack> .List </callStack>
           <interimStates> .List </interimStates>
-        </host>  
+        </host>
 
         <contracts>
           <contract multiplicity="*" type="Map">
@@ -46,7 +46,7 @@ module CONFIG
       </soroban>
 
     syntax HostStack ::= List{HostStackVal, ":"}  [symbol(hostStackList)]
-    syntax HostStackVal ::= ScVal | HostVal | Bytes
+    syntax HostStackVal ::= ScVal | HostVal | Bytes | List
 
 
     syntax InternalCmd ::= #callResult(ValStack, List)   [symbol(#callResult)]
@@ -81,7 +81,7 @@ module CONFIG-OPERATIONS
 
 ## Call State
 
-The `<callStack>` cell stores a list of previous contract execution states. 
+The `<callStack>` cell stores a list of previous contract execution states.
 These internal commands manages the call stack when calling and returning from a contract.
 
 ```k
@@ -156,13 +156,13 @@ These internal commands manages the call stack when calling and returning from a
 
 ### Creating host objects
 
-If `SCV` is an object (i.e., not a small value), `allocObject(SCV)` creates a new host object 
-and pushes a `HostVal` onto the `<hostStack>` that points to the newly created object. 
-If `SCV` is a container such as a Vector or Map, `allocObject` recursively allocates host objects for its content 
+If `SCV` is an object (i.e., not a small value), `allocObject(SCV)` creates a new host object
+and pushes a `HostVal` onto the `<hostStack>` that points to the newly created object.
+If `SCV` is a container such as a Vector or Map, `allocObject` recursively allocates host objects for its content
 but only pushes a single `HostVal` for the entire container onto the stack.
 If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly equivalent to `SCV`.
- 
-```k 
+
+```k
     syntax InternalCmd ::= allocObject(ScVal)             [symbol(allocObject)]
  // ---------------------------------------------------------------------------
     rule [allocObject-small]:
@@ -177,12 +177,38 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
          ~> allocObjectVecAux
             ...
         </k>
-    
-    syntax InternalCmd ::= "allocObjectVecAux"
- // ------------------------------------------
+
+    // recursively allocate map values.
+    rule [allocObject-map]:
+        <k> allocObject(ScMap(ITEMS))
+         => allocObjects(values(ITEMS))
+         ~> allocObjectMapAux(keys_list(ITEMS))
+            ...
+        </k>
+
+    syntax Map ::= mapFromLists(List, List)      [function, total, symbol(mapFromLists)]
+ // --------------------------------------------------------------------------------
+    rule mapFromLists(ListItem(KEY) KEYS, ListItem(VAL) VALS)
+      => mapFromLists(KEYS, VALS) [ KEY <- VAL]
+
+    rule mapFromLists(_, _) => .Map
+      [owise]
+
+    syntax InternalCmd ::= "allocObjectVecAux"    [symbol(allocObjectVecAux)]
+ // -------------------------------------------------------------------------
     rule [allocObjectVecAux]:
         <k> allocObjectVecAux => addObject(ScVec(V)) ... </k>
-        <hostStack> ScVec(V) : S => S </hostStack>
+        <hostStack> V : S => S </hostStack>
+
+    syntax InternalCmd ::= allocObjectMapAux(List)    [symbol(allocObjectMapAux)]
+ // -------------------------------------------------------------------------
+    rule [allocObjectMapAux]:
+        <k> allocObjectMapAux(KEYS)
+         => addObject(ScMap(mapFromLists(KEYS, VALS)))
+            ...
+        </k>
+        <hostStack> VALS : S => S </hostStack>
+      requires size(KEYS) ==Int size(VALS)
 
     rule [allocObject]:
         <k> allocObject(SCV) => addObject(SCV) ... </k>
@@ -204,31 +230,37 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
 
     syntax InternalCmd ::= allocObjects       (List)       [symbol(allocObjects)]
                          | allocObjectsAux    (List)       [symbol(allocObjectsAux)]
-                         | allocObjectsCollect(Int)        [symbol(allocObjectsCollect)]
  // ---------------------------------------------------------------------------
     rule [allocObjects]:
-        <k> allocObjects(L) => allocObjectsAux(L) ~> allocObjectsCollect(size(L))  ... </k>
+        <k> allocObjects(L) => allocObjectsAux(L) ~> collectStackObjects(size(L))  ... </k>
 
     rule [allocObjectsAux-empty]:
         <k> allocObjectsAux(.List) => .K ... </k>
 
     rule [allocObjectsAux]:
-        <k> allocObjectsAux(ListItem(SCV:ScVal) L) 
+        <k> allocObjectsAux(ListItem(SCV:ScVal) L)
          => allocObjectsAux(L)
          ~> allocObject(SCV)
             ...
         </k>
 
     rule [allocObjectsAux-HostVal]:
-        <k> allocObjectsAux(ListItem(HV:HostVal) L) 
+        <k> allocObjectsAux(ListItem(HV:HostVal) L)
          => allocObjectsAux(L)
          ~> pushStack(HV)
             ...
         </k>
 
-    rule [allocObjectsCollect]:
-        <k> allocObjectsCollect(LENGTH) => .K ... </k> 
-        <hostStack> STACK => ScVec(take(LENGTH, STACK)) : drop(LENGTH, STACK) </hostStack>
+    // Collect stack values into a List
+    syntax InternalCmd ::= collectStackObjects(Int)        [symbol(collectStackObjects)]
+ // ---------------------------------------------------------------------------------------
+    rule [collectStackObjects]:
+        <k> collectStackObjects(LENGTH) => .K ... </k>
+        <hostStack> STACK => take(LENGTH, STACK) : drop(LENGTH, STACK) </hostStack>
+
+    rule [collectStackObjects-instr]:
+        <instrs> collectStackObjects(LENGTH) => .K ... </instrs>
+        <hostStack> STACK => take(LENGTH, STACK) : drop(LENGTH, STACK) </hostStack>
 
 ```
 
@@ -248,7 +280,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
        andBool getIndex(VAL) <Int size(OBJS)
 
     rule [loadObject-rel]:
-        <instrs> loadObject(VAL) 
+        <instrs> loadObject(VAL)
               => loadObject(RELS {{ getIndex(VAL) }} orDefault HostVal(0))
                  ...
         </instrs>
@@ -264,7 +296,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
       requires notBool isObject(VAL)
        andBool fromSmallValid(VAL)
 
-    
+
 ```
 
 ### Auxiliary functions
@@ -274,7 +306,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
  // -------------------------------------------------------------------------------------
     rule drop(N, _ : S) => drop(N -Int 1, S)                requires N >Int 0
     rule drop(_,     S) => S                                [owise]
-    
+
     syntax List ::= take(Int, HostStack)        [function, total, symbol(HostStack:take)]
  // -------------------------------------------------------------------------------------
     rule take(N, X : S) => ListItem(X) take(N -Int 1, S)    requires N >Int 0
@@ -286,7 +318,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
 ```k
     rule [callResult-empty]:
         <k> #callResult(.ValStack, _RELS) => .K ... </k>
-    
+
     rule [callResult]:
         <k> #callResult(<i64> I : SS, RELS)
          => #callResult(SS, RELS)
@@ -294,7 +326,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
             ...
         </k>
         <hostObjects> OBJS </hostObjects>
-    
+
     // Convert HostVals to ScVal recursively
     syntax ScVal ::= HostVal2ScVal(HostVal, objs: List, rels: List)      [function, total, symbol(HostVal2ScVal)]
  // -------------------------------------------------------------------------------------------------------------------
@@ -318,19 +350,23 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
     syntax ScVal ::= HostVal2ScValRec(ScVal, objs: List, rels: List)     [function, total, symbol(HostVal2ScValRec)]
  // -------------------------------------------------------------------------------------------------------------------
     rule HostVal2ScValRec(ScVec(VEC), OBJS, RELS) => ScVec(HostVal2ScValMany(VEC, OBJS, RELS))
+
+    rule HostVal2ScValRec(ScMap(M), OBJS, RELS)
+      => ScMap(mapFromLists( keys_list(M), HostVal2ScValMany(values(M), OBJS, RELS)) )
+
     rule HostVal2ScValRec(SCV, _OBJS, _RELS)      => SCV                                        [owise]
-    
+
     syntax List  ::= HostVal2ScValMany(List, objs: List, rels: List)     [function, total, symbol(HostVal2ScValMany)]
  // -------------------------------------------------------------------------------------------------------------------
     rule HostVal2ScValMany(ListItem(V:HostVal) REST, OBJS, RELS)
       => ListItem(HostVal2ScVal(V, OBJS, RELS))    HostVal2ScValMany(REST, OBJS, RELS)
-    
+
     rule HostVal2ScValMany(ListItem(V:ScVal)   REST, OBJS, RELS)
       => ListItem(HostVal2ScValRec(V, OBJS, RELS)) HostVal2ScValMany(REST, OBJS, RELS)
-    
+
     rule HostVal2ScValMany(_, _, _)
       => .List     [owise]
-    
+
 ```
 
 ```k
