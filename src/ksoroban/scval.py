@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .utils import KSorobanError
+
 if TYPE_CHECKING:
     from typing import Any, Final, TypeVar
 
@@ -33,7 +35,10 @@ class SCType(ABC):
     @staticmethod
     def from_dict(d: dict[str, Any]) -> SCType:
         type_name = d['type']
-        cls_name = _NAME_TO_CLASSNAME[type_name]
+        try:
+            cls_name = _NAME_TO_CLASSNAME[type_name]
+        except KeyError:
+            raise KSorobanError(f'Unsupported SC value type: {type_name!r}') from None
         cls = globals()[cls_name]
         return cls._from_dict(d)
 
