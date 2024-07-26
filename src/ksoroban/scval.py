@@ -4,12 +4,79 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from hypothesis import strategies
+
 from .utils import KSorobanError
 
 if TYPE_CHECKING:
     from typing import Any, Final, TypeVar
 
+    from hypothesis.strategies import SearchStrategy
+
     SCT = TypeVar('SCT', bound='SCType')
+
+# SCVals
+
+
+@dataclass(frozen=True)
+class SCValue(ABC): ...
+
+
+@dataclass(frozen=True)
+class SCBool(SCValue):
+    val: bool
+
+
+@dataclass(frozen=True)
+class SCIntegral(SCValue):
+    val: int
+
+
+@dataclass(frozen=True)
+class SCI32(SCIntegral): ...
+
+
+@dataclass(frozen=True)
+class SCI64(SCIntegral): ...
+
+
+@dataclass(frozen=True)
+class SCI128(SCIntegral): ...
+
+
+@dataclass(frozen=True)
+class SCI256(SCIntegral): ...
+
+
+@dataclass(frozen=True)
+class SCU32(SCIntegral): ...
+
+
+@dataclass(frozen=True)
+class SCU64(SCIntegral): ...
+
+
+@dataclass(frozen=True)
+class SCU128(SCIntegral): ...
+
+
+@dataclass(frozen=True)
+class SCU256(SCIntegral): ...
+
+
+@dataclass(frozen=True)
+class SCSymbol(SCValue):
+    val: str
+
+
+@dataclass(frozen=True)
+class SCVec(SCValue):
+    val: tuple[SCValue]
+
+
+@dataclass(frozen=True)
+class SCMap(SCValue):
+    val: dict[SCValue, SCValue]
 
 
 # SCTypes
@@ -46,6 +113,9 @@ class SCType(ABC):
     @abstractmethod
     def _from_dict(cls: type[SCT], d: dict[str, Any]) -> SCT: ...
 
+    @abstractmethod
+    def strategy(self) -> SearchStrategy: ...
+
 
 @dataclass
 class SCMonomorphicType(SCType):
@@ -55,43 +125,120 @@ class SCMonomorphicType(SCType):
 
 
 @dataclass
-class SCBoolType(SCMonomorphicType): ...
+class SCBoolType(SCMonomorphicType):
+    def strategy(self) -> SearchStrategy:
+        return strategies.booleans().map(SCBool)
 
 
 @dataclass
-class SCI32Type(SCMonomorphicType): ...
+class SCIntegralType(SCMonomorphicType):
+    @staticmethod
+    @abstractmethod
+    def _range() -> tuple[int, int]: ...
+
+    @staticmethod
+    @abstractmethod
+    def _val_class() -> type[SCIntegral]: ...
+
+    def strategy(self) -> SearchStrategy:
+        min, max = self._range()
+        return strategies.integers(min_value=min, max_value=max).map(self._val_class())
 
 
 @dataclass
-class SCI64Type(SCMonomorphicType): ...
+class SCI32Type(SCIntegralType):
+    @staticmethod
+    def _range() -> tuple[int, int]:
+        return -(2**31), (2**31) - 1
+
+    @staticmethod
+    def _val_class() -> type[SCI32]:
+        return SCI32
 
 
 @dataclass
-class SCI128Type(SCMonomorphicType): ...
+class SCI64Type(SCIntegralType):
+    @staticmethod
+    def _range() -> tuple[int, int]:
+        return -(2**63), (2**63) - 1
+
+    @staticmethod
+    def _val_class() -> type[SCI64]:
+        return SCI64
 
 
 @dataclass
-class SCI256Type(SCMonomorphicType): ...
+class SCI128Type(SCIntegralType):
+    @staticmethod
+    def _range() -> tuple[int, int]:
+        return -(2**127), (2**127) - 1
+
+    @staticmethod
+    def _val_class() -> type[SCI128]:
+        return SCI128
 
 
 @dataclass
-class SCU32Type(SCMonomorphicType): ...
+class SCI256Type(SCIntegralType):
+    @staticmethod
+    def _range() -> tuple[int, int]:
+        return -(2**255), (2**255) - 1
+
+    @staticmethod
+    def _val_class() -> type[SCI256]:
+        return SCI256
 
 
 @dataclass
-class SCU64Type(SCMonomorphicType): ...
+class SCU32Type(SCIntegralType):
+    @staticmethod
+    def _range() -> tuple[int, int]:
+        return 0, (2**32) - 1
+
+    @staticmethod
+    def _val_class() -> type[SCU32]:
+        return SCU32
 
 
 @dataclass
-class SCU128Type(SCMonomorphicType): ...
+class SCU64Type(SCIntegralType):
+    @staticmethod
+    def _range() -> tuple[int, int]:
+        return 0, (2**64) - 1
+
+    @staticmethod
+    def _val_class() -> type[SCU64]:
+        return SCU64
 
 
 @dataclass
-class SCU256Type(SCMonomorphicType): ...
+class SCU128Type(SCIntegralType):
+    @staticmethod
+    def _range() -> tuple[int, int]:
+        return 0, (2**128) - 1
+
+    @staticmethod
+    def _val_class() -> type[SCU128]:
+        return SCU128
 
 
 @dataclass
-class SCSymbolType(SCMonomorphicType): ...
+class SCU256Type(SCIntegralType):
+    @staticmethod
+    def _range() -> tuple[int, int]:
+        return 0, (2**256) - 1
+
+    @staticmethod
+    def _val_class() -> type[SCU256]:
+        return SCU256
+
+
+@dataclass
+class SCSymbolType(SCMonomorphicType):
+    def strategy(self) -> SearchStrategy:
+        return strategies.text(
+            alphabet='_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', max_size=32
+        ).map(SCSymbol)
 
 
 @dataclass
@@ -104,6 +251,9 @@ class SCVecType(SCType):
     @classmethod
     def _from_dict(cls: type[SCVecType], d: dict[str, Any]) -> SCVecType:
         return SCVecType(SCType.from_dict(d['element']))
+
+    def strategy(self) -> SearchStrategy:
+        return strategies.lists(elements=self.element.strategy()).map(tuple).map(SCVec)
 
 
 @dataclass
@@ -120,3 +270,6 @@ class SCMapType(SCType):
         key = SCType.from_dict(d['key'])
         value = SCType.from_dict(d['value'])
         return SCMapType(key, value)
+
+    def strategy(self) -> SearchStrategy:
+        return strategies.dictionaries(keys=self.key.strategy(), values=self.value.strategy()).map(SCMap)
