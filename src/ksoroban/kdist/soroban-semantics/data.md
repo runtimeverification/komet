@@ -1,3 +1,4 @@
+# Host Data Types
 
 [Documentation - Host Value Type](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#host-value-type)
 
@@ -15,9 +16,35 @@ module HOST-OBJECT-SYNTAX
 
 [Documentation: ScVal](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#scval)
 
-`ScVal` is a union of various datatypes used in the context of smart contracts for passing values to and from contracts and
-storing data on the host side.
+`ScVal` is a union of various datatypes used in the context of smart contracts for passing values to and from contracts
+and storing data on the host side.
+It combines elements from Stellar XDR’s `ScVal` and the Soroban Rust environment’s `HostObject` type (_Stellar XDR_ is
+the data format storing and communicating blockchain data).
 
+* [Stellar XDR - `ScVal`](https://github.com/stellar/stellar-xdr/blob/78ef9860777bd53e75a8ce8b978131cade26b321/Stellar-contract.x#L214)
+* [Soroban Environment - `HostObject`](https://github.com/stellar/rs-soroban-env/blob/00ddd2714e757d0005bfc98798f05aa209f283bf/soroban-env-host/src/host_object.rs#L22)
+
+There are notable differences between XDR’s `ScVal` and Rust’s `HostObject`:
+
+* Data Representation: XDR `ScVal` and Rust `HostObject` differ in their data representation and storage.
+  XDR’s `ScVal` is recursive on container types such as map and vector, meaning it stores `ScVal`s as both keys and
+  values within vectors and maps, allowing for nested data structures. In contrast, `HostObject` uses `HostVal` in
+  container types, which requires resolving the corresponding host objects when accessing these values. 
+* Containers: XDR uses sorted vectors of key-value pairs for maps with binary search for lookups. The Rust environment
+  also uses a sorted vector but stores `HostVal` within these containers. Our semantics, however, use `Map` instead for
+  efficient lookup and simpler implementation.
+
+In our semantic implementation, `ScVal` is utilized to represent both XDR `ScVal` and Rust `HostObject`, adapting to
+various contexts:
+
+* Inside the Host:
+  * `ScVec`: Represented as a `List` of `HostVal`
+  * `ScMap`: Represented as a `Map` from `ScVal` to `HostVal`.
+    Using `ScVal` as keys allows for more efficient lookups because it avoids the additional layer of indirection that
+    would be required if `HostVal` were used.
+* Outside the Host:
+  * `ScVec`: Represented as a `List` of `ScVal`.
+  * `ScVec`: Represented as a `Map` from `ScVal` to `ScVal`.
 
 ```k
     syntax ScVal
