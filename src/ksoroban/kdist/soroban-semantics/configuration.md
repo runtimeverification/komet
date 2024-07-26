@@ -181,7 +181,9 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
     // recursively allocate map values.
     rule [allocObject-map]:
         <k> allocObject(ScMap(ITEMS))
-         => allocObjects(values(ITEMS))
+        // Using `lookupMany` with `keys_list` instead of `values`
+        // to ensure the order of values matches the order of keys.
+         => allocObjects(lookupMany(ITEMS, keys_list(ITEMS), 0)) 
          ~> allocObjectMapAux(keys_list(ITEMS))
             ...
         </k>
@@ -311,6 +313,16 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
  // -------------------------------------------------------------------------------------
     rule take(N, X : S) => ListItem(X) take(N -Int 1, S)    requires N >Int 0
     rule take(_,     _) => .List                            [owise]
+```
+
+- `lookupMany`: Retrieve values for multiple keys from a map. Return the specified default value for missing keys.
+
+```k
+    syntax List ::= lookupMany(Map, List, KItem)   [function, total]
+ // ----------------------------------------------------------------
+    rule lookupMany(M, ListItem(A) REST, D) => ListItem(M [ A ] orDefault D) lookupMany(M, REST, D)
+    rule lookupMany(_, _,                _) => .List
+        [owise]
 ```
 
 ## Call result handling

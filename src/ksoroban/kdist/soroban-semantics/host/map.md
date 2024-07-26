@@ -105,14 +105,8 @@ The function returns a `HostVal` pointing to the new map object.
 
 ## Helpers
 
-- `lookupMany`: Retrieve values for multiple keys from a map. Return the specified default value for missing keys.
 
 ```k
-    syntax List ::= lookupMany(Map, List, KItem)   [function, total]
- // ----------------------------------------------------------------
-    rule lookupMany(M, ListItem(A) REST, D) => ListItem(M [ A ] orDefault D) lookupMany(M, REST, D)
-    rule lookupMany(_, _,                _) => .List
-        [owise]
 
     syntax List ::= Bytes2U32List(Bytes)    [function, total, symbol(Bytes2U32List)]
  // --------------------------------------------------------------------------------
