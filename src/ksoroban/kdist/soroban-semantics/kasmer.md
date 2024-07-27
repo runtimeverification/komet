@@ -45,7 +45,7 @@ module KASMER
     rule [load-program]:
         <program> (_S:Step _SS:Steps) #as PGM => .Steps </program>
         <k> _ => PGM </k>
-        
+
     rule [steps-empty]:
         <k> .Steps => .K </k>
         <instrs> .K </instrs>
@@ -75,7 +75,7 @@ module KASMER
 
     rule [setAccount-new]:
         <k> setAccount(ADDR, BAL) => .K ... </k>
-        ( .Bag => 
+        ( .Bag =>
           <account>
             <accountId> ADDR </accountId>
             <balance> BAL </balance>
@@ -125,7 +125,7 @@ module KASMER
  // -------------------------------------------------------------------------------------------------------
     rule [callContractFromStack]:
         <k> callContractFromStack(FROM, TO, FUNC) => callContract(FROM, TO, FUNC, ARGS) ... </k>
-        <hostStack> ScVec(ARGS) : S => S </hostStack>
+        <hostStack> ARGS : S => S </hostStack>
 
  // --------------------------------------------------------------------------------------------------------------
     rule [callTx]:
