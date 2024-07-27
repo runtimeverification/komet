@@ -6,12 +6,27 @@ from typing import TYPE_CHECKING
 
 from hypothesis import strategies
 
+from .kast.syntax import (
+    sc_bool,
+    sc_i32,
+    sc_i64,
+    sc_i128,
+    sc_i256,
+    sc_map,
+    sc_symbol,
+    sc_u32,
+    sc_u64,
+    sc_u128,
+    sc_u256,
+    sc_vec,
+)
 from .utils import KSorobanError
 
 if TYPE_CHECKING:
     from typing import Any, Final, TypeVar
 
     from hypothesis.strategies import SearchStrategy
+    from pyk.kast.inner import KInner
 
     SCT = TypeVar('SCT', bound='SCType')
 
@@ -19,12 +34,17 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class SCValue(ABC): ...
+class SCValue(ABC):
+    @abstractmethod
+    def to_kast(self) -> KInner: ...
 
 
 @dataclass(frozen=True)
 class SCBool(SCValue):
     val: bool
+
+    def to_kast(self) -> KInner:
+        return sc_bool(self.val)
 
 
 @dataclass(frozen=True)
@@ -33,50 +53,75 @@ class SCIntegral(SCValue):
 
 
 @dataclass(frozen=True)
-class SCI32(SCIntegral): ...
+class SCI32(SCIntegral):
+    def to_kast(self) -> KInner:
+        return sc_i32(self.val)
 
 
 @dataclass(frozen=True)
-class SCI64(SCIntegral): ...
+class SCI64(SCIntegral):
+    def to_kast(self) -> KInner:
+        return sc_i64(self.val)
 
 
 @dataclass(frozen=True)
-class SCI128(SCIntegral): ...
+class SCI128(SCIntegral):
+    def to_kast(self) -> KInner:
+        return sc_i128(self.val)
 
 
 @dataclass(frozen=True)
-class SCI256(SCIntegral): ...
+class SCI256(SCIntegral):
+    def to_kast(self) -> KInner:
+        return sc_i256(self.val)
 
 
 @dataclass(frozen=True)
-class SCU32(SCIntegral): ...
+class SCU32(SCIntegral):
+    def to_kast(self) -> KInner:
+        return sc_u32(self.val)
 
 
 @dataclass(frozen=True)
-class SCU64(SCIntegral): ...
+class SCU64(SCIntegral):
+    def to_kast(self) -> KInner:
+        return sc_u64(self.val)
 
 
 @dataclass(frozen=True)
-class SCU128(SCIntegral): ...
+class SCU128(SCIntegral):
+    def to_kast(self) -> KInner:
+        return sc_u128(self.val)
 
 
 @dataclass(frozen=True)
-class SCU256(SCIntegral): ...
+class SCU256(SCIntegral):
+    def to_kast(self) -> KInner:
+        return sc_u256(self.val)
 
 
 @dataclass(frozen=True)
 class SCSymbol(SCValue):
     val: str
 
+    def to_kast(self) -> KInner:
+        return sc_symbol(self.val)
+
 
 @dataclass(frozen=True)
 class SCVec(SCValue):
     val: tuple[SCValue]
 
+    def to_kast(self) -> KInner:
+        return sc_vec((v.to_kast() for v in self.val))
+
 
 @dataclass(frozen=True)
 class SCMap(SCValue):
     val: dict[SCValue, SCValue]
+
+    def to_kast(self) -> KInner:
+        return sc_map(((k.to_kast(), v.to_kast()) for k, v in self.val.items()))
 
 
 # SCTypes
