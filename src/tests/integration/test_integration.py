@@ -43,3 +43,13 @@ def test_ksoroban(contract_path: Path, tmp_path: Path, kasmer: Kasmer) -> None:
             kasmer.deploy_and_run(contract_wasm)
     else:
         kasmer.deploy_and_run(contract_wasm)
+
+
+def test_bindings(tmp_path: Path, kasmer: Kasmer) -> None:
+    # Given
+    contract_path = SOROBAN_CONTRACTS_DIR / 'valtypes'
+    contract_wasm = kasmer.build_soroban_contract(contract_path, tmp_path)
+
+    # Then
+    # Just run this and make sure it doesn't throw an error
+    kasmer.contract_bindings(contract_wasm)

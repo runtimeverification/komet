@@ -74,7 +74,6 @@ class Kasmer:
         bindings_list = json.loads(proc_res.stdout)
         bindings = []
         for binding_dict in bindings_list:
-            # TODO: Properly read and store the type information in the bindings (ie. type parameters for vecs, tuples, etc.)
             if binding_dict['type'] != 'function':
                 continue
             name = binding_dict['name']
