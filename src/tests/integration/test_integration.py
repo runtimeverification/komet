@@ -1,4 +1,5 @@
 from pathlib import Path
+from subprocess import CalledProcessError
 
 import pytest
 from pyk.kdist import kdist
@@ -37,4 +38,8 @@ def test_ksoroban(contract_path: Path, tmp_path: Path, kasmer: Kasmer) -> None:
     contract_wasm = kasmer.build_soroban_contract(contract_path, tmp_path)
 
     # Then
-    kasmer.deploy_and_run(contract_wasm)
+    if contract_path.stem.endswith('_fail'):
+        with pytest.raises(CalledProcessError):
+            kasmer.deploy_and_run(contract_wasm)
+    else:
+        kasmer.deploy_and_run(contract_wasm)
