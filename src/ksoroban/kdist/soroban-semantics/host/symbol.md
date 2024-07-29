@@ -28,6 +28,7 @@ module HOST-SYMBOL
 
 
     syntax InternalInstr ::= "symbolNewFromLinearMemory"      [symbol(symbolNewFromLinearMemory)]
+ // ---------------------------------------------------------------------------------
     rule [symbolNewFromLinearMemory]:
         <instrs> symbolNewFromLinearMemory
               => allocObject(Symbol(Bytes2String(BS)))
@@ -36,5 +37,12 @@ module HOST-SYMBOL
         </instrs>
         <hostStack> BS:Bytes : S => S </hostStack>
       requires validSymbol(Bytes2String(BS))
+
+    syntax InternalInstr ::= "mkSymbolFromStack"   [symbol(mkSymbolFromStack)]
+ // ---------------------------------------------------------------------------------
+    rule [mkSymbolFromStack]:
+        <instrs> mkSymbolFromStack => .K ... </instrs>
+        <hostStack> (BS => Symbol(Bytes2String(BS))) : _ </hostStack>
+
 endmodule
 ```
