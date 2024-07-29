@@ -8,8 +8,12 @@ uploadWasm( b"test-wasm",
 ;; #[contract]
 ;; pub struct IncrementContract;
 
+;; // To enable the `kasmer_set_ledger_sequence` cheatcode, we first need to declare it as an extern function
+;; // The function will appear as an import from the "env" module
+;; //
+;; //   (import "env" "kasmer_set_ledger_sequence" (func $kasmer_set_ledger_sequence (param i64)))
+;; //
 ;; extern "C" {
-;;     // (import "env" "kasmer_set_ledger_sequence" (func $kasmer_set_ledger_sequence (param i64)))
 ;;     fn kasmer_set_ledger_sequence(x : u64);
 ;; }
 

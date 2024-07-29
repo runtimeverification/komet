@@ -42,6 +42,13 @@ module CONFIG
           </account>
         </accounts>
         <contractCodes> .Map </contractCodes>
+```
+
+- `ledgerSequenceNumber`: The current block (or "ledger" in Stellar) number.
+    Accessible to contracts via the `get_ledger_sequence` host function.
+    Set externally using `kasmer_set_ledger_sequence`.
+
+```k
         <ledgerSequenceNumber> 0 </ledgerSequenceNumber>
         <logging> .List </logging>
       </soroban>
