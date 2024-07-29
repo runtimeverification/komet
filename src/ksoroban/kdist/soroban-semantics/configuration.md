@@ -42,6 +42,7 @@ module CONFIG
           </account>
         </accounts>
         <contractCodes> .Map </contractCodes>
+        <ledgerSequenceNumber> 0 </ledgerSequenceNumber>
         <logging> .List </logging>
       </soroban>
 
