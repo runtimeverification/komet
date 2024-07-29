@@ -43,7 +43,7 @@ def deploy_contract(from_addr: bytes, address: bytes, wasm_hash: bytes, args: li
     return KApply('deployContract', [account_id(from_addr), contract_id(address), token(wasm_hash), list_of(args)])
 
 
-def call_tx(from_addr: KInner, to_addr: KInner, func: str, args: list[KInner], result: KInner) -> KInner:
+def call_tx(from_addr: KInner, to_addr: KInner, func: str, args: Iterable[KInner], result: KInner) -> KInner:
     return KApply('callTx', [from_addr, to_addr, wasm_string(func), list_of(args), result])
 
 
