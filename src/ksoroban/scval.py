@@ -113,7 +113,7 @@ class SCVec(SCValue):
     val: tuple[SCValue]
 
     def to_kast(self) -> KInner:
-        return sc_vec((v.to_kast() for v in self.val))
+        return sc_vec(v.to_kast() for v in self.val)
 
 
 @dataclass(frozen=True)
