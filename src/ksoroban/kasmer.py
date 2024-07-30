@@ -39,15 +39,15 @@ if TYPE_CHECKING:
     from pyk.kast.inner import KInner
     from pyk.kore.syntax import Pattern
 
-    from .utils import SorobanDefinitionInfo
+    from .utils import SorobanDefinition
 
 
 class Kasmer:
     """Reads soroban contracts, and runs tests for them."""
 
-    definition: SorobanDefinitionInfo
+    definition: SorobanDefinition
 
-    def __init__(self, definition: SorobanDefinitionInfo) -> None:
+    def __init__(self, definition: SorobanDefinition) -> None:
         self.definition = definition
 
     def _which(self, cmd: str) -> Path:

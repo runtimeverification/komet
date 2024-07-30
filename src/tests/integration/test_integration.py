@@ -6,7 +6,7 @@ from pyk.kdist import kdist
 from pyk.ktool.krun import _krun
 
 from ksoroban.kasmer import Kasmer
-from ksoroban.utils import SorobanDefinitionInfo
+from ksoroban.utils import SorobanDefinition
 
 TEST_DATA = (Path(__file__).parent / 'data').resolve(strict=True)
 TEST_FILES = TEST_DATA.glob('*.wast')
@@ -18,12 +18,12 @@ DEFINITION_DIR = kdist.get('soroban-semantics.llvm')
 
 
 @pytest.fixture
-def soroban_definition() -> SorobanDefinitionInfo:
-    return SorobanDefinitionInfo(DEFINITION_DIR)
+def soroban_definition() -> SorobanDefinition:
+    return SorobanDefinition(DEFINITION_DIR)
 
 
 @pytest.fixture
-def kasmer(soroban_definition: SorobanDefinitionInfo) -> Kasmer:
+def kasmer(soroban_definition: SorobanDefinition) -> Kasmer:
     return Kasmer(soroban_definition)
 
 

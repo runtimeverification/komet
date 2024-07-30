@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class KSorobanError(RuntimeError): ...
 
 
-class SorobanDefinitionInfo:
+class SorobanDefinition:
     """Anything related to the Soroban K definition goes here."""
 
     definition_info: DefinitionInfo
@@ -58,5 +58,5 @@ class SorobanDefinitionInfo:
         return self.krun.run_process(kore_term, **kwargs)
 
 
-llvm_definition = SorobanDefinitionInfo(kdist.get('soroban-semantics.llvm'))
-haskell_definition = SorobanDefinitionInfo(kdist.get('soroban-semantics.haskell'))
+llvm_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm'))
+haskell_definition = SorobanDefinition(kdist.get('soroban-semantics.haskell'))
