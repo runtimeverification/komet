@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from pyk.kast.outer import KDefinition
 
 
+class KSorobanError(RuntimeError): ...
+
+
 class SorobanDefinitionInfo:
     """Anything related to the Soroban K definition goes here."""
 
