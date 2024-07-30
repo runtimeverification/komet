@@ -15,7 +15,7 @@ from pyk.ktool.krun import _krun
 from pykwasm.scripts.preprocessor import preprocess
 
 from .kasmer import Kasmer
-from .utils import SorobanDefinitionInfo
+from .utils import llvm_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -68,9 +68,7 @@ def _exec_test(*, wasm: Path | None) -> None:
 
     Exits successfully when all the tests pass.
     """
-    definition_dir = kdist.get('soroban-semantics.llvm')
-    definition_info = SorobanDefinitionInfo(definition_dir)
-    kasmer = Kasmer(definition_info)
+    kasmer = Kasmer(llvm_definition)
 
     if wasm is None:
         # We build the contract here, specifying where it's saved so we know where to find it.

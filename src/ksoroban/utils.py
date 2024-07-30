@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from pyk.kast.outer import read_kast_definition
+from pyk.kdist import kdist
 from pyk.konvert import kast_to_kore
 from pyk.ktool.kompile import DefinitionInfo
 from pyk.ktool.krun import KRun
@@ -55,3 +56,7 @@ class SorobanDefinitionInfo:
         """
         kore_term = kast_to_kore(self.kdefinition, pgm, sort=sort)
         return self.krun.run_process(kore_term, **kwargs)
+
+
+llvm_definition = SorobanDefinitionInfo(kdist.get('soroban-semantics.llvm'))
+haskell_definition = SorobanDefinitionInfo(kdist.get('soroban-semantics.haskell'))
