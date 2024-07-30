@@ -31,6 +31,7 @@ from .kast.syntax import (
     upload_wasm,
 )
 from .scval import SCType
+from .utils import llvm_definition
 
 if TYPE_CHECKING:
     from typing import Any
@@ -121,7 +122,8 @@ class Kasmer:
         """Get a kast term from a wasm program."""
         return wasm2kast(open(wasm, 'rb'))
 
-    def deploy_test(self, contract: KInner) -> tuple[KInner, dict[str, KInner]]:
+    @staticmethod
+    def deploy_test(contract: KInner) -> tuple[KInner, dict[str, KInner]]:
         """Takes a wasm soroban contract as a kast term and deploys it in a fresh configuration.
 
         Returns:
@@ -140,9 +142,9 @@ class Kasmer:
         )
 
         # Run the steps and grab the resulting config as a starting place to call transactions
-        proc_res = self.definition.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
+        proc_res = llvm_definition.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
         kore_result = KoreParser(proc_res.stdout).pattern()
-        kast_result = kore_to_kast(self.definition.kdefinition, kore_result)
+        kast_result = kore_to_kast(llvm_definition.kdefinition, kore_result)
 
         conf, subst = split_config_from(kast_result)
 
