@@ -45,10 +45,10 @@ if TYPE_CHECKING:
 class Kasmer:
     """Reads soroban contracts, and runs tests for them."""
 
-    definition_info: SorobanDefinitionInfo
+    definition: SorobanDefinitionInfo
 
-    def __init__(self, definition_info: SorobanDefinitionInfo) -> None:
-        self.definition_info = definition_info
+    def __init__(self, definition: SorobanDefinitionInfo) -> None:
+        self.definition = definition
 
     def _which(self, cmd: str) -> Path:
         path_str = shutil.which(cmd)
@@ -140,9 +140,9 @@ class Kasmer:
         )
 
         # Run the steps and grab the resulting config as a starting place to call transactions
-        proc_res = self.definition_info.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
+        proc_res = self.definition.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
         kore_result = KoreParser(proc_res.stdout).pattern()
-        kast_result = kore_to_kast(self.definition_info.kdefinition, kore_result)
+        kast_result = kore_to_kast(self.definition.kdefinition, kore_result)
 
         conf, subst = split_config_from(kast_result)
 
@@ -162,18 +162,16 @@ class Kasmer:
 
         def make_steps(*args: KInner) -> Pattern:
             steps_kast = steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
-            return kast_to_kore(self.definition_info.kdefinition, steps_kast, KSort('Steps'))
+            return kast_to_kore(self.definition.kdefinition, steps_kast, KSort('Steps'))
 
         subst['PROGRAM_CELL'] = KVariable('STEPS')
         template_config = Subst(subst).apply(conf)
-        template_config_kore = kast_to_kore(
-            self.definition_info.kdefinition, template_config, KSort('GeneratedTopCell')
-        )
+        template_config_kore = kast_to_kore(self.definition.kdefinition, template_config, KSort('GeneratedTopCell'))
 
         steps_strategy = binding.strategy.map(lambda args: make_steps(*args))
         template_subst = {EVar('VarSTEPS', SortApp('SortSteps')): steps_strategy}
 
-        fuzz(self.definition_info.path, template_config_kore, template_subst, check_exit_code=True)
+        fuzz(self.definition.path, template_config_kore, template_subst, check_exit_code=True)
 
     def deploy_and_run(self, contract_wasm: Path) -> None:
         """Run all of the tests in a soroban test contract.
