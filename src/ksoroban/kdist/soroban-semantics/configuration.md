@@ -276,6 +276,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
 
 ### Accessing host objects
 
+- loadObject: Load a host object from `<hostObjects>` to `<hostStack>`
 
 ```k
     syntax InternalInstr ::= loadObject(HostVal)    [symbol(loadObject)]
@@ -306,6 +307,26 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
       requires notBool isObject(VAL)
        andBool fromSmallValid(VAL)
 
+```
+
+- loadObjectFull: Like `loadObject` but resolves all `HostVal`s in containers recursively using `HostVal2ScValRec`
+
+```k
+    syntax InternalInstr ::= loadObjectFull(HostVal)    [symbol(loadObjectFull)]
+                           | "loadObjectFullAux"
+ // --------------------------------------------------------------------
+    rule [loadObjectFull]:
+        <instrs> loadObjectFull(VAL)
+              => loadObject(VAL)
+              ~> loadObjectFullAux
+                 ...
+        </instrs>
+
+    rule [loadObjectFullAux]:
+        <instrs> loadObjectFullAux => .K ... </instrs>
+        <hostStack> (SCV => HostVal2ScValRec(SCV, OBJS, RELS)) : _ </hostStack>
+        <relativeObjects> RELS </relativeObjects>
+        <hostObjects>     OBJS </hostObjects>
 
 ```
 
