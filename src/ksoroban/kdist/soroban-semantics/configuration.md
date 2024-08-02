@@ -32,7 +32,19 @@ module CONFIG
           <contract multiplicity="*" type="Map">
             <contractId> Contract(.Bytes) </contractId>
             <wasmHash> .Bytes </wasmHash>
-            <instanceStorage> .Map </instanceStorage>
+```
+
+- `instanceStorage`: Instance storage is a map from user-provided keys (ScVal) to values (ScVal), and it is tied to the
+    contract's lifecycle.
+    If the value is a container (e.g., map or vector), the contained values must also be `ScVal`, not `HostVal`.
+    Therefore, before storing data, all `HostVal`s in the data should be resolved to `ScVal`s.
+    Other storage types (persistent and temporary) are stored separately in `<contractData>`.
+    
+    - [Stellar Docs](https://developers.stellar.org/docs/learn/encyclopedia/storage/persisting-data#ledger-entries)
+    - [CAP 46-05: Instance Storage](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-05.md#instance-storage)
+
+```k
+            <instanceStorage> .Map </instanceStorage> // Map of ScVal to ScVal
           </contract>
         </contracts>
         <accounts>
@@ -41,6 +53,13 @@ module CONFIG
             <balance> 0 </balance>
           </account>
         </accounts>
+```
+- `contractData`: Stores persistent and temporary storage items separately from the contract instances.
+    The storage entries are identified by `(ContractId, Durability, ScVal)` and contain values of type `ScVal`.
+    Keys and values must be fully resolved `ScVal`s as in `<instanceStorage>`.
+
+```k
+        <contractData> .Map </contractData> // Map of StorageKey to ScVal
         <contractCodes> .Map </contractCodes>
 ```
 
@@ -58,6 +77,14 @@ module CONFIG
 
 
     syntax InternalCmd ::= #callResult(ValStack, List)   [symbol(#callResult)]
+
+    syntax Durability ::= "#temporary"           [symbol(#temporary)]
+                        | "#persistent"          [symbol(#persistent)]
+
+    syntax StorageType ::= Durability
+                         | "#instance"           [symbol(#instance)]
+
+    syntax StorageKey ::= #skey( ContractId , Durability , ScVal )   [symbol(StorageKey)]
 
 endmodule
 ```
@@ -131,25 +158,27 @@ These internal commands manages the call stack when calling and returning from a
     syntax AccountsCellFragment
     syntax ContractsCellFragment
 
-    syntax Accounts ::= "{" AccountsCellFragment "," ContractsCellFragment "}"
+    syntax Accounts ::= "{" AccountsCellFragment "," ContractsCellFragment "," Map "}"
  // --------------------------------------------------------
 
     syntax InternalCmd ::= "pushWorldState"  [symbol(pushWorldState)]
  // ---------------------------------------
     rule [pushWorldState]:
          <k> pushWorldState => .K ... </k>
-         <interimStates> (.List => ListItem({ ACCTDATA , CONTRACTS })) ... </interimStates>
+         <interimStates> (.List => ListItem({ ACCTDATA , CONTRACTS , CTRDATA })) ... </interimStates>
          <contracts> CONTRACTS </contracts>
          <accounts> ACCTDATA </accounts>
+         <contractData> CTRDATA </contractData>
       [priority(60)]
 
     syntax InternalCmd ::= "popWorldState"  [symbol(popWorldState)]
  // --------------------------------------
     rule [popWorldState]:
          <k> popWorldState => .K ... </k>
-         <interimStates> (ListItem({ ACCTDATA , CONTRACTS }) => .List) ... </interimStates>
+         <interimStates> (ListItem({ ACCTDATA , CONTRACTS , CTRDATA }) => .List) ... </interimStates>
          <contracts> _ =>  CONTRACTS </contracts>
          <accounts> _ => ACCTDATA </accounts>
+         <contractData> _ => CTRDATA </contractData>
       [priority(60)]
 
     syntax InternalCmd ::= "dropWorldState"  [symbol(dropWorldState)]
@@ -276,6 +305,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
 
 ### Accessing host objects
 
+- loadObject: Load a host object from `<hostObjects>` to `<hostStack>`
 
 ```k
     syntax InternalInstr ::= loadObject(HostVal)    [symbol(loadObject)]
@@ -306,6 +336,26 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
       requires notBool isObject(VAL)
        andBool fromSmallValid(VAL)
 
+```
+
+- loadObjectFull: Like `loadObject` but resolves all `HostVal`s in containers recursively using `HostVal2ScValRec`
+
+```k
+    syntax InternalInstr ::= loadObjectFull(HostVal)    [symbol(loadObjectFull)]
+                           | "loadObjectFullAux"
+ // --------------------------------------------------------------------
+    rule [loadObjectFull]:
+        <instrs> loadObjectFull(VAL)
+              => loadObject(VAL)
+              ~> loadObjectFullAux
+                 ...
+        </instrs>
+
+    rule [loadObjectFullAux]:
+        <instrs> loadObjectFullAux => .K ... </instrs>
+        <hostStack> (SCV => HostVal2ScValRec(SCV, OBJS, RELS)) : _ </hostStack>
+        <relativeObjects> RELS </relativeObjects>
+        <hostObjects>     OBJS </hostObjects>
 
 ```
 
