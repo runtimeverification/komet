@@ -12,10 +12,11 @@ from pyk.cli.utils import file_path
 from pyk.kdist import kdist
 from pyk.ktool.kprint import KAstOutput, _kast
 from pyk.ktool.krun import _krun
+from pyk.utils import ensure_dir_path
 from pykwasm.scripts.preprocessor import preprocess
 
 from .kasmer import Kasmer
-from .utils import llvm_definition
+from .utils import haskell_definition, llvm_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -38,6 +39,9 @@ def main() -> None:
     elif args.command == 'test':
         wasm = Path(args.wasm.name) if args.wasm is not None else None
         _exec_test(wasm=wasm)
+    elif args.command == 'prove':
+        wasm = Path(args.wasm.name) if args.wasm is not None else None
+        _exec_prove(wasm=wasm, proof_dir=args.proof_dir)
 
     raise AssertionError()
 
@@ -81,6 +85,17 @@ def _exec_test(*, wasm: Path | None) -> None:
     sys.exit(0)
 
 
+def _exec_prove(*, wasm: Path | None, proof_dir: Path | None) -> None:
+    kasmer = Kasmer(haskell_definition)
+
+    if wasm is None:
+        wasm = kasmer.build_soroban_contract(Path.cwd())
+
+    kasmer.deploy_and_run(wasm, proof_dir)
+
+    sys.exit(0)
+
+
 @contextmanager
 def _preprocessed(program: Path) -> Iterator[Path]:
     program_text = program.read_text()
@@ -111,6 +126,10 @@ def _argument_parser() -> ArgumentParser:
 
     test_parser = command_parser.add_parser('test', help='Test the soroban contract in the current working directory')
     test_parser.add_argument('--wasm', type=FileType('r'), help='Test a specific contract wasm file instead')
+
+    test_parser = command_parser.add_parser('prove', help='Test the soroban contract in the current working directory')
+    test_parser.add_argument('--wasm', type=FileType('r'), help='Test a specific contract wasm file instead')
+    test_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
 
     return parser
 

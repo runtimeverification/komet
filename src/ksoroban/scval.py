@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from hypothesis import strategies
+from pyk.kast.inner import KApply, KSort, KVariable
+from pyk.prelude.kint import leInt
+from pyk.prelude.utils import token
 
 from .kast.syntax import (
     sc_bool,
@@ -161,6 +164,10 @@ class SCType(ABC):
     @abstractmethod
     def strategy(self) -> SearchStrategy: ...
 
+    @classmethod
+    @abstractmethod
+    def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]: ...
+
 
 @dataclass
 class SCMonomorphicType(SCType):
@@ -173,6 +180,10 @@ class SCMonomorphicType(SCType):
 class SCBoolType(SCMonomorphicType):
     def strategy(self) -> SearchStrategy:
         return strategies.booleans().map(SCBool)
+
+    @classmethod
+    def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
+        return KApply('SCVal:Bool', [KVariable(name, KSort('Bool'))]), ()
 
 
 @dataclass
@@ -188,6 +199,15 @@ class SCIntegralType(SCMonomorphicType):
     def strategy(self) -> SearchStrategy:
         min, max = self._range()
         return strategies.integers(min_value=min, max_value=max).map(self._val_class())
+
+    @classmethod
+    def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
+        var = KVariable(name, KSort('Int'))
+        label = f'SCVal:{cls.__name__[2:-4]}'
+        k = KApply(label, [var])
+        min, max = cls._range()
+        constraints = (leInt(token(min), var), leInt(var, token(max)))
+        return k, constraints
 
 
 @dataclass
@@ -285,6 +305,10 @@ class SCSymbolType(SCMonomorphicType):
             alphabet='_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', max_size=32
         ).map(SCSymbol)
 
+    @classmethod
+    def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
+        return KApply('SCVal:Symbol', [KVariable(name, KSort('String'))]), ()
+
 
 @dataclass
 class SCVecType(SCType):
@@ -299,6 +323,10 @@ class SCVecType(SCType):
 
     def strategy(self) -> SearchStrategy:
         return strategies.lists(elements=self.element.strategy()).map(tuple).map(SCVec)
+
+    @classmethod
+    def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
+        return KApply('SCVal:Vec', [KVariable(name, KSort('List'))]), ()
 
 
 @dataclass
@@ -318,3 +346,7 @@ class SCMapType(SCType):
 
     def strategy(self) -> SearchStrategy:
         return strategies.dictionaries(keys=self.key.strategy(), values=self.value.strategy()).map(SCMap)
+
+    @classmethod
+    def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
+        return KApply('SCVal:Map', [KVariable(name, KSort('Map'))]), ()

@@ -9,17 +9,22 @@ from tempfile import mkdtemp
 from typing import TYPE_CHECKING
 
 from hypothesis import strategies
+from pyk.cterm import CTerm, cterm_build_claim
 from pyk.kast.inner import KSort, KVariable
 from pyk.kast.manip import Subst, split_config_from
 from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.kore.syntax import EVar, SortApp
 from pyk.ktool.kfuzz import fuzz
+from pyk.ktool.kompile import KompileBackend
 from pyk.ktool.krun import KRunOutput
+from pyk.prelude.ml import mlEqualsTrue
+from pyk.prelude.utils import token
 from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
 
 from .kast.syntax import (
+    STEPS_TERMINATOR,
     account_id,
     call_tx,
     contract_id,
@@ -30,6 +35,7 @@ from .kast.syntax import (
     steps_of,
     upload_wasm,
 )
+from .proof import run_claim
 from .scval import SCType
 from .utils import llvm_definition
 
@@ -175,7 +181,35 @@ class Kasmer:
 
         fuzz(self.definition.path, template_config_kore, template_subst, check_exit_code=True)
 
-    def deploy_and_run(self, contract_wasm: Path) -> None:
+    def run_prove(
+        self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding, proof_dir: Path | None = None
+    ) -> None:
+        from_acct = account_id(b'test-account')
+        to_acct = contract_id(b'test-contract')
+        name = binding.name
+        result = sc_bool(True)
+
+        def make_steps(*args: KInner) -> KInner:
+            return steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
+
+        vars, ctrs = binding.symbolic_args()
+
+        lhs_subst = subst.copy()
+        lhs_subst['PROGRAM_CELL'] = make_steps(*vars)
+        lhs = CTerm(Subst(lhs_subst).apply(conf), [mlEqualsTrue(c) for c in ctrs])
+
+        rhs_subst = subst.copy()
+        rhs_subst['PROGRAM_CELL'] = STEPS_TERMINATOR
+        rhs_subst['EXITCODE_CELL'] = token(0)
+        del rhs_subst['LOGGING_CELL']
+        rhs = CTerm(Subst(rhs_subst).apply(conf))
+
+        claim, _ = cterm_build_claim(binding.name, lhs, rhs)
+
+        proof = run_claim(binding.name, claim, proof_dir)
+        print(proof.summary)
+
+    def deploy_and_run(self, contract_wasm: Path, proof_dir: Path | None = None) -> None:
         """Run all of the tests in a soroban test contract.
 
         Args:
@@ -192,7 +226,11 @@ class Kasmer:
         for binding in bindings:
             if not binding.name.startswith('test_'):
                 continue
-            self.run_test(conf, subst, binding)
+            backend = self.definition.backend
+            if backend == KompileBackend.LLVM:
+                self.run_test(conf, subst, binding)
+            elif backend == KompileBackend.HASKELL:
+                self.run_prove(conf, subst, binding, proof_dir)
 
 
 @dataclass(frozen=True)
@@ -206,3 +244,12 @@ class ContractBinding:
     @cached_property
     def strategy(self) -> SearchStrategy[tuple[KInner, ...]]:
         return strategies.tuples(*(arg.strategy().map(lambda x: x.to_kast()) for arg in self.inputs))
+
+    def symbolic_args(self) -> tuple[tuple[KInner, ...], tuple[KInner, ...]]:
+        args: tuple[KInner, ...] = ()
+        constraints: tuple[KInner, ...] = ()
+        for i, arg in enumerate(self.inputs):
+            v, c = arg.as_var(f'ARG_{i}')
+            args += (v,)
+            constraints += c
+        return args, constraints

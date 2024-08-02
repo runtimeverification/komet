@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from pyk.kast.inner import KInner, KSort
     from pyk.kast.outer import KDefinition
+    from pyk.ktool.kompile import KompileBackend
 
 
 class KSorobanError(RuntimeError): ...
@@ -32,6 +33,10 @@ class SorobanDefinition:
     @cached_property
     def path(self) -> Path:
         return self.definition_info.path
+
+    @cached_property
+    def backend(self) -> KompileBackend:
+        return self.definition_info.backend
 
     @cached_property
     def kdefinition(self) -> KDefinition:
