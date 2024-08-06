@@ -45,6 +45,12 @@ module CONFIG
 
 ```k
             <instanceStorage> .Map </instanceStorage> // Map of ScVal to ScVal
+```
+
+- `contractLiveUntil`: The ledger sequence number until which the contract instance will live.
+ 
+```k
+            <contractLiveUntil> 0 </contractLiveUntil>
           </contract>
         </contracts>
         <accounts>
@@ -60,7 +66,13 @@ module CONFIG
 
 ```k
         <contractData> .Map </contractData> // Map of StorageKey to ScVal
-        <contractCodes> .Map </contractCodes>
+        <contractCodes>
+          <contractCode multiplicity="*" type="Map">
+            <codeHash>      .Bytes         </codeHash>
+            <codeLiveUntil> 0              </codeLiveUntil>
+            <codeWasm>      #emptyModule() </codeWasm> 
+          </contractCode>
+        </contractCodes>
 ```
 
 - `ledgerSequenceNumber`: The current block (or "ledger" in Stellar) number.
