@@ -130,6 +130,89 @@ module HOST-LEDGER
 
 ```
 
+## extend_current_contract_instance_and_code_ttl
+
+```k
+    rule [hostfun-extend-current-contract-instance-and-code-ttl]:
+        <instrs> hostCall ( "l" , "8" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(EXTEND_TO))
+              ~> loadObject(HostVal(THRESHOLD))
+              ~> extendContractTtl(CONTRACT)
+              ~> loadObject(HostVal(EXTEND_TO))
+              ~> loadObject(HostVal(THRESHOLD))
+              ~> extendContractCodeTtl(CONTRACT)
+              ~> toSmall(Void)
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > THRESHOLD   // U32
+          1 |-> < i64 > EXTEND_TO   // U32
+        </locals>
+        <callee> CONTRACT </callee>
+
+  // If the TTL for the contract is less than `THRESHOLD`, update contractLiveUntil
+  //    where TTL is defined as LIVE_UNTIL - SEQ.
+    syntax InternalInstr ::= extendContractTtl(ContractId)   [symbol(extendContractTtl)]
+ // -------------------------------------------------------------------------------
+    rule [extendContractTtl]:
+        <instrs> extendContractTtl(CONTRACT) => .K ... </instrs>
+        <hostStack> U32(THRESHOLD) : U32(EXTEND_TO) : S => S </hostStack>
+        <contract>
+          <contractId> CONTRACT </contractId>
+          <contractLiveUntil> LIVE_UNTIL => SEQ +Int EXTEND_TO </contractLiveUntil>
+          ...
+        </contract>
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
+      requires LIVE_UNTIL -Int SEQ <Int THRESHOLD
+
+    rule [extendContractTtl-skip]:
+        <instrs> extendContractTtl(CONTRACT) => .K ... </instrs>
+        <hostStack> U32(THRESHOLD) : U32(_EXTEND_TO) : S => S </hostStack>
+        <contract>
+          <contractId> CONTRACT </contractId>
+          <contractLiveUntil> LIVE_UNTIL </contractLiveUntil>
+          ...
+        </contract>
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
+      requires LIVE_UNTIL -Int SEQ >=Int THRESHOLD
+
+    syntax InternalInstr ::= extendContractCodeTtl(ContractId)   [symbol(extendContractCodeTtl)]
+ // --------------------------------------------------------------------------------------------
+    rule [extendContractCodeTtl]:
+        <instrs> extendContractCodeTtl(CONTRACT) => extendCodeTtl(HASH) ... </instrs>
+        <contract>
+          <contractId> CONTRACT </contractId>
+          <wasmHash> HASH </wasmHash>
+          ...
+        </contract>
+
+  // If the TTL for the contract code is less than `THRESHOLD`, update contractLiveUntil
+  //    where TTL is defined as LIVE_UNTIL - SEQ.
+    syntax InternalInstr ::= extendCodeTtl(Bytes)   [symbol(extendCodeTtl)]
+ // -------------------------------------------------------------------------------
+    rule [extendCodeTtl]:
+        <instrs> extendCodeTtl(HASH) => .K ... </instrs>
+        <hostStack> U32(THRESHOLD) : U32(EXTEND_TO) : S => S </hostStack>
+        <contractCode>
+          <codeHash> HASH </codeHash>
+          <codeLiveUntil> LIVE_UNTIL => SEQ +Int EXTEND_TO </codeLiveUntil>
+          ...
+        </contractCode>
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
+      requires LIVE_UNTIL -Int SEQ <Int THRESHOLD
+
+    rule [extendCodeTtl-skip]:
+        <instrs> extendCodeTtl(HASH) => .K ... </instrs>
+        <hostStack> U32(THRESHOLD) : U32(_EXTEND_TO) : S => S </hostStack>
+        <contractCode>
+          <codeHash> HASH </codeHash>
+          <codeLiveUntil> LIVE_UNTIL </codeLiveUntil>
+          ...
+        </contractCode>
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
+      requires LIVE_UNTIL -Int SEQ >=Int THRESHOLD
+```
+
 ## Helpers
 
 ```k
