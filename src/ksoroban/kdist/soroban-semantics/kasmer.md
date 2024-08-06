@@ -2,6 +2,7 @@
 ```k
 requires "soroban.md"
 requires "cheatcodes.md"
+requires "ksoroban-lemmas.md"
 
 module KASMER-SYNTAX
   imports WASM-TEXT-SYNTAX
@@ -33,6 +34,7 @@ module KASMER
     imports SOROBAN
     imports CHEATCODES
     imports KASMER-SYNTAX-COMMON
+    imports KSOROBAN-LEMMAS
 
     configuration
       <kasmer>
