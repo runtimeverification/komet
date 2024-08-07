@@ -38,9 +38,8 @@ def upload_wasm(name: bytes, contract: KInner) -> KInner:
     return KApply('uploadWasm', [token(name), contract])
 
 
-def deploy_contract(from_addr: bytes, address: bytes, wasm_hash: bytes, args: list[KInner] | None = None) -> KInner:
-    args = args if args is not None else []
-    return KApply('deployContract', [account_id(from_addr), contract_id(address), token(wasm_hash), list_of(args)])
+def deploy_contract(from_addr: bytes, address: bytes, wasm_hash: bytes) -> KInner:
+    return KApply('deployContract', [account_id(from_addr), contract_id(address), token(wasm_hash)])
 
 
 def call_tx(from_addr: KInner, to_addr: KInner, func: str, args: Iterable[KInner], result: KInner) -> KInner:
