@@ -19,7 +19,7 @@ module KASMER-SYNTAX-COMMON
     syntax Step ::= setExitCode(Int)                                                                     [symbol(setExitCode)]
                   | setAccount( address: AccountId, balance: Int)                                        [symbol(setAccount)]
                   | uploadWasm(Bytes, ModuleDecl)                                                        [symbol(uploadWasm)]
-                  | deployContract( from: Address, address: ContractId, wasmHash: Bytes, args: List )    [symbol(deployContract)]
+                  | deployContract( from: Address, address: ContractId, wasmHash: Bytes )                [symbol(deployContract)]
                   | callTx( from: Address, to: Address, func: WasmString, args: List, result: ScVal)     [symbol(callTx)]
 
 
@@ -98,7 +98,7 @@ module KASMER
 
  // -----------------------------------------------------------------------------------------------------------------------
     rule [deployContract-existing]:
-        <k> deployContract(_OWNER, ADDR, _WASM_HASH, _ARGS) => #hostTrap ... </k>
+        <k> deployContract(_OWNER, ADDR, _WASM_HASH) => #hostTrap ... </k>
         <contract>
            <contractId> ADDR </contractId>
            ...
@@ -108,12 +108,7 @@ module KASMER
     syntax HostCell
 
     rule [deployContract]:
-        <k> deployContract(OWNER, ADDR, WASM_HASH, ARGS)
-         => allocObjects(ARGS)
-         ~> callContractFromStack(OWNER, ADDR, #quoteUnparseWasmString("init"))
-         ~> #resetHost
-            ...
-        </k>
+        <k> deployContract(_OWNER, ADDR, WASM_HASH) => .K ... </k>
         ( .Bag =>
           <contract>
             <contractId> ADDR </contractId>
