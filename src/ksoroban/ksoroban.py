@@ -18,7 +18,7 @@ from pyk.utils import ensure_dir_path
 from pykwasm.scripts.preprocessor import preprocess
 
 from .kasmer import Kasmer
-from .utils import haskell_definition, llvm_definition
+from .utils import concrete_definition, symbolic_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -78,7 +78,7 @@ def _exec_test(*, wasm: Path | None) -> None:
 
     Exits successfully when all the tests pass.
     """
-    kasmer = Kasmer(llvm_definition)
+    kasmer = Kasmer(concrete_definition)
 
     if wasm is None:
         # We build the contract here, specifying where it's saved so we know where to find it.
@@ -92,7 +92,7 @@ def _exec_test(*, wasm: Path | None) -> None:
 
 
 def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None) -> None:
-    kasmer = Kasmer(haskell_definition)
+    kasmer = Kasmer(symbolic_definition)
 
     if wasm is None:
         wasm = kasmer.build_soroban_contract(Path.cwd())
@@ -104,7 +104,7 @@ def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None) -> None:
 
 def _exec_prove_view(*, proof_dir: Path, id: str) -> None:
     proof = APRProof.read_proof_data(proof_dir, id)
-    viewer = APRProofViewer(proof, haskell_definition.krun)
+    viewer = APRProofViewer(proof, symbolic_definition.krun)
     viewer.run()
     sys.exit(0)
 

@@ -63,5 +63,5 @@ class SorobanDefinition:
         return self.krun.run_process(kore_term, **kwargs)
 
 
-llvm_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm'))
-haskell_definition = SorobanDefinition(kdist.get('soroban-semantics.haskell'))
+concrete_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm'))
+symbolic_definition = SorobanDefinition(kdist.get('soroban-semantics.haskell'))

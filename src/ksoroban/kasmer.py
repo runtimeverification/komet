@@ -37,7 +37,7 @@ from .kast.syntax import (
 )
 from .proof import run_claim
 from .scval import SCType
-from .utils import llvm_definition
+from .utils import concrete_definition
 
 if TYPE_CHECKING:
     from typing import Any
@@ -148,9 +148,9 @@ class Kasmer:
         )
 
         # Run the steps and grab the resulting config as a starting place to call transactions
-        proc_res = llvm_definition.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
+        proc_res = concrete_definition.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
         kore_result = KoreParser(proc_res.stdout).pattern()
-        kast_result = kore_to_kast(llvm_definition.kdefinition, kore_result)
+        kast_result = kore_to_kast(concrete_definition.kdefinition, kore_result)
 
         conf, subst = split_config_from(kast_result)
 
