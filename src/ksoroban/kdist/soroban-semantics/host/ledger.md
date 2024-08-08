@@ -150,8 +150,8 @@ module HOST-LEDGER
         </locals>
         <callee> CONTRACT </callee>
 
-  // If the TTL for the contract is less than `THRESHOLD`, update contractLiveUntil
-  //    where TTL is defined as LIVE_UNTIL - SEQ.
+  // If the TTL for the contract is less than or equal to `THRESHOLD`,
+  // update <contractLiveUntil>
     syntax InternalInstr ::= extendContractTtl(ContractId)   [symbol(extendContractTtl)]
  // -------------------------------------------------------------------------------
     rule [extendContractTtl]:
@@ -159,22 +159,23 @@ module HOST-LEDGER
         <hostStack> U32(THRESHOLD) : U32(EXTEND_TO) : S => S </hostStack>
         <contract>
           <contractId> CONTRACT </contractId>
-          <contractLiveUntil> LIVE_UNTIL => SEQ +Int EXTEND_TO </contractLiveUntil>
+          <contractLiveUntil> LIVE_UNTIL
+                           => extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO)
+          </contractLiveUntil>
           ...
         </contract>
         <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
-      requires LIVE_UNTIL -Int SEQ <Int THRESHOLD
+      requires THRESHOLD <=Int EXTEND_TO   // input is valid
+       andBool SEQ <=Int LIVE_UNTIL        // entry is still alive
 
-    rule [extendContractTtl-skip]:
-        <instrs> extendContractTtl(CONTRACT) => .K ... </instrs>
-        <hostStack> U32(THRESHOLD) : U32(_EXTEND_TO) : S => S </hostStack>
-        <contract>
-          <contractId> CONTRACT </contractId>
-          <contractLiveUntil> LIVE_UNTIL </contractLiveUntil>
-          ...
-        </contract>
-        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
-      requires LIVE_UNTIL -Int SEQ >=Int THRESHOLD
+    syntax Int ::= extendedLiveUntil(Int, Int, Int, Int)    [function, total]
+ // -----------------------------------------------------------------------------------
+    rule extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO) => SEQ +Int EXTEND_TO
+      requires LIVE_UNTIL -Int SEQ <=Int THRESHOLD            // CURRENT_TTL <= THRESHOLD
+       andBool LIVE_UNTIL          <Int  SEQ +Int EXTEND_TO   // LIVE_UNTIL  <  NEW_LIVE_UNTIL
+
+    rule extendedLiveUntil(_, LIVE_UNTIL, _, _) => LIVE_UNTIL
+      [owise]
 
     syntax InternalInstr ::= extendContractCodeTtl(ContractId)   [symbol(extendContractCodeTtl)]
  // --------------------------------------------------------------------------------------------
@@ -195,22 +196,15 @@ module HOST-LEDGER
         <hostStack> U32(THRESHOLD) : U32(EXTEND_TO) : S => S </hostStack>
         <contractCode>
           <codeHash> HASH </codeHash>
-          <codeLiveUntil> LIVE_UNTIL => SEQ +Int EXTEND_TO </codeLiveUntil>
+          <codeLiveUntil> LIVE_UNTIL
+                       => extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO)
+          </codeLiveUntil>
           ...
         </contractCode>
         <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
-      requires LIVE_UNTIL -Int SEQ <Int THRESHOLD
+      requires THRESHOLD <=Int EXTEND_TO   // input is valid
+       andBool SEQ <=Int LIVE_UNTIL        // entry is still alive
 
-    rule [extendCodeTtl-skip]:
-        <instrs> extendCodeTtl(HASH) => .K ... </instrs>
-        <hostStack> U32(THRESHOLD) : U32(_EXTEND_TO) : S => S </hostStack>
-        <contractCode>
-          <codeHash> HASH </codeHash>
-          <codeLiveUntil> LIVE_UNTIL </codeLiveUntil>
-          ...
-        </contractCode>
-        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
-      requires LIVE_UNTIL -Int SEQ >=Int THRESHOLD
 ```
 
 ## Helpers
