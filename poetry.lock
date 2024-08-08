@@ -2,13 +2,13 @@
 
 [[package]]
 name = "attrs"
-version = "24.1.0"
+version = "24.2.0"
 description = "Classes Without Boilerplate"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "attrs-24.1.0-py3-none-any.whl", hash = "sha256:377b47448cb61fea38533f671fba0d0f8a96fd58facd4dc518e3dac9dbea0905"},
-    {file = "attrs-24.1.0.tar.gz", hash = "sha256:adbdec84af72d38be7628e353a09b6a6790d15cd71819f6e9d7b0faa8a125745"},
+    {file = "attrs-24.2.0-py3-none-any.whl", hash = "sha256:81921eb96de3191c8258c199618104dd27ac608d9366f5e35d011eae1867ede2"},
+    {file = "attrs-24.2.0.tar.gz", hash = "sha256:5cfb1b9148b5b086569baec03f20d7b6bf3bcacc9a42bebf87ffaaca362f6346"},
 ]
 
 [package.extras]
@@ -514,13 +514,13 @@ pyreadline3 = {version = "*", markers = "sys_platform == \"win32\" and python_ve
 
 [[package]]
 name = "hypothesis"
-version = "6.108.8"
+version = "6.108.10"
 description = "A library for property-based testing"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "hypothesis-6.108.8-py3-none-any.whl", hash = "sha256:33e8bbc25c2f40d931327b210e9de5639eb954743c97984bcc19bdc7ef21a625"},
-    {file = "hypothesis-6.108.8.tar.gz", hash = "sha256:310eb6ce1ae7cbb34195ec76b054572c182d008564a42069883920f4ab3c80ac"},
+    {file = "hypothesis-6.108.10-py3-none-any.whl", hash = "sha256:7b24f7197dad30de0799181eeb885452846ed81022707e35c9c275cf63ddd24f"},
+    {file = "hypothesis-6.108.10.tar.gz", hash = "sha256:8d8b3a57f27bd964b04e58c5731ab9862134fbb5511958c814aaca3120286f28"},
 ]
 
 [package.dependencies]
@@ -591,13 +591,13 @@ colors = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "kframework"
-version = "7.1.92"
+version = "7.1.93"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "kframework-7.1.92-py3-none-any.whl", hash = "sha256:0d334679cf0d5b7746125a46cd67bb7641e2ccf920c7d207f280748cc0fa6376"},
-    {file = "kframework-7.1.92.tar.gz", hash = "sha256:584f56e4d03b15df8272f9a92a34f81a2646af83df73e6888986e92b7d807bc4"},
+    {file = "kframework-7.1.93-py3-none-any.whl", hash = "sha256:27b501bc2379b1bd1707a4deff44d597409a665355ad8671a0b0b6270068e174"},
+    {file = "kframework-7.1.93.tar.gz", hash = "sha256:f68e060994818808c9d37f10f84c7b419e410be4ee99a5aee032bd12359d9f51"},
 ]
 
 [package.dependencies]
@@ -975,7 +975,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pykwasm"
-version = "0.1.96"
+version = "0.1.97"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -984,15 +984,15 @@ develop = false
 
 [package.dependencies]
 cytoolz = "^0.12.1"
-kframework = "7.1.92"
+kframework = "7.1.93"
 numpy = "^1.24.2"
 py-wasm = {git = "https://github.com/runtimeverification/py-wasm.git", tag = "0.2.1"}
 
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/wasm-semantics.git"
-reference = "v0.1.96"
-resolved_reference = "a818cb3893e531c181f9785f8cccbfd0dec80021"
+reference = "v0.1.97"
+resolved_reference = "c4fc79c684ca9007547a74d768a4e743e3f1431f"
 subdirectory = "pykwasm"
 
 [[package]]
@@ -1270,4 +1270,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "bab78518051430f835c18d41d97703fe9fe3841d4b9754fe0f22c3cd25bfb752"
+content-hash = "aa8f6cb21905ba1a4712f3c206cc45ae9fbb4269fcfaab353cf44573f65f9703"
