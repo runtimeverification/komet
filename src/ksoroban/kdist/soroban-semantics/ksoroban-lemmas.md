@@ -9,6 +9,8 @@ module KSOROBAN-LEMMAS [symbolic]
 endmodule
 
 module INT-BITWISE-LEMMAS [symbolic]
+  imports INT
+  imports BOOL
 
   rule C |Int S => S |Int C [simplification, concrete(C), symbolic(S)]
   rule X |Int 0 => X        [simplification]
@@ -29,7 +31,7 @@ module INT-BITWISE-LEMMAS [symbolic]
   rule fullMask(I:Int) => (1 <<Int I) -Int 1 requires 0 <Int I
   rule fullMask(I:Int) => 0                  requires I <=Int 0
 
-  rule I modInt M => I &Int fullMask(M) requires isPowerOf2(M) [simplification, concrete(M)]
+  rule I modInt M => I &Int (M -Int 1) requires isPowerOf2(M) [simplification, concrete(M)]
 
 endmodule
 
