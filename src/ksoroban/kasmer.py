@@ -16,10 +16,10 @@ from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.kore.syntax import EVar, SortApp
 from pyk.ktool.kfuzz import fuzz
-from pyk.ktool.kompile import KompileBackend
 from pyk.ktool.krun import KRunOutput
 from pyk.prelude.ml import mlEqualsTrue
 from pyk.prelude.utils import token
+from pyk.proof import ProofStatus
 from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
 
@@ -37,7 +37,7 @@ from .kast.syntax import (
 )
 from .proof import run_claim
 from .scval import SCType
-from .utils import concrete_definition
+from .utils import KSorobanError, concrete_definition
 
 if TYPE_CHECKING:
     from typing import Any
@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from hypothesis.strategies import SearchStrategy
     from pyk.kast.inner import KInner
     from pyk.kore.syntax import Pattern
+    from pyk.proof import APRProof
 
     from .utils import SorobanDefinition
 
@@ -183,7 +184,7 @@ class Kasmer:
 
     def run_prove(
         self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding, proof_dir: Path | None = None
-    ) -> None:
+    ) -> APRProof:
         from_acct = account_id(b'test-account')
         to_acct = contract_id(b'test-contract')
         name = binding.name
@@ -204,12 +205,11 @@ class Kasmer:
         del rhs_subst['LOGGING_CELL']
         rhs = CTerm(Subst(rhs_subst).apply(conf))
 
-        claim, _ = cterm_build_claim(binding.name, lhs, rhs)
+        claim, _ = cterm_build_claim(name, lhs, rhs)
 
-        proof = run_claim(binding.name, claim, proof_dir)
-        print(proof.summary)
+        return run_claim(name, claim, proof_dir)
 
-    def deploy_and_run(self, contract_wasm: Path, proof_dir: Path | None = None) -> None:
+    def deploy_and_run(self, contract_wasm: Path) -> None:
         """Run all of the tests in a soroban test contract.
 
         Args:
@@ -226,11 +226,29 @@ class Kasmer:
         for binding in bindings:
             if not binding.name.startswith('test_'):
                 continue
-            backend = self.definition.backend
-            if backend == KompileBackend.LLVM:
-                self.run_test(conf, subst, binding)
-            elif backend == KompileBackend.HASKELL:
-                self.run_prove(conf, subst, binding, proof_dir)
+            self.run_test(conf, subst, binding)
+
+    def deploy_and_prove(self, contract_wasm: Path, proof_dir: Path | None = None) -> None:
+        """Prove all of the tests in a soroban test contract.
+
+        Args:
+            contract_wasm: The path to the compiled wasm contract.
+            proof_dir: The optional location to save the proof.
+
+        Raises:
+            KSorobanError if a proof fails
+        """
+        contract_kast = self.kast_from_wasm(contract_wasm)
+        conf, subst = self.deploy_test(contract_kast)
+
+        bindings = self.contract_bindings(contract_wasm)
+
+        for binding in bindings:
+            if not binding.name.startswith('test_'):
+                continue
+            proof = self.run_prove(conf, subst, binding, proof_dir)
+            if proof.status == ProofStatus.FAILED:
+                raise KSorobanError(proof.summary)
 
 
 @dataclass(frozen=True)

@@ -97,7 +97,7 @@ def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None) -> None:
     if wasm is None:
         wasm = kasmer.build_soroban_contract(Path.cwd())
 
-    kasmer.deploy_and_run(wasm, proof_dir)
+    kasmer.deploy_and_prove(wasm, proof_dir)
 
     sys.exit(0)
 
