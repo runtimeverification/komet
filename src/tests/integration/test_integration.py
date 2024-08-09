@@ -6,7 +6,7 @@ from pyk.kdist import kdist
 from pyk.ktool.krun import _krun
 
 from ksoroban.kasmer import Kasmer
-from ksoroban.utils import SorobanDefinition
+from ksoroban.utils import concrete_definition, symbolic_definition
 
 TEST_DATA = (Path(__file__).parent / 'data').resolve(strict=True)
 TEST_FILES = TEST_DATA.glob('*.wast')
@@ -18,13 +18,13 @@ DEFINITION_DIR = kdist.get('soroban-semantics.llvm')
 
 
 @pytest.fixture
-def soroban_definition() -> SorobanDefinition:
-    return SorobanDefinition(DEFINITION_DIR)
+def concrete_kasmer() -> Kasmer:
+    return Kasmer(concrete_definition)
 
 
 @pytest.fixture
-def kasmer(soroban_definition: SorobanDefinition) -> Kasmer:
-    return Kasmer(soroban_definition)
+def symbolic_kasmer() -> Kasmer:
+    return Kasmer(symbolic_definition)
 
 
 @pytest.mark.parametrize('program', TEST_FILES, ids=str)
@@ -33,23 +33,31 @@ def test_run(program: Path, tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize('contract_path', SOROBAN_TEST_CONTRACTS, ids=lambda p: str(p.stem))
-def test_ksoroban(contract_path: Path, tmp_path: Path, kasmer: Kasmer) -> None:
+def test_ksoroban(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> None:
     # Given
-    contract_wasm = kasmer.build_soroban_contract(contract_path, tmp_path)
+    contract_wasm = concrete_kasmer.build_soroban_contract(contract_path, tmp_path)
 
     # Then
     if contract_path.stem.endswith('_fail'):
         with pytest.raises(CalledProcessError):
-            kasmer.deploy_and_run(contract_wasm)
+            concrete_kasmer.deploy_and_run(contract_wasm)
     else:
-        kasmer.deploy_and_run(contract_wasm)
+        concrete_kasmer.deploy_and_run(contract_wasm)
 
 
-def test_bindings(tmp_path: Path, kasmer: Kasmer) -> None:
+def test_prove_adder(tmp_path: Path, symbolic_kasmer: Kasmer) -> None:
+    # Given
+    contract_wasm = symbolic_kasmer.build_soroban_contract(SOROBAN_CONTRACTS_DIR / 'test_adder', tmp_path)
+
+    # Then
+    symbolic_kasmer.deploy_and_prove(contract_wasm, tmp_path)
+
+
+def test_bindings(tmp_path: Path, concrete_kasmer: Kasmer) -> None:
     # Given
     contract_path = SOROBAN_CONTRACTS_DIR / 'valtypes'
-    contract_wasm = kasmer.build_soroban_contract(contract_path, tmp_path)
+    contract_wasm = concrete_kasmer.build_soroban_contract(contract_path, tmp_path)
 
     # Then
     # Just run this and make sure it doesn't throw an error
-    kasmer.contract_bindings(contract_wasm)
+    concrete_kasmer.contract_bindings(contract_wasm)
