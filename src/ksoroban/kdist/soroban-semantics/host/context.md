@@ -19,6 +19,22 @@ Return the current ledger sequence number as `U32`.
         </instrs>
         <locals> .Map </locals>
         <ledgerSequenceNumber> SEQ_NUM </ledgerSequenceNumber>
+```
+
+## fail_with_error
+
+```k
+    rule [hostfun-fail-with-error]:
+        <instrs> hostCall ( "x" , "5" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] ) ~> _REST
+              => .K
+        </instrs>
+        <k> (.K => pushStack(fromSmall(HostVal(ERR)))) ... </k>
+        <locals>
+            0 |-> < i64 > ERR
+        </locals>
+      requires fromSmallValid(HostVal(ERR))
+       andBool getTag(HostVal(ERR)) ==Int 3
+
 
 endmodule
 ```
