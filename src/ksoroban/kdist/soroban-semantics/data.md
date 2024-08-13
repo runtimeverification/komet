@@ -3,6 +3,8 @@
 [Documentation - Host Value Type](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#host-value-type)
 
 ```k
+requires "errors.md"
+
 module HOST-OBJECT-SYNTAX
     imports BOOL-SYNTAX
     imports INT-SYNTAX
@@ -10,6 +12,7 @@ module HOST-OBJECT-SYNTAX
     imports STRING-SYNTAX
     imports LIST
     imports MAP
+    imports ERRORS
 ```
 
 ## ScVal
@@ -48,8 +51,9 @@ various contexts:
 
 ```k
     syntax ScVal
-     ::= SCBool(Bool)                              [symbol(SCVal:Bool)]
+      ::= SCBool(Bool)                             [symbol(SCVal:Bool)]
         | "Void"                                   [symbol(SCVal:Void)]
+        | Error(ErrorType, Int)                  [symbol(SCVal:Error)]
         | U32(Int)                                 [symbol(SCVal:U32)]
         | I32(Int)                                 [symbol(SCVal:I32)]
         | U64(Int)                                 [symbol(SCVal:U64)]
@@ -97,10 +101,12 @@ module HOST-OBJECT
     imports WASM
 
     syntax Int ::= getMajor(HostVal)        [function, total, symbol(getMajor)]
+                 | getMinor(HostVal)        [function, total, symbol(getMinor)]
                  | getTag(HostVal)          [function, total, symbol(getTag)]
                  | getBody(HostVal)         [function, total, symbol(getBody)]
  // -----------------------------------------------------------------------
     rule getMajor(HostVal(I)) => I >>Int 32
+    rule getMinor(HostVal(I)) => (I &Int (#pow(i32) -Int 1)) >>Int 8
     rule getTag(HostVal(I))   => I &Int 255
     rule getBody(HostVal(I))  => I >>Int 8
 
@@ -139,6 +145,7 @@ module HOST-OBJECT
     rule getTag(SCBool(true))  => 0
     rule getTag(SCBool(false)) => 1
     rule getTag(Void)          => 2
+    rule getTag(Error(_,_))    => 3
     rule getTag(U32(_))        => 4
     rule getTag(I32(_))        => 5
     rule getTag(U64(I))        => 6     requires          I <=Int #maxU64small
@@ -204,6 +211,10 @@ module HOST-OBJECT
 
     rule fromSmall(VAL) => Void                    requires getTag(VAL) ==Int 2
 
+    rule fromSmall(VAL) => Error(Int2ErrorType(getMinor(VAL)), getMajor(VAL))
+                                                   requires getTag(VAL) ==Int 3
+                                                    andBool Int2ErrorTypeValid(getMinor(VAL))
+
     rule fromSmall(VAL) => U32(getMajor(VAL))      requires getTag(VAL) ==Int 4
 
     rule fromSmall(VAL) => I32(#signed(i32, getMajor(VAL)))
@@ -232,6 +243,7 @@ module HOST-OBJECT
     rule toSmall(SCBool(false)) => fromMajorMinorAndTag(0, 0, 0)
     rule toSmall(SCBool(true))  => fromMajorMinorAndTag(0, 0, 1)
     rule toSmall(Void)          => fromMajorMinorAndTag(0, 0, 2)
+    rule toSmall(Error(TYP, I)) => fromMajorMinorAndTag(I, ErrorType2Int(TYP), 3)
     rule toSmall(U32(I))        => fromMajorMinorAndTag(I, 0, 4)
     rule toSmall(I32(I))        => fromMajorMinorAndTag(#unsigned(i32, I), 0, 5)
       requires definedUnsigned(i32, I)
