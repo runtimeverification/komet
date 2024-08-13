@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from pyk.kast.outer import read_kast_definition
+from pyk.kdist import kdist
 from pyk.konvert import kast_to_kore
 from pyk.ktool.kompile import DefinitionInfo
 from pyk.ktool.krun import KRun
@@ -15,12 +16,13 @@ if TYPE_CHECKING:
 
     from pyk.kast.inner import KInner, KSort
     from pyk.kast.outer import KDefinition
+    from pyk.ktool.kompile import KompileBackend
 
 
 class KSorobanError(RuntimeError): ...
 
 
-class SorobanDefinitionInfo:
+class SorobanDefinition:
     """Anything related to the Soroban K definition goes here."""
 
     definition_info: DefinitionInfo
@@ -31,6 +33,10 @@ class SorobanDefinitionInfo:
     @cached_property
     def path(self) -> Path:
         return self.definition_info.path
+
+    @cached_property
+    def backend(self) -> KompileBackend:
+        return self.definition_info.backend
 
     @cached_property
     def kdefinition(self) -> KDefinition:
@@ -55,3 +61,7 @@ class SorobanDefinitionInfo:
         """
         kore_term = kast_to_kore(self.kdefinition, pgm, sort=sort)
         return self.krun.run_process(kore_term, **kwargs)
+
+
+concrete_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm'))
+symbolic_definition = SorobanDefinition(kdist.get('soroban-semantics.haskell'))
