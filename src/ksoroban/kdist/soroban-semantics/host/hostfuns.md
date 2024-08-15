@@ -1,5 +1,6 @@
 
 ```k
+requires "address.md"
 requires "buffer.md"
 requires "context.md"
 requires "integer.md"
@@ -9,6 +10,7 @@ requires "symbol.md"
 requires "vector.md"
 
 module HOSTFUNS
+    imports HOST-ADDRESS
     imports HOST-BUFFER
     imports HOST-CONTEXT
     imports HOST-INTEGER
