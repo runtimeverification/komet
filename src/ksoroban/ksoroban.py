@@ -12,10 +12,13 @@ from pyk.cli.utils import file_path
 from pyk.kdist import kdist
 from pyk.ktool.kprint import KAstOutput, _kast
 from pyk.ktool.krun import _krun
+from pyk.proof.reachability import APRProof
+from pyk.proof.tui import APRProofViewer
+from pyk.utils import ensure_dir_path
 from pykwasm.scripts.preprocessor import preprocess
 
 from .kasmer import Kasmer
-from .utils import SorobanDefinitionInfo
+from .utils import concrete_definition, symbolic_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -38,6 +41,13 @@ def main() -> None:
     elif args.command == 'test':
         wasm = Path(args.wasm.name) if args.wasm is not None else None
         _exec_test(wasm=wasm)
+    elif args.command == 'prove':
+        if args.prove_command is None or args.prove_command == 'run':
+            wasm = Path(args.wasm.name) if args.wasm is not None else None
+            _exec_prove_run(wasm=wasm, proof_dir=args.proof_dir)
+        if args.prove_command == 'view':
+            assert args.proof_dir is not None
+            _exec_prove_view(proof_dir=args.proof_dir, id=args.id)
 
     raise AssertionError()
 
@@ -68,9 +78,7 @@ def _exec_test(*, wasm: Path | None) -> None:
 
     Exits successfully when all the tests pass.
     """
-    definition_dir = kdist.get('soroban-semantics.llvm')
-    definition_info = SorobanDefinitionInfo(definition_dir)
-    kasmer = Kasmer(definition_info)
+    kasmer = Kasmer(concrete_definition)
 
     if wasm is None:
         # We build the contract here, specifying where it's saved so we know where to find it.
@@ -80,6 +88,24 @@ def _exec_test(*, wasm: Path | None) -> None:
 
     kasmer.deploy_and_run(wasm)
 
+    sys.exit(0)
+
+
+def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None) -> None:
+    kasmer = Kasmer(symbolic_definition)
+
+    if wasm is None:
+        wasm = kasmer.build_soroban_contract(Path.cwd())
+
+    kasmer.deploy_and_prove(wasm, proof_dir)
+
+    sys.exit(0)
+
+
+def _exec_prove_view(*, proof_dir: Path, id: str) -> None:
+    proof = APRProof.read_proof_data(proof_dir, id)
+    viewer = APRProofViewer(proof, symbolic_definition.krun)
+    viewer.run()
     sys.exit(0)
 
 
@@ -113,6 +139,18 @@ def _argument_parser() -> ArgumentParser:
 
     test_parser = command_parser.add_parser('test', help='Test the soroban contract in the current working directory')
     test_parser.add_argument('--wasm', type=FileType('r'), help='Test a specific contract wasm file instead')
+
+    prove_parser = command_parser.add_parser('prove', help='Test the soroban contract in the current working directory')
+    prove_parser.add_argument(
+        'prove_command',
+        default='run',
+        choices=('run', 'view'),
+        metavar='COMMAND',
+        help='Proof command to run. One of (%(choices)s)',
+    )
+    prove_parser.add_argument('--wasm', type=FileType('r'), help='Prove a specific contract wasm file instead')
+    prove_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
+    prove_parser.add_argument('--id', help='Name of the test function in the testing contract')
 
     return parser
 

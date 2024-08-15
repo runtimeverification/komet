@@ -23,7 +23,7 @@ poetry-install:
 # Semantics
 
 kdist-build: poetry-install
-	$(POETRY) run kdist -v build soroban-semantics.llvm
+	$(POETRY) run kdist -v build -j2 soroban-semantics.*
 
 kdist-clean: poetry-install
 	$(POETRY) run kdist clean

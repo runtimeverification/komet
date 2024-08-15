@@ -514,13 +514,13 @@ pyreadline3 = {version = "*", markers = "sys_platform == \"win32\" and python_ve
 
 [[package]]
 name = "hypothesis"
-version = "6.108.10"
+version = "6.110.1"
 description = "A library for property-based testing"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "hypothesis-6.108.10-py3-none-any.whl", hash = "sha256:7b24f7197dad30de0799181eeb885452846ed81022707e35c9c275cf63ddd24f"},
-    {file = "hypothesis-6.108.10.tar.gz", hash = "sha256:8d8b3a57f27bd964b04e58c5731ab9862134fbb5511958c814aaca3120286f28"},
+    {file = "hypothesis-6.110.1-py3-none-any.whl", hash = "sha256:4b54a4ed3385c53b247b99e7b3c9630e7b665ef3cfdb2c557dd1c0b34d090481"},
+    {file = "hypothesis-6.110.1.tar.gz", hash = "sha256:a138bfaea11aba6daadf8effd9065251a6fec1549f25b7d72ac9881a413f76b0"},
 ]
 
 [package.dependencies]
@@ -591,13 +591,13 @@ colors = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "kframework"
-version = "7.1.93"
+version = "7.1.103"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "kframework-7.1.93-py3-none-any.whl", hash = "sha256:27b501bc2379b1bd1707a4deff44d597409a665355ad8671a0b0b6270068e174"},
-    {file = "kframework-7.1.93.tar.gz", hash = "sha256:f68e060994818808c9d37f10f84c7b419e410be4ee99a5aee032bd12359d9f51"},
+    {file = "kframework-7.1.103-py3-none-any.whl", hash = "sha256:a148f763fd1a65a67511cc72f737ecd3d53897597c72fc56be3bbd0579fe4b22"},
+    {file = "kframework-7.1.103.tar.gz", hash = "sha256:b62571985cbe6a1654c2420703c0df9e2528bb474f68e9ea7a2b437e6f6de10d"},
 ]
 
 [package.dependencies]
@@ -975,7 +975,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pykwasm"
-version = "0.1.97"
+version = "0.1.98"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -984,15 +984,15 @@ develop = false
 
 [package.dependencies]
 cytoolz = "^0.12.1"
-kframework = "7.1.93"
+kframework = "7.1.103"
 numpy = "^1.24.2"
 py-wasm = {git = "https://github.com/runtimeverification/py-wasm.git", tag = "0.2.1"}
 
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/wasm-semantics.git"
-reference = "v0.1.97"
-resolved_reference = "c4fc79c684ca9007547a74d768a4e743e3f1431f"
+reference = "v0.1.98"
+resolved_reference = "8b29c636dd8a78ca25f4ceaa8cec2409ae9b99a0"
 subdirectory = "pykwasm"
 
 [[package]]
@@ -1270,4 +1270,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "aa8f6cb21905ba1a4712f3c206cc45ae9fbb4269fcfaab353cf44573f65f9703"
+content-hash = "8f4633c13158a55123c9d093e4cbfd961fdc95297c710d737941300af1ceea29"

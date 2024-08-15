@@ -49,7 +49,11 @@ module SOROBAN
           <wasmHash> HASH </wasmHash>
           ...
         </contract>
-        <contractCodes> ... HASH |-> CODE:ModuleDecl ... </contractCodes>
+        <contractCode>
+          <codeHash> HASH </codeHash>
+          <codeWasm> CODE </codeWasm>
+          ...
+        </contractCode>
         <instrs> .K </instrs>
 
     // rule [callContractAux-not-contract]:

@@ -13,9 +13,11 @@ if TYPE_CHECKING:
 
     from pyk.kast.inner import KInner
 
+STEPS_TERMINATOR = KApply('.List{"kasmerSteps"}')
+
 
 def steps_of(steps: Iterable[KInner]) -> KInner:
-    return build_cons(KApply('.List{"kasmerSteps"}'), 'kasmerSteps', steps)
+    return build_cons(STEPS_TERMINATOR, 'kasmerSteps', steps)
 
 
 def account_id(acct_id: bytes) -> KApply:

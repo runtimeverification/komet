@@ -48,6 +48,17 @@ __TARGETS__: Final = {
     'source': SourceTarget(),
     'llvm': KompileTarget(
         lambda src_dir: {
+            'backend': 'llvm',
+            'main_file': src_dir / 'soroban-semantics/kasmer.md',
+            'syntax_module': 'KASMER-SYNTAX',
+            'include_dirs': [src_dir],
+            'md_selector': 'k',
+            'warnings_to_errors': True,
+        },
+    ),
+    'haskell': KompileTarget(
+        lambda src_dir: {
+            'backend': 'haskell',
             'main_file': src_dir / 'soroban-semantics/kasmer.md',
             'syntax_module': 'KASMER-SYNTAX',
             'include_dirs': [src_dir],

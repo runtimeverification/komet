@@ -2,6 +2,7 @@
 ```k
 requires "soroban.md"
 requires "cheatcodes.md"
+requires "ksoroban-lemmas.md"
 
 module KASMER-SYNTAX
   imports WASM-TEXT-SYNTAX
@@ -33,6 +34,7 @@ module KASMER
     imports SOROBAN
     imports CHEATCODES
     imports KASMER-SYNTAX-COMMON
+    imports KSOROBAN-LEMMAS
 
     configuration
       <kasmer>
@@ -86,15 +88,19 @@ module KASMER
       [priority(55)]
 
 //  ----------------------------------------------------------------------------
-    rule [uploadWasm]:
-        <k> uploadWasm(HASH, MOD) => .K ... </k>
-        <contractCodes> MODS => MODS [ HASH <- MOD ] </contractCodes>
-      requires notBool( HASH in_keys(MODS) )
 
     rule [uploadWasm-exists]:
         <k> uploadWasm(HASH, _MOD) => .K ... </k>
-        <contractCodes> MODS </contractCodes>
-      requires HASH in_keys(MODS)
+        <codeHash> HASH </codeHash>  
+      
+    rule [uploadWasm]:
+        <k> uploadWasm(HASH, MOD) => .K ... </k>
+        (.Bag => <contractCode>
+          <codeHash> HASH </codeHash>
+          <codeWasm> MOD </codeWasm>
+          ...
+        </contractCode>)
+      [priority(51)]
 
  // -----------------------------------------------------------------------------------------------------------------------
     rule [deployContract-existing]:

@@ -34,6 +34,16 @@ module SWITCH
   stack after the function execution.
 
 ```k
+    rule [endWasm-error]:
+        <k> #endWasm 
+         => popCallState
+         ~> popWorldState
+            ...
+        </k>
+        <instrs> .K </instrs>
+        <hostStack> (Error(_,_) #as ERR) : _ => ERR : .HostStack </hostStack>
+      [priority(40)]
+
     rule [endWasm]:
         <k> #endWasm 
          => popCallState
@@ -44,6 +54,12 @@ module SWITCH
         <instrs> .K </instrs>
         <relativeObjects> RELS </relativeObjects>
         <valstack> STACK </valstack>
+      [priority(50)]
+
+    rule [endWasm-trap]:
+        <k> #endWasm ... </k>
+        <instrs> trap => .K </instrs>
+        <hostStack> S => Error(ErrContext, InvalidAction) : S </hostStack>
 
 ```
 
