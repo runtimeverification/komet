@@ -2,6 +2,7 @@
 ```k
 requires "address.md"
 requires "buffer.md"
+requires "call.md"
 requires "context.md"
 requires "integer.md"
 requires "ledger.md"
@@ -12,6 +13,7 @@ requires "vector.md"
 module HOSTFUNS
     imports HOST-ADDRESS
     imports HOST-BUFFER
+    imports HOST-CALL
     imports HOST-CONTEXT
     imports HOST-INTEGER
     imports HOST-LEDGER
