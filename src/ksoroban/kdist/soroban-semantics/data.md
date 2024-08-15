@@ -53,7 +53,7 @@ various contexts:
     syntax ScVal
       ::= SCBool(Bool)                             [symbol(SCVal:Bool)]
         | "Void"                                   [symbol(SCVal:Void)]
-        | Error(ErrorType, Int)                  [symbol(SCVal:Error)]
+        | Error(ErrorType, Int)                    [symbol(SCVal:Error)]
         | U32(Int)                                 [symbol(SCVal:U32)]
         | I32(Int)                                 [symbol(SCVal:I32)]
         | U64(Int)                                 [symbol(SCVal:U64)]
@@ -63,6 +63,7 @@ various contexts:
         | ScMap(Map)                               [symbol(SCVal:Map)]      // Map<ScVal, HostVal>
         | ScAddress(Address)                       [symbol(SCVal:Address)]
         | Symbol(String)                           [symbol(SCVal:Symbol)]
+        | ScBytes(Bytes)                           [symbol(SCVal:Bytes)]
 
     syntax Address ::= AccountId | ContractId
     syntax AccountId  ::= Account(Bytes)          [symbol(AccountId)]
@@ -158,7 +159,7 @@ module HOST-OBJECT
     rule getTag(ScAddress(_))  => 77
     rule getTag(Symbol(BS))    => 14    requires lengthString(BS) <=Int 9
     rule getTag(Symbol(BS))    => 74    requires lengthString(BS) >Int  9
-
+    rule getTag(ScBytes(_))    => 72
 
     // 64-bit integers that fit in 56 bits
     syntax Int ::= "#maxU64small"     [macro]
