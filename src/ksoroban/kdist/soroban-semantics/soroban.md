@@ -6,6 +6,10 @@ requires "switch.md"
 requires "host/hostfuns.md"
 
 module SOROBAN-SYNTAX
+    imports HOST-OBJECT-SYNTAX
+
+    syntax InternalCmd ::= callContract ( Address, ContractId, String, List ) [symbol(callContractString), function, total]
+
 endmodule
 
 
@@ -20,8 +24,7 @@ module SOROBAN
 
 ```k
 
-    syntax InternalCmd ::= callContract    ( Address, ContractId, String,     List ) [symbol(callContractString), function, total]
-                         | callContract    ( Address, ContractId, WasmString, List ) [symbol(callContractWasmString)]
+    syntax InternalCmd ::= callContract    ( Address, ContractId, WasmString, List ) [symbol(callContractWasmString)]
                          | callContractAux ( Address, ContractId, WasmString, List ) [symbol(callContractAux)]
  // -------------------------------------------------------------------------------------
     rule callContract(FROM, TO, FUNCNAME:String, ARGS)
