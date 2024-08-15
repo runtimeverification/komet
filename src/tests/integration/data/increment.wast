@@ -127,8 +127,7 @@ setAccount(Account(b"test-account"), 9876543210)
 deployContract(
   Account(b"test-account"),
   Contract(b"test-sc"),
-  b"test-wasm",
-  .List
+  b"test-wasm"
 )
 
 ;; assert_eq!(client.increment(&true), 1);

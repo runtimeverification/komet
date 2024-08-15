@@ -129,25 +129,6 @@ module SOROBAN
         requires isListIndex(FUNCIDX, FUNCADDRS)
       [priority(60)]
 
-    rule [mkCall-no-init]:
-        <k> mkCall(_FROM, _TO, FUNCNAME:WasmStringToken, .List) => .K ... </k>
-        <callState>
-          <wasm>
-            <instrs> .K </instrs>
-            <moduleInst>
-              <modIdx> MODIDX </modIdx>
-              <exports> EXPORTS </exports>
-              ...
-            </moduleInst>
-            ...
-          </wasm>
-          <contractModIdx> MODIDX:Int </contractModIdx>
-          ...
-        </callState>
-        requires notBool (FUNCNAME in_keys(EXPORTS))
-         andBool #parseWasmString(FUNCNAME) ==K "\"init\""
-      [priority(60)]
-
     syntax InternalInstr ::= pushArgs(List)      [symbol(pushArgs)]
                            | pushArg(HostVal)    [symbol(pushArg)]
  // ---------------------------------------------------------------------

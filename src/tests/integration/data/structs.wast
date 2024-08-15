@@ -394,8 +394,7 @@ setAccount(Account(b"test-account"), 9876543210)
 deployContract(
   Account(b"test-account"),
   Contract(b"test-ctr"),
-  b"test-wasm",
-  .List
+  b"test-wasm"
 )
 
 callTx(
