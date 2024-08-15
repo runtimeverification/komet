@@ -15,7 +15,7 @@ module CONFIG
         <host>
           <callState>
             <callee> Contract(.Bytes) </callee>
-            <caller> Account(.Bytes) </caller>
+            <caller> Account(.Bytes):Address </caller>
             <function> .WasmString </function>
             <args> .List </args>
             <wasm/>
