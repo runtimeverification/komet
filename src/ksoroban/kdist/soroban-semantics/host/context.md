@@ -48,5 +48,19 @@ Return the current ledger sequence number as `U32`.
        andBool getTag(HostVal(ERR)) ==Int 3
        andBool Int2ErrorType(getMinor(HostVal(ERR))) =/=K ErrContract
 
+```
+
+## get_current_contract_address
+
+```k
+    rule [hostfun-get-current-contract-address]:
+        <instrs> hostCall ( "x" , "7" , [ .ValTypes ] -> [ i64  .ValTypes ] )
+              => allocObject(ScAddress(CONTRACT))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals> .Map </locals>
+        <callee> CONTRACT </callee>
+
 endmodule
 ```
