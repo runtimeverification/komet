@@ -11,6 +11,7 @@ from pyk.prelude.utils import token
 
 from .kast.syntax import (
     sc_bool,
+    sc_bytes,
     sc_i32,
     sc_i64,
     sc_i128,
@@ -112,6 +113,14 @@ class SCSymbol(SCValue):
 
 
 @dataclass(frozen=True)
+class SCBytes(SCValue):
+    val: bytes
+
+    def to_kast(self) -> KInner:
+        return sc_bytes(self.val)
+
+
+@dataclass(frozen=True)
 class SCVec(SCValue):
     val: tuple[SCValue]
 
@@ -140,6 +149,7 @@ _NAME_TO_CLASSNAME: Final = {
     'u128': 'SCU128Type',
     'u256': 'SCU256Type',
     'symbol': 'SCSymbolType',
+    'bytes': 'SCBytesType',
     'vec': 'SCVecType',
     'map': 'SCMapType',
 }
@@ -308,6 +318,16 @@ class SCSymbolType(SCMonomorphicType):
     @classmethod
     def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
         return KApply('SCVal:Symbol', [KVariable(name, KSort('String'))]), ()
+
+
+@dataclass
+class SCBytesType(SCMonomorphicType):
+    def strategy(self) -> SearchStrategy:
+        return strategies.binary().map(SCBytes)
+
+    @classmethod
+    def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
+        return KApply('SCVal:Bytes', [KVariable(name, KSort('Bytes'))]), ()
 
 
 @dataclass

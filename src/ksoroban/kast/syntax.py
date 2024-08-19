@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pyk.kast.inner import KApply, KSort, KToken, build_cons
+from pyk.kast.inner import KApply, build_cons
 from pyk.prelude.collections import list_of, map_of
 from pyk.prelude.utils import token
 from pykwasm.kwasm_ast import wasm_string
@@ -91,6 +91,10 @@ def sc_symbol(s: str) -> KInner:
     return KApply('SCVal:Symbol', [token(s)])
 
 
+def sc_bytes(b: bytes) -> KInner:
+    return KApply('SCVal:Bytes', [token(b)])
+
+
 def sc_vec(l: Iterable[KInner]) -> KInner:
     return KApply('SCVal:Vec', list_of(l))
 
@@ -99,4 +103,4 @@ def sc_map(m: dict[KInner, KInner] | Iterable[tuple[KInner, KInner]]) -> KInner:
     return KApply('SCVal:Map', map_of(m))
 
 
-SC_VOID: Final = KToken('Void', KSort('ScVal'))
+SC_VOID: Final = KApply('SCVal:Void', ())
