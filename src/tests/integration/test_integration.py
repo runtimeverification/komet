@@ -6,6 +6,7 @@ from pyk.kdist import kdist
 from pyk.ktool.krun import _krun
 
 from ksoroban.kasmer import Kasmer
+from ksoroban.ksoroban import _read_config_file
 from ksoroban.utils import concrete_definition, symbolic_definition
 
 TEST_DATA = (Path(__file__).parent / 'data').resolve(strict=True)
@@ -36,13 +37,14 @@ def test_run(program: Path, tmp_path: Path) -> None:
 def test_ksoroban(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> None:
     # Given
     contract_wasm = concrete_kasmer.build_soroban_contract(contract_path, tmp_path)
+    child_wasms = _read_config_file(contract_path)
 
     # Then
     if contract_path.stem.endswith('_fail'):
         with pytest.raises(CalledProcessError):
-            concrete_kasmer.deploy_and_run(contract_wasm)
+            concrete_kasmer.deploy_and_run(contract_wasm, child_wasms)
     else:
-        concrete_kasmer.deploy_and_run(contract_wasm)
+        concrete_kasmer.deploy_and_run(contract_wasm, child_wasms)
 
 
 def test_prove_adder(tmp_path: Path, symbolic_kasmer: Kasmer) -> None:
@@ -50,7 +52,7 @@ def test_prove_adder(tmp_path: Path, symbolic_kasmer: Kasmer) -> None:
     contract_wasm = symbolic_kasmer.build_soroban_contract(SOROBAN_CONTRACTS_DIR / 'test_adder', tmp_path)
 
     # Then
-    symbolic_kasmer.deploy_and_prove(contract_wasm, tmp_path)
+    symbolic_kasmer.deploy_and_prove(contract_wasm, (), tmp_path)
 
 
 def test_bindings(tmp_path: Path, concrete_kasmer: Kasmer) -> None:
