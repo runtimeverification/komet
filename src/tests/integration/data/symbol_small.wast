@@ -17,13 +17,13 @@ uploadWasm( b"test-wasm",
     i64.or
     
     ;; size
-    i64.const 8
+    i64.const 9
     i64.const 32
     i64.shl
     i64.const 4
     i64.or
     call $symbol_new_from_linear_memory)
-  (memory (data "_ABCabc0"))
+  (memory (data "_ABZabz09"))
   (export "symbol_small" (func $symbol_small)))
 )
 
@@ -40,7 +40,7 @@ callTx(
   Contract(b"test-sc"),
   "symbol_small",
   .List,
-  Symbol(str("_ABCabc0"))
+  Symbol(str("_ABZabz09"))
 )
 
 setExitCode(0)
