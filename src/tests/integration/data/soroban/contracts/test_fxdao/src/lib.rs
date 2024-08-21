@@ -23,16 +23,16 @@ mod VaultsContract {
 
 const ADDR: &[u8; 32] = b"fxdao_ctr_______________________";
 const FXDAO_KEY: Symbol = symbol_short!("fxdao");
+const FEE: u128 = 100;
 
 #[contractimpl]
 impl TestFxDAOContract {
     pub fn init(env: Env, hash: Bytes) {
         let addr = create_contract(&env, &Bytes::from_array(&env, ADDR), &hash);
         let self_addr = env.current_contract_address();
-        let fee: u128 = 100;
         let client = VaultsContract::Client::new(&env, &addr);
 
-        client.init(&self_addr, &self_addr, &self_addr, &self_addr, &self_addr, &fee, &self_addr);
+        client.init(&self_addr, &self_addr, &self_addr, &self_addr, &self_addr, &FEE, &self_addr);
 
         env.storage().instance().set(&FXDAO_KEY, &addr);
     }
@@ -49,6 +49,25 @@ impl TestFxDAOContract {
 
         client.calculate_deposit_ratio(&currency_rate, &collateral, &debt);
         
+        true
+    }
+
+    pub fn test_get_core_state(env: Env) -> bool {
+        let self_addr = env.current_contract_address();
+        let fxdao_addr: Address = env.storage().instance().get(&FXDAO_KEY).unwrap();
+        let client = VaultsContract::Client::new(&env, &fxdao_addr);
+
+        let core_state = client.get_core_state();
+        
+        // commented out lines require the obj_cmp host function 
+        // assert_eq!(&core_state.col_token, &self_addr);
+        // assert_eq!(&core_state.oracle, &self_addr);
+        // assert_eq!(&core_state.protocol_manager, &self_addr);
+        // assert_eq!(&core_state.admin, &self_addr);
+        // assert_eq!(&core_state.stable_issuer, &self_addr);
+        assert_eq!(&core_state.panic_mode, &false);
+        assert_eq!(&core_state.fee, &FEE);
+
         true
     }
 
