@@ -48,7 +48,7 @@ impl TestFxDAOContract {
         let client = VaultsContract::Client::new(&env, &fxdao_addr);
 
         client.calculate_deposit_ratio(&currency_rate, &collateral, &debt);
-        
+
         true
     }
 
@@ -58,13 +58,12 @@ impl TestFxDAOContract {
         let client = VaultsContract::Client::new(&env, &fxdao_addr);
 
         let core_state = client.get_core_state();
-        
-        // commented out lines require the obj_cmp host function 
-        // assert_eq!(&core_state.col_token, &self_addr);
-        // assert_eq!(&core_state.oracle, &self_addr);
-        // assert_eq!(&core_state.protocol_manager, &self_addr);
-        // assert_eq!(&core_state.admin, &self_addr);
-        // assert_eq!(&core_state.stable_issuer, &self_addr);
+
+        assert_eq!(&core_state.col_token, &self_addr);
+        assert_eq!(&core_state.oracle, &self_addr);
+        assert_eq!(&core_state.protocol_manager, &self_addr);
+        assert_eq!(&core_state.admin, &self_addr);
+        assert_eq!(&core_state.stable_issuer, &self_addr);
         assert_eq!(&core_state.panic_mode, &false);
         assert_eq!(&core_state.fee, &FEE);
 
