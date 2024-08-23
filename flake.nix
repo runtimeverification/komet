@@ -1,5 +1,5 @@
 {
-  description = "ksoroban - K tooling for the Soroban platform";
+  description = "komet - K tooling for the Soroban platform";
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-22.05";
     flake-utils.url = "github:numtide/flake-utils";
@@ -10,7 +10,7 @@
       allOverlays = [
         poetry2nix.overlay
         (final: prev: {
-          ksoroban = prev.poetry2nix.mkPoetryApplication {
+          komet = prev.poetry2nix.mkPoetryApplication {
             python = prev.python310;
             projectDir = ./.;
             groups = [];
@@ -32,8 +32,8 @@
         };
       in {
         packages = rec {
-          inherit (pkgs) ksoroban;
-          default = ksoroban;
+          inherit (pkgs) komet;
+          default = komet;
         };
       }) // {
         overlay = nixpkgs.lib.composeManyExtensions allOverlays;

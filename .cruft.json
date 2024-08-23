@@ -4,9 +4,9 @@
   "checkout": null,
   "context": {
     "cookiecutter": {
-      "project_name": "ksoroban",
-      "project_slug": "ksoroban",
-      "package_name": "ksoroban",
+      "project_name": "komet",
+      "project_slug": "komet",
+      "package_name": "komet",
       "version": "0.1.0",
       "description": "K tooling for the Soroban platform",
       "author_name": "Runtime Verification, Inc.",
