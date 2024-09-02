@@ -77,7 +77,7 @@
             projectDir = ./.;
             src = rv-utils.lib.mkSubdirectoryAppSrc {
               pkgs = import nixpkgs { system = prev.system; };
-              inherit src;
+              src = ./.;
               subdirectories = [ "pykwasm" ];
               cleaner = poetry2nix.cleanPythonSources;
             };
