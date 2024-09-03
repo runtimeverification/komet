@@ -3,18 +3,18 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "ksoroban"
-version = "0.1.23"
+name = "komet"
+version = "0.1.24"
 description = "K tooling for the Soroban platform"
 authors = [
     "Runtime Verification, Inc. <contact@runtimeverification.com>",
 ]
 
 [tool.poetry.scripts]
-ksoroban = "ksoroban.ksoroban:main"
+komet = "komet.komet:main"
 
 [tool.poetry.plugins.kdist]
-soroban-semantics = "ksoroban.kdist.plugin"
+soroban-semantics = "komet.kdist.plugin"
 
 [tool.poetry.dependencies]
 python = "^3.10"

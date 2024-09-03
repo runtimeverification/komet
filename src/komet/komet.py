@@ -127,7 +127,7 @@ def _exit_with_output(cp: CompletedProcess) -> None:
 
 
 def _argument_parser() -> ArgumentParser:
-    parser = ArgumentParser(prog='ksoroban')
+    parser = ArgumentParser(prog='komet')
     command_parser = parser.add_subparsers(dest='command', required=True)
 
     run_parser = command_parser.add_parser('run', help='run a concrete test')

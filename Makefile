@@ -51,7 +51,7 @@ COV_ARGS :=
 
 cov: cov-all
 
-cov-%: TEST_ARGS += --cov=ksoroban --no-cov-on-fail --cov-branch --cov-report=term
+cov-%: TEST_ARGS += --cov=komet --no-cov-on-fail --cov-branch --cov-report=term
 
 cov-all: TEST_ARGS += --cov-report=html:cov-all-html $(COV_ARGS)
 cov-all: test-all

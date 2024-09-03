@@ -1,4 +1,4 @@
-A quick example of a contract that can be ran with `ksoroban test`
+A quick example of a contract that can be ran with `komet test`
 
 You will need to have the stellar cli utils installed:
 https://developers.stellar.org/docs/build/smart-contracts/getting-started/setup
@@ -12,7 +12,7 @@ And then (from this directory):
 
 ```sh
 soroban contract build --out-dir output
-ksoroban test output/test_storage.wasm
+komet test output/test_storage.wasm
 ```
 
-`ksoroban test` should exit successfully
+`komet test` should exit successfully

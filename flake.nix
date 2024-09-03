@@ -66,7 +66,7 @@
               mkdir -p $out
               cp -r ./kdist-*/* $out/
 
-              makeWrapper ${komet-pyk}/bin/ksoroban $out/bin/ksoroban --prefix PATH : ${
+              makeWrapper ${komet-pyk}/bin/komet $out/bin/komet --prefix PATH : ${
                 prev.lib.makeBinPath [ k-framework.packages.${prev.system}.k ]
               } --set KDIST_DIR $out
             '';
