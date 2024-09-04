@@ -1,4 +1,4 @@
-from ksoroban.hello import hello
+from komet.hello import hello
 
 
 def test_hello() -> None:

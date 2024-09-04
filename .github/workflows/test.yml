@@ -51,7 +51,7 @@ jobs:
     name: 'Integration Tests'
     runs-on: [self-hosted, linux, normal]
     env:
-      CONTAINER: ksoroban-integration-${{ github.sha }}
+      CONTAINER: komet-integration-${{ github.sha }}
     steps:
       - name: 'Check out code'
         uses: actions/checkout@v3
@@ -61,7 +61,7 @@ jobs:
         uses: ./.github/actions/with-docker
         with:
           container-name: ${CONTAINER}
-      - name: 'Build ksoroban'
+      - name: 'Build komet'
         run: docker exec --user user ${CONTAINER} poetry install
       - name: 'Build semantics'
         run: docker exec --user user ${CONTAINER} make kdist-build

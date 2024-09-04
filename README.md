@@ -1,4 +1,4 @@
-# ksoroban
+# komet
 
 
 ## Installation

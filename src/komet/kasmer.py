@@ -121,7 +121,7 @@ class Kasmer:
         contract_stem = self.contract_manifest(contract_path)['name']
         contract_name = f'{contract_stem}.wasm'
         if out_dir is None:
-            out_dir = Path(mkdtemp(f'ksoroban_{str(contract_path.stem)}'))
+            out_dir = Path(mkdtemp(f'komet_{str(contract_path.stem)}'))
 
         run_process([str(self._soroban_bin), 'contract', 'build', '--out-dir', str(out_dir)], cwd=contract_path)
 
@@ -237,6 +237,8 @@ class Kasmer:
         Raises:
             CalledProcessError if any of the tests fail
         """
+        print(f'Processing contract: {contract_wasm.stem}')
+
         bindings = self.contract_bindings(contract_wasm)
         has_init = 'init' in (b.name for b in bindings)
 
@@ -245,10 +247,16 @@ class Kasmer:
 
         conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
 
+        test_bindings = [b for b in bindings if b.name.startswith('test_')]
+
+        print(f'Discovered {len(test_bindings)} test functions:')
+        for binding in test_bindings:
+            print(f'    - {binding.name}')
+
         for binding in bindings:
-            if not binding.name.startswith('test_'):
-                continue
+            print(f'\n  Running {binding.name}...')
             self.run_test(conf, subst, binding)
+            print('    Test passed.')
 
     def deploy_and_prove(
         self, contract_wasm: Path, child_wasms: tuple[Path, ...], proof_dir: Path | None = None

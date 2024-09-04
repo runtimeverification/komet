@@ -5,9 +5,9 @@ import pytest
 from pyk.kdist import kdist
 from pyk.ktool.krun import _krun
 
-from ksoroban.kasmer import Kasmer
-from ksoroban.ksoroban import _read_config_file
-from ksoroban.utils import concrete_definition, symbolic_definition
+from komet.kasmer import Kasmer
+from komet.komet import _read_config_file
+from komet.utils import concrete_definition, symbolic_definition
 
 TEST_DATA = (Path(__file__).parent / 'data').resolve(strict=True)
 TEST_FILES = TEST_DATA.glob('*.wast')
@@ -34,7 +34,7 @@ def test_run(program: Path, tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize('contract_path', SOROBAN_TEST_CONTRACTS, ids=lambda p: str(p.stem))
-def test_ksoroban(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> None:
+def test_komet(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> None:
     # Given
     contract_wasm = concrete_kasmer.build_soroban_contract(contract_path, tmp_path)
     child_wasms = _read_config_file(contract_path)
