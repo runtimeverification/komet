@@ -24,12 +24,14 @@ from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
 
 from .kast.syntax import (
+    SC_VOID,
     STEPS_TERMINATOR,
     account_id,
     call_tx,
     contract_id,
     deploy_contract,
     sc_bool,
+    sc_bytes,
     set_account,
     set_exit_code,
     steps_of,
@@ -119,7 +121,7 @@ class Kasmer:
         contract_stem = self.contract_manifest(contract_path)['name']
         contract_name = f'{contract_stem}.wasm'
         if out_dir is None:
-            out_dir = Path(mkdtemp(f'ksoroban_{str(contract_path.stem)}'))
+            out_dir = Path(mkdtemp(f'komet_{str(contract_path.stem)}'))
 
         run_process([str(self._soroban_bin), 'contract', 'build', '--out-dir', str(out_dir)], cwd=contract_path)
 
@@ -130,12 +132,28 @@ class Kasmer:
         return wasm2kast(open(wasm, 'rb'))
 
     @staticmethod
-    def deploy_test(contract: KInner) -> tuple[KInner, dict[str, KInner]]:
+    def deploy_test(
+        contract: KInner, child_contracts: tuple[KInner, ...], init: bool
+    ) -> tuple[KInner, dict[str, KInner]]:
         """Takes a wasm soroban contract as a kast term and deploys it in a fresh configuration.
 
         Returns:
             A configuration with the contract deployed.
         """
+
+        def wasm_hash(i: int) -> bytes:
+            return str(i).rjust(32, '_').encode()
+
+        def call_init() -> tuple[KInner, ...]:
+            hashes = tuple(wasm_hash(i) for i in range(len(child_contracts)))
+            upload_wasms = tuple(upload_wasm(h, c) for h, c in zip(hashes, child_contracts, strict=False))
+
+            from_addr = account_id(b'test-account')
+            to_addr = contract_id(b'test-contract')
+            args = [sc_bytes(h) for h in hashes]
+            init_tx = call_tx(from_addr, to_addr, 'init', args, SC_VOID)
+
+            return upload_wasms + (init_tx,)
 
         # Set up the steps that will deploy the contract
         steps = steps_of(
@@ -144,6 +162,7 @@ class Kasmer:
                 upload_wasm(b'test', contract),
                 set_account(b'test-account', 9876543210),
                 deploy_contract(b'test-account', b'test-contract', b'test'),
+                *(call_init() if init else ()),
                 set_exit_code(0),
             ]
         )
@@ -209,7 +228,7 @@ class Kasmer:
 
         return run_claim(name, claim, proof_dir)
 
-    def deploy_and_run(self, contract_wasm: Path) -> None:
+    def deploy_and_run(self, contract_wasm: Path, child_wasms: tuple[Path, ...]) -> None:
         """Run all of the tests in a soroban test contract.
 
         Args:
@@ -218,17 +237,30 @@ class Kasmer:
         Raises:
             CalledProcessError if any of the tests fail
         """
-        contract_kast = self.kast_from_wasm(contract_wasm)
-        conf, subst = self.deploy_test(contract_kast)
+        print(f'Processing contract: {contract_wasm.stem}')
 
         bindings = self.contract_bindings(contract_wasm)
+        has_init = 'init' in (b.name for b in bindings)
 
-        for binding in bindings:
-            if not binding.name.startswith('test_'):
-                continue
+        contract_kast = self.kast_from_wasm(contract_wasm)
+        child_kasts = tuple(self.kast_from_wasm(c) for c in child_wasms)
+
+        conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
+
+        test_bindings = [b for b in bindings if b.name.startswith('test_')]
+
+        print(f'Discovered {len(test_bindings)} test functions:')
+        for binding in test_bindings:
+            print(f'    - {binding.name}')
+
+        for binding in test_bindings:
+            print(f'\n  Running {binding.name}...')
             self.run_test(conf, subst, binding)
+            print('    Test passed.')
 
-    def deploy_and_prove(self, contract_wasm: Path, proof_dir: Path | None = None) -> None:
+    def deploy_and_prove(
+        self, contract_wasm: Path, child_wasms: tuple[Path, ...], proof_dir: Path | None = None
+    ) -> None:
         """Prove all of the tests in a soroban test contract.
 
         Args:
@@ -238,10 +270,13 @@ class Kasmer:
         Raises:
             KSorobanError if a proof fails
         """
-        contract_kast = self.kast_from_wasm(contract_wasm)
-        conf, subst = self.deploy_test(contract_kast)
-
         bindings = self.contract_bindings(contract_wasm)
+        has_init = 'init' in (b.name for b in bindings)
+
+        contract_kast = self.kast_from_wasm(contract_wasm)
+        child_kasts = tuple(self.kast_from_wasm(c) for c in child_wasms)
+
+        conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
 
         for binding in bindings:
             if not binding.name.startswith('test_'):

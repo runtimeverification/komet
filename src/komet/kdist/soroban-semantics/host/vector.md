@@ -10,8 +10,23 @@ module HOST-VECTOR
     imports WASM-OPERATIONS
     imports HOST-INTEGER
     imports SWITCH-SYNTAX
+```
 
-    // vec_unpack_to_linear_memory
+## vec_new
+
+```k
+    rule [hostfun-vec-new]:
+        <instrs> hostCall ( "v" , "_" , [ .ValTypes ] -> [ i64  .ValTypes ] )
+              => allocObject(ScVec(.List))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals> .Map </locals>
+```
+
+## vec_unpack_to_linear_memory
+
+```k
     rule [hostfun-vec-unpack-to-linear-memory]:
         <instrs> hostCall ( "v" , "h" , [ i64  i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
               => loadObject(HostVal(LEN))
@@ -61,8 +76,7 @@ module HOST-VECTOR
         <hostStack> U32(VALS_POS) : U32(LEN) : S => S </hostStack>
 
     rule [vecNewFromLinearMemoryAux]:
-        <instrs> vecNewFromLinearMemoryAux => #waitCommands ... </instrs>
-        <k> (.K => allocObject(ScVec(Bytes2Vals(BS)))) ... </k>
+        <instrs> vecNewFromLinearMemoryAux => allocObject(ScVec(Bytes2Vals(BS))) ... </instrs>
         <hostStack> BS : S => S </hostStack>
 
 

@@ -266,7 +266,7 @@ module HOST-OBJECT
 
     syntax String ::= "sixBitStringTable" [macro]
  // -------------------------------------------------------------------------------------------
-    rule sixBitStringTable => "_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgyahijklmnopqrstuvwxyz"
+    rule sixBitStringTable => "_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
     syntax String ::= decode6bitChar(Int)   [function, total, symbol(decode6bitChar)]
  // ---------------------------------------------------------------------------------
