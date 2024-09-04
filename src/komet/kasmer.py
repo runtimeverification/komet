@@ -218,15 +218,21 @@ class Kasmer:
         Raises:
             CalledProcessError if any of the tests fail
         """
+        print(f'Processing contract: {contract_wasm.stem}')
+
         contract_kast = self.kast_from_wasm(contract_wasm)
         conf, subst = self.deploy_test(contract_kast)
 
-        bindings = self.contract_bindings(contract_wasm)
+        bindings = [b for b in self.contract_bindings(contract_wasm) if b.name.startswith('test_')]
+
+        print(f'Discovered {len(bindings)} test functions:')
+        for binding in bindings:
+            print(f'    - {binding.name}')
 
         for binding in bindings:
-            if not binding.name.startswith('test_'):
-                continue
+            print(f'\n  Running {binding.name}...')
             self.run_test(conf, subst, binding)
+            print('    Test passed.')
 
     def deploy_and_prove(self, contract_wasm: Path, proof_dir: Path | None = None) -> None:
         """Prove all of the tests in a soroban test contract.
