@@ -77,7 +77,6 @@ jobs:
       matrix:
         runner: [normal, ARM64]
     runs-on: ${{ matrix.runner }}
-    needs: draft-release
     steps:
       - name: 'Check out code'
         uses: actions/checkout@v4
