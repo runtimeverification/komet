@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from argparse import ArgumentParser, FileType
 from contextlib import contextmanager
@@ -14,7 +15,7 @@ from pyk.ktool.kprint import KAstOutput, _kast
 from pyk.ktool.krun import _krun
 from pyk.proof.reachability import APRProof
 from pyk.proof.tui import APRProofViewer
-from pyk.utils import ensure_dir_path
+from pyk.utils import abs_or_rel_to, ensure_dir_path
 from pykwasm.scripts.preprocessor import preprocess
 
 from .kasmer import Kasmer
@@ -23,6 +24,9 @@ from .utils import concrete_definition, symbolic_definition
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from subprocess import CompletedProcess
+
+
+sys.setrecursionlimit(4000)
 
 
 class Backend(Enum):
@@ -80,13 +84,16 @@ def _exec_test(*, wasm: Path | None) -> None:
     """
     kasmer = Kasmer(concrete_definition)
 
+    child_wasms: tuple[Path, ...] = ()
+
     if wasm is None:
         # We build the contract here, specifying where it's saved so we know where to find it.
         # Knowing where the compiled contract is saved by default when building it would eliminate
         # the need for this step, but at the moment I don't know how to retrieve that information.
         wasm = kasmer.build_soroban_contract(Path.cwd())
+        child_wasms = _read_config_file()
 
-    kasmer.deploy_and_run(wasm)
+    kasmer.deploy_and_run(wasm, child_wasms)
 
     sys.exit(0)
 
@@ -94,12 +101,27 @@ def _exec_test(*, wasm: Path | None) -> None:
 def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None) -> None:
     kasmer = Kasmer(symbolic_definition)
 
+    child_wasms: tuple[Path, ...] = ()
+
     if wasm is None:
         wasm = kasmer.build_soroban_contract(Path.cwd())
+        child_wasms = _read_config_file()
 
-    kasmer.deploy_and_prove(wasm, proof_dir)
+    kasmer.deploy_and_prove(wasm, child_wasms, proof_dir)
 
     sys.exit(0)
+
+
+def _read_config_file(dir_path: Path | None = None) -> tuple[Path, ...]:
+    dir_path = Path.cwd() if dir_path is None else dir_path
+    config_path = dir_path / 'kasmer.json'
+
+    if config_path.is_file():
+        with open(config_path) as f:
+            config = json.load(f)
+            return tuple(abs_or_rel_to(Path(c), dir_path) for c in config['contracts'])
+
+    return ()
 
 
 def _exec_prove_view(*, proof_dir: Path, id: str) -> None:
