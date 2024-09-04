@@ -70,3 +70,26 @@ jobs:
       - name: 'Tear down Docker'
         if: always()
         run: docker stop --time=0 ${CONTAINER}
+    
+  nix-binary-cache:
+    name: 'Populate Nix Binary Cache'
+    strategy:
+      matrix:
+        runner: [normal, ARM64]
+    runs-on: ${{ matrix.runner }}
+    needs: draft-release
+    steps:
+      - name: 'Check out code'
+        uses: actions/checkout@v4
+
+      - name: 'Publish Komet to k-framework-binary cache'
+        uses: workflow/nix-shell-action@v3
+        env:
+          CACHIX_AUTH_TOKEN: '${{ secrets.CACHIX_PRIVATE_KFB_TOKEN }}'
+          GC_DONT_GC: '1'
+        with:
+          packages: jq
+          script: |
+            export PATH="$(nix build github:runtimeverification/kup --no-link --json | jq -r '.[].outputs | to_entries[].value')/bin:$PATH"
+            kup publish k-framework-binary .#komet --keep-days 180
+
