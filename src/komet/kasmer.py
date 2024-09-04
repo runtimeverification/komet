@@ -253,7 +253,7 @@ class Kasmer:
         for binding in test_bindings:
             print(f'    - {binding.name}')
 
-        for binding in bindings:
+        for binding in test_bindings:
             print(f'\n  Running {binding.name}...')
             self.run_test(conf, subst, binding)
             print('    Test passed.')
