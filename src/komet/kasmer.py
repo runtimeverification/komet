@@ -169,6 +169,8 @@ class Kasmer:
 
         # Run the steps and grab the resulting config as a starting place to call transactions
         proc_res = concrete_definition.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
+        assert proc_res.returncode == 0
+
         kore_result = KoreParser(proc_res.stdout).pattern()
         kast_result = kore_to_kast(concrete_definition.kdefinition, kore_result)
 
