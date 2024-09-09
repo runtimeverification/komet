@@ -977,7 +977,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pykwasm"
-version = "0.1.104"
+version = "0.1.105"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -993,8 +993,8 @@ py-wasm = {git = "https://github.com/runtimeverification/py-wasm.git", tag = "0.
 [package.source]
 type = "git"
 url = "https://github.com/runtimeverification/wasm-semantics.git"
-reference = "v0.1.104"
-resolved_reference = "296ae4a3fcb464bd76e01d0db8d95e2500d664f9"
+reference = "v0.1.105"
+resolved_reference = "fd23f082451d010971ec2127a0c0019bb75e8922"
 subdirectory = "pykwasm"
 
 [[package]]
@@ -1280,4 +1280,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "583b9cfdf9d01a18d6ddf4919bc0faad3dd20ee53a474553a463c91475b27f13"
+content-hash = "7c61374d191ea17f9178f96781fc1c43ee5021499600b2ab63aca11d7fe6ddad"
