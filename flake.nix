@@ -2,19 +2,17 @@
   description = "komet - K tooling for the Soroban platform";
 
   inputs = {
-    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.98";
-    k-framework.url = "github:runtimeverification/k/v7.1.103";
-    pyk.url = "github:runtimeverification/k/v7.1.103?dir=pyk";
+    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.102";
+    k-framework.follows = "wasm-semantics/k-framework";
     nixpkgs.follows = "k-framework/nixpkgs";
     flake-utils.follows = "k-framework/flake-utils";
-    rv-utils.url = "github:runtimeverification/rv-nix-tools";
-    nixpkgs-pyk.follows = "pyk/nixpkgs";
-    poetry2nix.follows = "pyk/poetry2nix";
+    rv-utils.follows = "k-framework/rv-utils";
+    poetry2nix.follows = "k-framework/poetry2nix";
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, k-framework, nixpkgs, flake-utils, rv-utils, pyk
-    , nixpkgs-pyk, poetry2nix, wasm-semantics, rust-overlay }@inputs:
+  outputs = { self, k-framework, nixpkgs, flake-utils, rv-utils, wasm-semantics
+    , rust-overlay, ... }@inputs:
     let
       overlay = (final: prev:
         let
@@ -26,23 +24,14 @@
           ] ./.);
 
           version = self.rev or "dirty";
-
-          nixpkgs-pyk = import inputs.nixpkgs-pyk {
-            system = prev.system;
-            overlays = [ pyk.overlay ];
-          };
-
-          python310-pyk = nixpkgs-pyk.python310;
-
-          poetry2nix =
-            inputs.poetry2nix.lib.mkPoetry2Nix { pkgs = nixpkgs-pyk; };
+          poetry2nix = inputs.poetry2nix.lib.mkPoetry2Nix { pkgs = prev; };
         in rec {
           komet = prev.stdenv.mkDerivation {
             pname = "komet";
             inherit src version;
 
             buildInputs = with final; [
-              nixpkgs-pyk.pyk-python310
+              k-framework.packages.${system}.pyk-python310
               k-framework.packages.${system}.k
               komet-pyk
             ];
@@ -73,7 +62,7 @@
           };
 
           komet-pyk = poetry2nix.mkPoetryApplication {
-            python = nixpkgs-pyk.python310;
+            python = prev.python310;
             projectDir = ./.;
             src = rv-utils.lib.mkSubdirectoryAppSrc {
               pkgs = import nixpkgs { system = prev.system; };
@@ -83,35 +72,8 @@
             };
             overrides = poetry2nix.overrides.withDefaults
               (finalPython: prevPython: {
-                cmd2 = prevPython.cmd2.overridePythonAttrs (old: {
-                  propagatedBuildInputs = prev.lib.filter
-                    (x: !(prev.lib.strings.hasInfix "exceptiongroup" x.name))
-                    old.propagatedBuildInputs ++ [ finalPython.exceptiongroup ];
-                });
-                pytest = prevPython.pytest.overridePythonAttrs (old: {
-                  propagatedBuildInputs = prev.lib.filter
-                    (x: !(prev.lib.strings.hasInfix "attrs" x.name))
-                    old.propagatedBuildInputs ++ [ finalPython.attrs ];
-                });
-                kframework = nixpkgs-pyk.pyk-python310.overridePythonAttrs
-                  (old: {
-                    propagatedBuildInputs = prev.lib.filter (x:
-                      !(prev.lib.strings.hasInfix "hypothesis" x.name)
-                      && !(prev.lib.strings.hasInfix "pytest" x.name)
-                      && !(prev.lib.strings.hasInfix "cmd2" x.name))
-                      old.propagatedBuildInputs ++ [
-                        finalPython.hypothesis
-                        finalPython.pytest
-                        finalPython.cmd2
-                      ];
-                  });
-                pykwasm =
-                  wasm-semantics.packages.${prev.system}.kwasm-pyk.overridePythonAttrs
-                  (old: {
-                    propagatedBuildInputs = prev.lib.filter
-                      (x: !(prev.lib.strings.hasInfix "kframework" x.name))
-                      old.propagatedBuildInputs ++ [ finalPython.kframework ];
-                  });
+                kframework = k-framework.packages.${prev.system}.pyk-python310;
+                pykwasm = wasm-semantics.packages.${prev.system}.kwasm-pyk;
               });
             groups = [ ];
             checkGroups = [ ];
