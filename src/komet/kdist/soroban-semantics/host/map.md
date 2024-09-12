@@ -91,7 +91,7 @@ The function returns a `HostVal` pointing to the new map object.
                     ScMap(
                       mapFromLists(
                         KEYS,
-                        Bytes2Vals(VALS_BS)
+                        rel2absMany(RELS, Bytes2Vals(VALS_BS))
                       )
                     )
                   )
@@ -99,6 +99,7 @@ The function returns a `HostVal` pointing to the new map object.
                  ...
         </instrs>
         <hostStack> KEYS : VALS_BS : S => S </hostStack>
+        <relativeObjects> RELS </relativeObjects>
       requires size(KEYS) ==Int lengthBytes(VALS_BS) /Int 8
 
 ```
