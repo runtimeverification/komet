@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
 
+from pyk.cli.args import bug_report_arg
 from pyk.cli.utils import file_path
 from pyk.kdist import kdist
 from pyk.ktool.kprint import KAstOutput, _kast
@@ -24,6 +25,8 @@ from .utils import concrete_definition, symbolic_definition
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from subprocess import CompletedProcess
+
+    from pyk.utils import BugReport
 
 
 sys.setrecursionlimit(4000)
@@ -48,7 +51,7 @@ def main() -> None:
     elif args.command == 'prove':
         if args.prove_command is None or args.prove_command == 'run':
             wasm = Path(args.wasm.name) if args.wasm is not None else None
-            _exec_prove_run(wasm=wasm, proof_dir=args.proof_dir)
+            _exec_prove_run(wasm=wasm, proof_dir=args.proof_dir, bug_report=args.bug_report)
         if args.prove_command == 'view':
             assert args.proof_dir is not None
             _exec_prove_view(proof_dir=args.proof_dir, id=args.id)
@@ -98,7 +101,7 @@ def _exec_test(*, wasm: Path | None) -> None:
     sys.exit(0)
 
 
-def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None) -> None:
+def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None, bug_report: BugReport | None = None) -> None:
     kasmer = Kasmer(symbolic_definition)
 
     child_wasms: tuple[Path, ...] = ()
@@ -107,7 +110,7 @@ def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None) -> None:
         wasm = kasmer.build_soroban_contract(Path.cwd())
         child_wasms = _read_config_file()
 
-    kasmer.deploy_and_prove(wasm, child_wasms, proof_dir)
+    kasmer.deploy_and_prove(wasm, child_wasms, proof_dir, bug_report)
 
     sys.exit(0)
 
@@ -172,6 +175,7 @@ def _argument_parser() -> ArgumentParser:
     )
     prove_parser.add_argument('--wasm', type=FileType('r'), help='Prove a specific contract wasm file instead')
     prove_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
+    prove_parser.add_argument('--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs')
     prove_parser.add_argument('--id', help='Name of the test function in the testing contract')
 
     return parser
