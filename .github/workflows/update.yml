@@ -39,5 +39,11 @@ jobs:
           K_VERSION=$(poetry run python3 -c 'import pyk; print(pyk.__version__)')
           echo ${K_VERSION} > deps/k_release
           git add deps/k_release && git commit -m "deps/k_release: sync release file version ${K_VERSION}" || true
+      - name: 'Update Nix flake inputs'
+        run: |
+          PYKWASM_VERSION=v"$(cat deps/kwasm_release)"
+          sed -i 's!    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+"!    wasm-semantics.url = "github:runtimeverification/wasm-semantics/'"${PYKWASM_VERSION}"'"!' flake.nix
+          nix flake update
+          git add flake.nix flake.lock && git commit -m 'flake.{nix,lock}: update Nix derivations' || true
       - name: 'Push updates'
         run: git push
