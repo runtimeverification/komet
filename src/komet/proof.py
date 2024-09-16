@@ -8,7 +8,7 @@ from pyk.kcfg import KCFGExplore
 from pyk.kcfg.semantics import DefaultSemantics
 from pyk.proof import APRProof, APRProver
 
-from .utils import symbolic_definition
+from .utils import symbolic_definition, library_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -23,6 +23,7 @@ def _explore_context(id: str, bug_report: BugReport | None) -> Iterator[KCFGExpl
     with cterm_symbolic(
         definition=symbolic_definition.kdefinition,
         definition_dir=symbolic_definition.path,
+        llvm_definition_dir=library_definition.path,
         id=id if bug_report else None,
         bug_report=bug_report,
     ) as cts:
