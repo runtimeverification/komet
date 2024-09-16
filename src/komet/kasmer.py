@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from pyk.kast.inner import KInner
     from pyk.kore.syntax import Pattern
     from pyk.proof import APRProof
+    from pyk.utils import BugReport
 
     from .utils import SorobanDefinition
 
@@ -204,7 +205,12 @@ class Kasmer:
         fuzz(self.definition.path, template_config_kore, template_subst, check_exit_code=True)
 
     def run_prove(
-        self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding, proof_dir: Path | None = None
+        self,
+        conf: KInner,
+        subst: dict[str, KInner],
+        binding: ContractBinding,
+        proof_dir: Path | None = None,
+        bug_report: BugReport | None = None,
     ) -> APRProof:
         from_acct = account_id(b'test-account')
         to_acct = contract_id(b'test-contract')
@@ -228,7 +234,7 @@ class Kasmer:
 
         claim, _ = cterm_build_claim(name, lhs, rhs)
 
-        return run_claim(name, claim, proof_dir)
+        return run_claim(name, claim, proof_dir, bug_report)
 
     def deploy_and_run(self, contract_wasm: Path, child_wasms: tuple[Path, ...]) -> None:
         """Run all of the tests in a soroban test contract.
@@ -261,7 +267,11 @@ class Kasmer:
             print('    Test passed.')
 
     def deploy_and_prove(
-        self, contract_wasm: Path, child_wasms: tuple[Path, ...], proof_dir: Path | None = None
+        self,
+        contract_wasm: Path,
+        child_wasms: tuple[Path, ...],
+        proof_dir: Path | None = None,
+        bug_report: BugReport | None = None,
     ) -> None:
         """Prove all of the tests in a soroban test contract.
 
@@ -283,7 +293,7 @@ class Kasmer:
         for binding in bindings:
             if not binding.name.startswith('test_'):
                 continue
-            proof = self.run_prove(conf, subst, binding, proof_dir)
+            proof = self.run_prove(conf, subst, binding, proof_dir, bug_report)
             if proof.status == ProofStatus.FAILED:
                 raise KSorobanError(proof.summary)
 

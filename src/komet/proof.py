@@ -15,24 +15,30 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from pyk.kast.outer import KClaim
+    from pyk.utils import BugReport
 
 
 @contextmanager
-def _explore_context() -> Iterator[KCFGExplore]:
-    with cterm_symbolic(definition=symbolic_definition.kdefinition, definition_dir=symbolic_definition.path) as cts:
+def _explore_context(id: str, bug_report: BugReport | None) -> Iterator[KCFGExplore]:
+    with cterm_symbolic(
+        definition=symbolic_definition.kdefinition,
+        definition_dir=symbolic_definition.path,
+        id=id if bug_report else None,
+        bug_report=bug_report,
+    ) as cts:
         yield KCFGExplore(cts)
 
 
 class SorobanSemantics(DefaultSemantics): ...
 
 
-def run_claim(id: str, claim: KClaim, proof_dir: Path | None = None) -> APRProof:
+def run_claim(id: str, claim: KClaim, proof_dir: Path | None = None, bug_report: BugReport | None = None) -> APRProof:
     if proof_dir is not None and APRProof.proof_data_exists(id, proof_dir):
         proof = APRProof.read_proof_data(proof_dir, id)
     else:
         proof = APRProof.from_claim(symbolic_definition.kdefinition, claim=claim, logs={}, proof_dir=proof_dir)
 
-    with _explore_context() as kcfg_explore:
+    with _explore_context(id, bug_report) as kcfg_explore:
         prover = APRProver(kcfg_explore)
         prover.advance_proof(proof)
 
