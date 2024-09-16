@@ -10,6 +10,9 @@ from pyk.prelude.kint import leInt
 from pyk.prelude.utils import token
 
 from .kast.syntax import (
+    account_id,
+    contract_id,
+    sc_address,
     sc_bool,
     sc_bytes,
     sc_i32,
@@ -121,6 +124,30 @@ class SCBytes(SCValue):
 
 
 @dataclass(frozen=True)
+class AccountId:
+    val: bytes
+
+    def to_kast(self) -> KInner:
+        return account_id(self.val)
+
+
+@dataclass(frozen=True)
+class ContractId:
+    val: bytes
+
+    def to_kast(self) -> KInner:
+        return contract_id(self.val)
+
+
+@dataclass(frozen=True)
+class SCAddress(SCValue):
+    val: AccountId | ContractId
+
+    def to_kast(self) -> KInner:
+        return sc_address(self.val.to_kast())
+
+
+@dataclass(frozen=True)
 class SCVec(SCValue):
     val: tuple[SCValue]
 
@@ -150,6 +177,7 @@ _NAME_TO_CLASSNAME: Final = {
     'u256': 'SCU256Type',
     'symbol': 'SCSymbolType',
     'bytes': 'SCBytesType',
+    'address': 'SCAddressType',
     'vec': 'SCVecType',
     'map': 'SCMapType',
 }
@@ -328,6 +356,21 @@ class SCBytesType(SCMonomorphicType):
     @classmethod
     def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
         return KApply('SCVal:Bytes', [KVariable(name, KSort('Bytes'))]), ()
+
+
+@dataclass
+class SCAddressType(SCMonomorphicType):
+    def strategy(self) -> strategies.SearchStrategy:
+        def target(p: bool, val: bytes) -> SCAddress:
+            if p:
+                return SCAddress(ContractId(val))
+            return SCAddress(AccountId(val))
+
+        return strategies.builds(target, strategies.booleans(), strategies.binary(min_size=32, max_size=32))
+
+    @classmethod
+    def as_var(cls, name: str) -> tuple[KInner, tuple[KInner, ...]]:
+        return KApply('SCVal:Address', [KVariable(name, KSort('Address'))]), ()
 
 
 @dataclass

@@ -76,8 +76,15 @@ module HOST-VECTOR
         <hostStack> U32(VALS_POS) : U32(LEN) : S => S </hostStack>
 
     rule [vecNewFromLinearMemoryAux]:
-        <instrs> vecNewFromLinearMemoryAux => allocObject(ScVec(Bytes2Vals(BS))) ... </instrs>
+        <instrs> vecNewFromLinearMemoryAux
+              => allocObject(
+                    ScVec(
+                      rel2absMany(RELS, Bytes2Vals(BS))
+                    )
+                  ) ...
+        </instrs>
         <hostStack> BS : S => S </hostStack>
+        <relativeObjects> RELS </relativeObjects>
 
 
     syntax Bytes ::= Vals2Bytes(List)    [function, total]

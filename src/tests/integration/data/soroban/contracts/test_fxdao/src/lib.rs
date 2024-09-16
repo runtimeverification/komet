@@ -70,6 +70,15 @@ impl TestFxDAOContract {
         true
     }
 
+    pub fn test_set_admin(env: Env, addr: Address) -> bool {
+        let fxdao_addr: Address = env.storage().instance().get(&FXDAO_KEY).unwrap();
+        let client = VaultsContract::Client::new(&env, &fxdao_addr);
+
+        client.set_admin(&addr);
+
+        let core_state = client.get_core_state();
+        core_state.admin == addr
+    }
 }
 
 mod test;

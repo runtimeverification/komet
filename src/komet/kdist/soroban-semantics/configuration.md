@@ -333,7 +333,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
 
     rule [loadObject-rel]:
         <instrs> loadObject(VAL)
-              => loadObject(RELS {{ getIndex(VAL) }} orDefault HostVal(0))
+              => loadObject(rel2abs(RELS, VAL))
                  ...
         </instrs>
         <relativeObjects> RELS </relativeObjects>
@@ -368,6 +368,24 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
         <hostStack> (SCV => HostVal2ScValRec(SCV, OBJS, RELS)) : _ </hostStack>
         <relativeObjects> RELS </relativeObjects>
         <hostObjects>     OBJS </hostObjects>
+
+```
+
+- rel2abs, rel2absMany: Convert relative handles to absolute handles
+
+```k
+    syntax HostVal ::= rel2abs(List, HostVal)   [function, total, symbol(rel2abs)]
+ // ------------------------------------------------------------------------
+    rule rel2abs(RELS, HV) => RELS {{ getIndex(HV) }} orDefault HV
+      requires isObject(HV) andBool isRelativeObjectHandle(HV)
+    rule rel2abs(_,    HV) => HV
+      [owise]
+
+    syntax List ::= rel2absMany(List, List)    [function, total, symbol(rel2absMany)]
+ // --------------------------------------------------------------------------------
+    rule rel2absMany(RELS, ListItem(HV) L) => ListItem(rel2abs(RELS, HV)) rel2absMany(RELS, L)
+    rule rel2absMany(_,                 L) => L
+      [owise]
 
 ```
 
