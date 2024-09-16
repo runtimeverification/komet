@@ -8,7 +8,7 @@ from pyk.kcfg import KCFGExplore
 from pyk.kcfg.semantics import DefaultSemantics
 from pyk.proof import APRProof, APRProver
 
-from .utils import symbolic_definition, library_definition
+from .utils import library_definition, symbolic_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
