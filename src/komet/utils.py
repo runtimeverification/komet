@@ -64,4 +64,5 @@ class SorobanDefinition:
 
 
 concrete_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm'))
+library_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm-library'))
 symbolic_definition = SorobanDefinition(kdist.get('soroban-semantics.haskell'))
