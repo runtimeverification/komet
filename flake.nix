@@ -2,7 +2,7 @@
   description = "komet - K tooling for the Soroban platform";
 
   inputs = {
-    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.107";
+    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.108";
     k-framework.follows = "wasm-semantics/k-framework";
     nixpkgs.follows = "k-framework/nixpkgs";
     flake-utils.follows = "k-framework/flake-utils";
