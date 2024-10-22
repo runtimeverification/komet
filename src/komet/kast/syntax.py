@@ -95,6 +95,10 @@ def sc_bytes(b: bytes) -> KInner:
     return KApply('SCVal:Bytes', [token(b)])
 
 
+def sc_address(address: KInner) -> KInner:
+    return KApply('SCVal:Address', [address])
+
+
 def sc_vec(l: Iterable[KInner]) -> KInner:
     return KApply('SCVal:Vec', list_of(l))
 
