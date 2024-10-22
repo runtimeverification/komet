@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from pyk.kbuild.utils import k_version
 from pyk.kdist.api import Target
-from pyk.ktool.kompile import kompile
+from pyk.ktool.kompile import LLVMKompileType, kompile
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -49,6 +49,17 @@ __TARGETS__: Final = {
     'llvm': KompileTarget(
         lambda src_dir: {
             'backend': 'llvm',
+            'main_file': src_dir / 'soroban-semantics/kasmer.md',
+            'syntax_module': 'KASMER-SYNTAX',
+            'include_dirs': [src_dir],
+            'md_selector': 'k',
+            'warnings_to_errors': True,
+        },
+    ),
+    'llvm-library': KompileTarget(
+        lambda src_dir: {
+            'backend': 'llvm',
+            'llvm_kompile_type': LLVMKompileType.C,
             'main_file': src_dir / 'soroban-semantics/kasmer.md',
             'syntax_module': 'KASMER-SYNTAX',
             'include_dirs': [src_dir],
