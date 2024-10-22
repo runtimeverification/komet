@@ -29,5 +29,4 @@ RUN wget -O rustup.sh https://sh.rustup.rs && \
 
 ENV PATH="/home/user/.cargo/bin:${PATH}"
 
-RUN cargo install --locked cargo-binstall
-RUN cargo binstall -y stellar-cli
+RUN cargo install --locked stellar-cli --features opt
