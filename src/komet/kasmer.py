@@ -119,9 +119,10 @@ class Kasmer:
         Returns:
             The path to the compiled wasm contract.
         """
-        contract_stem = self.contract_manifest(contract_path)['name']
+        contract_stem = self.contract_manifest(contract_path)['name'].replace('-', "_")
         contract_name = f'{contract_stem}.wasm'
         if out_dir is None:
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', contract_stem)
             out_dir = Path(mkdtemp(f'komet_{str(contract_path.stem)}'))
 
         run_process([str(self._soroban_bin), 'contract', 'build', '--out-dir', str(out_dir)], cwd=contract_path)
