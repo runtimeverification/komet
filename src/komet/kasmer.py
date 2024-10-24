@@ -10,13 +10,13 @@ from typing import TYPE_CHECKING
 
 from hypothesis import strategies
 from pyk.cterm import CTerm, cterm_build_claim
-from pyk.kast.inner import KSort, KVariable
+from pyk.kast.inner import KSort, KVariable, KSequence
 from pyk.kast.manip import Subst, split_config_from
 from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.kore.syntax import EVar, SortApp
-from pyk.ktool.kfuzz import fuzz
-from pyk.ktool.krun import KRunOutput
+from pyk.ktool.kfuzz import fuzz, KFuzzHandler
+from pyk.ktool.krun import KRunOutput, llvm_interpret
 from pyk.prelude.ml import mlEqualsTrue
 from pyk.prelude.utils import token
 from pyk.proof import ProofStatus
@@ -42,6 +42,7 @@ from .scval import SCType
 from .utils import KSorobanError, concrete_definition
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from typing import Any
 
     from hypothesis.strategies import SearchStrategy
@@ -202,7 +203,8 @@ class Kasmer:
         steps_strategy = binding.strategy.map(lambda args: make_steps(*args))
         template_subst = {EVar('VarSTEPS', SortApp('SortSteps')): steps_strategy}
 
-        fuzz(self.definition.path, template_config_kore, template_subst, check_exit_code=True)
+        handler = KasmerFuzzHandler(self.definition, template_config_kore)
+        fuzz(self.definition.path, template_config_kore, template_subst, check_exit_code=True, handler=handler)
 
     def run_prove(
         self,
@@ -296,6 +298,48 @@ class Kasmer:
             proof = self.run_prove(conf, subst, binding, proof_dir, bug_report)
             if proof.status == ProofStatus.FAILED:
                 raise KSorobanError(proof.summary)
+
+
+class KasmerFuzzHandler(KFuzzHandler):
+    definition: SorobanDefinition
+    template: Pattern
+
+    def __init__(self, definition: SorobanDefinition, template: Pattern) -> None:
+        self.definition = definition
+        self.template = template
+
+    def handle_test(self, args: Mapping[EVar, Pattern]) -> None:
+        pass
+
+    def handle_failure(self, args: Mapping[EVar, Pattern]) -> None:
+        def sub(p: Pattern) -> Pattern:
+            if isinstance(p, EVar) and p in args:
+                return args[p]
+            else:
+                return p
+    
+        test_pattern = self.template.top_down(sub)
+        res_kore = llvm_interpret(self.definition.path, test_pattern, check=False)
+        res = kore_to_kast(self.definition.kdefinition, res_kore)
+        _, subst = split_config_from(res)
+
+        k_cell = subst['K_CELL']
+        instrs_cell = subst['INSTRS_CELL']
+        assert isinstance(k_cell, KSequence)
+        assert isinstance(instrs_cell, KSequence)
+        
+        first_cmd = k_cell.items[0]
+        if first_cmd.label.name == 'expectResult':
+            input = kore_to_kast(self.definition.kdefinition, list(args.values()[0])
+            raise ValueError(f'Property violated')
+
+        if first_cmd.label.name == '#endWasm':
+            if instrs_cell.arity:
+                first_instr = instrs_cell.items[0]
+                first_instr_str = self.definition.krun.pretty_print(first_instr)
+                
+                if first_instr.label.name == 'hostCall(_,_,_)_WASM-AUTO-ALLOCATE_Instr_String_String_FuncType':
+                    raise ValueError(f'Unimplemented host function: {first_instr_str}')    
 
 
 @dataclass(frozen=True)
