@@ -1,0 +1,6 @@
+{
+    "contracts": [
+        "../../../../../../../deps/soroban-examples/cross_contract/contract_a",
+        "../../../../../../../deps/soroban-examples/cross_contract/contract_b"
+    ]
+}
