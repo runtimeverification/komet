@@ -31,7 +31,7 @@ module HOST-LEDGER
         <instrs> putContractData(#instance) => toSmall(Void) ... </instrs>
         <hostStack> KEY : VAL : S => S </hostStack>
         <callee> CONTRACT </callee>
-        <contract> 
+        <contract>
           <contractId> CONTRACT </contractId>
           <instanceStorage> STORAGE => STORAGE [ KEY <- VAL ] </instanceStorage>
           ...
@@ -71,7 +71,7 @@ module HOST-LEDGER
         </instrs>
         <hostStack> KEY : S => S </hostStack>
         <callee> CONTRACT </callee>
-        <contract> 
+        <contract>
           <contractId> CONTRACT </contractId>
           <instanceStorage> STORAGE </instanceStorage>
           ...
@@ -112,7 +112,7 @@ module HOST-LEDGER
         </instrs>
         <hostStack> KEY : S => S </hostStack>
         <callee> CONTRACT </callee>
-        <contract> 
+        <contract>
           <contractId> CONTRACT </contractId>
           <instanceStorage> ... KEY |-> VAL ... </instanceStorage>
           ...
@@ -151,7 +151,7 @@ module HOST-LEDGER
         <instrs> delContractData(#instance) => toSmall(Void) ... </instrs>
         <hostStack> KEY : S => S </hostStack>
         <callee> CONTRACT </callee>
-        <contract> 
+        <contract>
           <contractId> CONTRACT </contractId>
           <instanceStorage> MAP => MAP [ KEY <- undef ] </instanceStorage>
           ...
