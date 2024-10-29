@@ -130,6 +130,43 @@ module HOST-LEDGER
 
 ```
 
+## del_contract_data
+
+```k
+    rule [hostfun-del-contract-data]:
+        <instrs> hostCall ( "l" , "2" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObjectFull(HostVal(KEY))
+              ~> delContractData(Int2StorageType(STORAGE_TYPE))
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > KEY            // HostVal
+          1 |-> < i64 > STORAGE_TYPE   // 0: temp, 1: persistent, 2: instance
+        </locals>
+      requires Int2StorageTypeValid(STORAGE_TYPE)
+
+    syntax InternalInstr ::= delContractData(StorageType)   [symbol(delContractData)]
+ // ---------------------------------------------------------------------------------
+    rule [delContractData-instance]:
+        <instrs> delContractData(#instance) => toSmall(Void) ... </instrs>
+        <hostStack> KEY : S => S </hostStack>
+        <callee> CONTRACT </callee>
+        <contract> 
+          <contractId> CONTRACT </contractId>
+          <instanceStorage> MAP => MAP [ KEY <- undef ] </instanceStorage>
+          ...
+        </contract>
+      requires KEY in_keys(MAP)
+
+    rule [delContractData-other]:
+        <instrs> delContractData(DUR:Durability) => toSmall(Void) ... </instrs>
+        <hostStack> KEY : S => S </hostStack>
+        <callee> CONTRACT </callee>
+        <contractData> MAP => MAP [#skey(CONTRACT, DUR, KEY) <- undef ] </contractData>
+      requires #skey(CONTRACT, DUR, KEY) in_keys(MAP)
+
+```
+
 ## extend_current_contract_instance_and_code_ttl
 
 ```k
