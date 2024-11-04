@@ -44,6 +44,17 @@ module HOST-INTEGER
         </locals>
         <k> (.K => allocObject(U64(I))) ... </k>
 
+    rule [hostfun-obj-from-i64]:
+        <instrs> hostCall ( "i" , "1" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => allocObject(I64(#signed(i64, VAL)))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > VAL
+        </locals>
+      requires definedSigned(i64, VAL)
+
     rule [hostfun-obj-to-i64]:
         <instrs> hostCall ( "i" , "2" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
               => loadObject(HostVal(VAL))

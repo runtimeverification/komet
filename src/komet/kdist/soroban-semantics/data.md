@@ -151,7 +151,8 @@ module HOST-OBJECT
     rule getTag(I32(_))        => 5
     rule getTag(U64(I))        => 6     requires          I <=Int #maxU64small
     rule getTag(U64(I))        => 64    requires notBool( I <=Int #maxU64small )
-    rule getTag(I64(_))        => 65    // I64small is not implemented
+    rule getTag(I64(I))        => 7     requires          #minI64small <=Int I andBool I <=Int #maxI64small
+    rule getTag(I64(I))        => 65    requires notBool( #minI64small <=Int I andBool I <=Int #maxI64small )
     rule getTag(U128(I))       => 10    requires          I <=Int #maxU64small
     rule getTag(U128(I))       => 68    requires notBool( I <=Int #maxU64small ) // U64small and U128small have the same width
     rule getTag(ScVec(_))      => 75
@@ -225,6 +226,10 @@ module HOST-OBJECT
 
     rule fromSmall(VAL) => U64(getBody(VAL))       requires getTag(VAL) ==Int 6
 
+    rule fromSmall(VAL) => I64(#signed(i56, getBody(VAL)))
+      requires getTag(VAL) ==Int 7
+       andBool definedSigned(i56, getBody(VAL))
+
     rule fromSmall(VAL) => U128(getBody(VAL))      requires getTag(VAL) ==Int 10
 
     rule fromSmall(VAL) => Symbol(decode6bit(getBody(VAL)))
@@ -249,6 +254,9 @@ module HOST-OBJECT
     rule toSmall(I32(I))        => fromMajorMinorAndTag(#unsigned(i32, I), 0, 5)
       requires definedUnsigned(i32, I)
     rule toSmall(U64(I))        => fromBodyAndTag(I, 6)               requires I <=Int #maxU64small
+    rule toSmall(I64(I))        => fromBodyAndTag(#unsigned(i56, I), 7)
+      requires #minI64small <=Int I andBool I <=Int #maxI64small
+       andBool definedUnsigned(i56, I)
     rule toSmall(U128(I))       => fromBodyAndTag(I, 10)              requires I <=Int #maxU64small
     rule toSmall(Symbol(S))     => fromBodyAndTag(encode6bit(S), 14)  requires lengthString(S) <=Int 9
     rule toSmall(_)             => HostVal(-1)                        [owise]
@@ -306,6 +314,13 @@ module HOST-OBJECT
     rule head(S) => substrString(S, 0, 1)                      requires lengthString(S) >Int 0
     rule tail(S) => ""                                         requires lengthString(S) <=Int 0
     rule tail(S) => substrString(S, 1, lengthString(S))        requires lengthString(S) >Int 0
+
+    // 56-bit integers for small values
+    syntax IWidth ::= "i56"
+ // ------------------------------------
+    rule #width(i56) => 56
+    rule #pow(i56)  => 72057594037927936
+    rule #pow1(i56) => 36028797018963968
 
 endmodule
 ```
