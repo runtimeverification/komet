@@ -34,6 +34,37 @@ module CHEATCODES
       requires getTag(HostVal(NEW_SEQ_NUM)) ==Int getTag(U32(0)) // check `NEW_SEQ_NUM` is a U32
 ```
 
+## kasmer_set_ledger_timestamp
+
+```rust
+    extern "C" {
+        fn kasmer_set_ledger_timestamp(x : u64);
+    }
+```
+
+```k
+    rule [kasmer-set-ledger-timestamp]:
+        <instrs> hostCall ( "env" , "kasmer_set_ledger_timestamp" , [ i64  .ValTypes ] -> [ .ValTypes ] )
+              => loadObject(HostVal(TIMESTAMP))
+              ~> setLedgerTimestamp
+              ~> toSmall(Void)
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > TIMESTAMP // U64 HostVal
+        </locals>
+      requires getTag(HostVal(TIMESTAMP)) ==Int 6 // check `NEW_SEQ_NUM` is a U64
+        orBool getTag(HostVal(TIMESTAMP)) ==Int 64
+    
+    syntax InternalInstr ::= "setLedgerTimestamp"
+ // ---------------------------------------------
+    rule [setLedgerTimestamp]:
+        <instrs> setLedgerTimestamp => .K ... </instrs>
+        <hostStack> U64(TIMESTAMP) : S => S </hostStack>
+        <ledgerTimestamp> _ => TIMESTAMP </ledgerTimestamp>
+
+```
+
 ## kasmer_create_contract
 
 ```rust
