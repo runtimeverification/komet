@@ -23,11 +23,37 @@ impl StorageContract {
     }
 
     pub fn test_u32_overwrite(env: Env, num1: u32, num2: u32) -> bool {
-      env.storage().instance().set(&INST_KEY, &num1);
-      env.storage().instance().set(&INST_KEY, &num2);
-      
-      let num: u32 = env.storage().instance().get(&INST_KEY).unwrap();
-      
-      num == num2
-  }
+        env.storage().instance().set(&INST_KEY, &num1);
+        env.storage().instance().set(&INST_KEY, &num2);
+        
+        let num: u32 = env.storage().instance().get(&INST_KEY).unwrap();
+        
+        num == num2
+    }
+
+    pub fn test_set_remove_u64(env: Env, x: u64) -> bool {
+        // instance storage
+        env.storage().instance().set(&INST_KEY, &x);
+        assert!(env.storage().instance().has(&INST_KEY));
+
+        env.storage().instance().remove(&INST_KEY);
+        assert!(!env.storage().instance().has(&INST_KEY));
+        
+        // temporary storage
+        env.storage().temporary().set(&TEMP_KEY, &x);
+        assert!(env.storage().temporary().has(&TEMP_KEY));
+
+        env.storage().temporary().remove(&TEMP_KEY);
+        assert!(!env.storage().temporary().has(&TEMP_KEY));
+
+
+        // persistent storage
+        env.storage().persistent().set(&PRST_KEY, &x);
+        assert!(env.storage().persistent().has(&PRST_KEY));
+
+        env.storage().persistent().remove(&PRST_KEY);
+        assert!(!env.storage().persistent().has(&PRST_KEY));
+
+        true
+    }
 }

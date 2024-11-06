@@ -1,16 +1,26 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, Env, Val};
+use soroban_sdk::{contract, contractimpl, Env, FromVal, Val};
 
 #[contract]
 pub struct TtlContract;
 
 extern "C" {
+
     fn kasmer_set_ledger_sequence(x : u64);
+
+    fn kasmer_set_ledger_timestamp(x : u64);
+
 }
 
 fn set_ledger_sequence(x: u32) {
     unsafe {
         kasmer_set_ledger_sequence(Val::from_u32(x).to_val().get_payload());
+    }
+}
+
+fn set_ledger_timestamp(env: &Env, x: u64) {
+    unsafe {
+        kasmer_set_ledger_timestamp(Val::from_val(env, &x).get_payload());
     }
 }
 
@@ -41,4 +51,10 @@ impl TtlContract {
         // Consider adding a custom hook to retrieve the TTL value for more thorough testing.
         true
     }
+
+    pub fn test_timestamp(env: Env, t: u64) -> bool {
+        set_ledger_timestamp(&env, t);
+        env.ledger().timestamp() == t
+    }
+
 }

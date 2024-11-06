@@ -61,6 +61,21 @@ Return the current ledger sequence number as `U32`.
         <ledgerSequenceNumber> SEQ_NUM </ledgerSequenceNumber>
 ```
 
+## get_ledger_timestamp
+
+Return the current ledger timestamp as `U64`.
+
+```k
+    rule [hostfun-get-ledger-timestamp]:
+        <instrs> hostCall ( "x" , "4" , [ .ValTypes ] -> [ i64  .ValTypes ] )
+              => allocObject(U64(TIMESTAMP))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals> .Map </locals>
+        <ledgerTimestamp> TIMESTAMP </ledgerTimestamp>
+```
+
 ## fail_with_error
 
 ```k

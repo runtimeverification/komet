@@ -81,6 +81,7 @@ module CONFIG
 
 ```k
         <ledgerSequenceNumber> 0 </ledgerSequenceNumber>
+        <ledgerTimestamp> 0 </ledgerTimestamp>
         <logging> .List </logging>
       </soroban>
 

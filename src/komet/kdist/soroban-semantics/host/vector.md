@@ -24,6 +24,86 @@ module HOST-VECTOR
         <locals> .Map </locals>
 ```
 
+## vec_get
+
+```k
+    rule [hostfun-vec-get]:
+        <instrs> hostCall ( "v" , "1" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(INDEX))
+              ~> loadObject(HostVal(VEC))
+              ~> vecGet
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > VEC
+          1 |-> < i64 > INDEX
+        </locals>
+
+    syntax InternalInstr ::= "vecGet"   [symbol(vecGet)]
+ // ----------------------------------------------------
+    rule [vecGet]:
+        <instrs> vecGet => VEC {{ I }} orDefault HostVal(0) ... </instrs> // use 'orDefault' to avoid non-total list lookup
+        <hostStack> ScVec(VEC) : U32(I) : S => S </hostStack>
+      requires 0 <=Int I
+       andBool I <Int size(VEC)
+
+```
+
+## vec_len
+
+```k
+    rule [hostfun-vec-len]:
+        <instrs> hostCall ( "v" , "3" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(VEC))
+              ~> vecLen
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > VEC
+        </locals>
+
+    syntax InternalInstr ::= "vecLen"   [symbol(vecLen)]
+ // ----------------------------------------------------
+    rule [vecLen]:
+        <instrs> vecLen => toSmall(U32(size(VEC))) ... </instrs>
+        <hostStack> ScVec(VEC) : S => S </hostStack>
+
+```
+
+## vec_push_back
+
+Creates a new vector by appending a given item to the end of the provided vector.
+This function does not modify the original vector, maintaining immutability.
+Returns a new vector with the appended item.
+
+```k
+    rule [hostfun-vec-push-back]:
+        <instrs> hostCall ( "v" , "6" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(VEC))
+              ~> vecPushBack(HostVal(ITEM))
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > VEC
+          1 |-> < i64 > ITEM
+        </locals>
+
+    syntax InternalInstr ::= vecPushBack(HostVal)   [symbol(vecPushBack)]
+ // ----------------------------------------------------
+    rule [vecPushBack]:
+        <instrs> vecPushBack(ITEM)
+              => allocObject(
+                  ScVec(
+                    VEC ListItem(rel2abs(RELS, ITEM))
+                  )
+                 )
+              ~> returnHostVal
+              ...
+        </instrs>
+        <hostStack> ScVec(VEC) : S => S </hostStack>
+        <relativeObjects> RELS </relativeObjects>
+```
+
 ## vec_unpack_to_linear_memory
 
 ```k
