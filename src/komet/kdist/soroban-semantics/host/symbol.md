@@ -11,8 +11,11 @@ module HOST-SYMBOL
     imports WASM-OPERATIONS
     imports HOST-INTEGER
     imports SWITCH-SYNTAX
+```
 
-    // symbol_new_from_linear_memory
+## symbol_new_from_linear_memory
+
+```k
     rule [hostfun-symbol-new-from-linear-memory]:
         <instrs> hostCall ( "b" , "j" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
               => #memLoad(getMajor(HostVal(LM_POS)), getMajor(HostVal(LEN)))
@@ -38,11 +41,52 @@ module HOST-SYMBOL
         <hostStack> BS:Bytes : S => S </hostStack>
       requires validSymbol(Bytes2String(BS))
 
+  // TODO add validity check
     syntax InternalInstr ::= "mkSymbolFromStack"   [symbol(mkSymbolFromStack)]
  // ---------------------------------------------------------------------------------
     rule [mkSymbolFromStack]:
         <instrs> mkSymbolFromStack => .K ... </instrs>
         <hostStack> (BS => Symbol(Bytes2String(BS))) : _ </hostStack>
+```
+
+## symbol_index_in_linear_memory
+
+Linear search a `Symbol` in an array of byte slices. Return the index of the element or trap if not found.
+
+```k
+    rule [hostfun-symbol-index-in-linear-memory]:
+        <instrs> hostCall ( "b" , "m" , [ i64  i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(SYMBOL))
+              ~> #memLoad(getMajor(HostVal(POS)), 8 *Int getMajor(HostVal(LEN)))
+              ~> loadSlices
+              ~> symbolIndexInLinearMemory
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > SYMBOL    // Symbol
+          1 |-> < i64 > POS       // U32VAL
+          2 |-> < i64 > LEN       // U32VAL
+        </locals>
+      requires fromSmallValid(HostVal(POS))
+       andBool fromSmallValid(HostVal(LEN))
+
+    syntax InternalInstr ::= "symbolIndexInLinearMemory"            [symbol(symbolIndexInLinearMemory)]
+                           | symbolIndexInLinearMemoryAux(Int)      [symbol(symbolIndexInLinearMemoryAux)]
+ // ------------------------------------------------------------------------------------------------------
+    rule [symbolIndexInLinearMemory]:
+        <instrs> symbolIndexInLinearMemory
+              => symbolIndexInLinearMemoryAux(indexOf(HAYSTACK, NEEDLE))
+                 ...
+        </instrs>
+        <hostStack> NEEDLE:List : (Symbol(_) #as HAYSTACK) : S => S </hostStack>
+
+    rule [symbolIndexInLinearMemoryAux-trap]:
+        <instrs> symbolIndexInLinearMemoryAux(-1) => trap ... </instrs>
+
+    rule [symbolIndexInLinearMemoryAux]:
+        <instrs> symbolIndexInLinearMemoryAux(N) => toSmall(U32(N)) ... </instrs>
+      requires N =/=Int -1
+
 ```
 
 ## Helpers
@@ -84,6 +128,18 @@ module HOST-SYMBOL
               ~> loadSlicesAux(REST)
                  ...
         </instrs>
+```
+
+- `indexOf(X, XS)`: returns the index of the first element in `XS` which is equal to `X`, or `-1` if there is no such element.
+
+```k
+    syntax Int ::= indexOf   (KItem, List)          [function, total, symbol(indexOf)]
+                 | indexOfAux(KItem, List, Int)     [function, total, symbol(indexOfAux)]
+ // --------------------------------------------------------------------------
+    rule indexOf(X, XS) => indexOfAux(X, XS, 0)
+    rule indexOfAux(_, .List,          _) => -1
+    rule indexOfAux(X, ListItem(Y) _,  N) => N                              requires X ==K  Y
+    rule indexOfAux(X, ListItem(Y) XS, N) => indexOfAux(X, XS, N +Int 1)    requires X =/=K Y
 
 endmodule
 ```
