@@ -43,6 +43,47 @@ module HOST-SYMBOL
     rule [mkSymbolFromStack]:
         <instrs> mkSymbolFromStack => .K ... </instrs>
         <hostStack> (BS => Symbol(Bytes2String(BS))) : _ </hostStack>
+```
+
+## Helpers
+
+
+```k
+
+    syntax List ::= Bytes2U32List(Bytes)    [function, total, symbol(Bytes2U32List)]
+ // --------------------------------------------------------------------------------
+    rule Bytes2U32List(BS) => ListItem(Bytes2Int(substrBytes(BS, 0, 4), LE, Unsigned))
+                              Bytes2U32List(substrBytes(BS, 4, lengthBytes(BS)))
+      requires lengthBytes(BS) >=Int 4
+    rule Bytes2U32List(BS) => .List
+      requires lengthBytes(BS) <Int 4
+
+```
+
+- `loadSlices`: Load symbols stored as byte slices in Wasm memory.
+
+```k
+    syntax InternalInstr ::= "loadSlices"                     [symbol(loadSlices)]
+                           | loadSlicesAux(List)              [symbol(loadSlicesAux)]
+ // ---------------------------------------------------------------------------------
+    rule [loadSlices]:
+        <instrs> loadSlices
+              => loadSlicesAux(Bytes2U32List(KEY_SLICES))
+              ~> collectStackObjects(lengthBytes(KEY_SLICES) /Int 8)
+                 ...
+        </instrs>
+        <hostStack> KEY_SLICES : S => S </hostStack>
+
+    rule [loadSlicesAux-empty]:
+        <instrs> loadSlicesAux(.List) => .K ... </instrs>
+
+    rule [loadSlicesAux]:
+        <instrs> loadSlicesAux(REST ListItem(OFFSET) ListItem(LEN))
+              => #memLoad(OFFSET, LEN)
+              ~> mkSymbolFromStack
+              ~> loadSlicesAux(REST)
+                 ...
+        </instrs>
 
 endmodule
 ```
