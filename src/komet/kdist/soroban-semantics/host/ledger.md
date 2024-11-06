@@ -166,6 +166,37 @@ module HOST-LEDGER
       requires #skey(CONTRACT, DUR, KEY) in_keys(MAP)
 
 ```
+## update_current_contract_wasm
+
+```k
+    rule [hostfun-update-current-contract-wasm]:
+        <instrs> hostCall ( "l" , "6" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(HASH))
+              ~> updateContractWasm(CALLEE)
+              ~> toSmall(Void)
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > HASH   // Bytes
+        </locals>
+        <callee> CALLEE </callee>
+
+    syntax InternalInstr ::= updateContractWasm(ContractId)   [symbol(updateContractWasm)]
+ // --------------------------------------------------------------------------------------
+    rule [updateContractWasm]:
+        <instrs> updateContractWasm(CONTRACT) => .K ... </instrs>
+        <hostStack> ScBytes(HASH) : S => S </hostStack>
+        <contract>
+          <contractId> CONTRACT </contractId>
+          <wasmHash> _ => HASH </wasmHash>
+          ...
+        </contract>
+        <contractCode>
+          <codeHash> HASH </codeHash>
+          ...
+        </contractCode>
+
+```
 
 ## extend_current_contract_instance_and_code_ttl
 
