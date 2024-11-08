@@ -210,6 +210,52 @@ module HOST-LEDGER
 
 ```
 
+## extend_contract_data_ttl
+
+```k
+    rule [hostfun-extend-contract-data-ttl]:
+        <instrs> hostCall ( "l" , "7" , [ i64  i64  i64  i64 .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(EXTEND_TO))
+              ~> loadObject(HostVal(THRESHOLD))
+              ~> loadObjectFull(HostVal(KEY))
+              ~> extendContractDataTtl(CONTRACT, Int2StorageType(STORAGE_TYPE))
+              ~> toSmall(Void)
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > KEY            // HostVal
+          1 |-> < i64 > STORAGE_TYPE   // 0: temp, 1: persistent, 2: instance
+          2 |-> < i64 > THRESHOLD   // U32
+          3 |-> < i64 > EXTEND_TO   // U32
+        </locals>
+        <callee> CONTRACT </callee>
+      requires Int2StorageTypeValid(STORAGE_TYPE)
+
+    syntax InternalInstr ::= extendContractDataTtl(ContractId, StorageType)   [symbol(extendContractDataTtl)]
+ // --------------------------------------------------------------------------------------------
+    rule [extendContractDataTtl]:
+        <instrs> extendContractDataTtl(CONTRACT, DUR:Durability) => .K ... </instrs>
+        <hostStack> KEY:ScVal : U32(THRESHOLD) : U32(EXTEND_TO) : S => S </hostStack>
+        <contractData>
+          ...
+          #skey(CONTRACT, DUR, KEY)
+            |-> #sval(_VAL, LIVE_UNTIL => extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO))
+          ... 
+        </contractData>
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
+      requires THRESHOLD <=Int EXTEND_TO   // input is valid
+       andBool SEQ <=Int LIVE_UNTIL        // entry is alive
+       andBool ( DUR =/=K #temporary 
+          orBool extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO) <=Int maxLiveUntil(SEQ)
+       ) // #temporary TTLs has to be exact
+
+    rule [extendContractDataTtl-err]:
+        <instrs> extendContractDataTtl(_CONTRACT, _TYP) => #throw(ErrStorage, InvalidAction) ... </instrs>
+        <hostStack> _KEY:ScVal : U32(_THRESHOLD) : U32(_EXTEND_TO) : S => S </hostStack>
+      [owise]
+
+```
+
 ## extend_current_contract_instance_and_code_ttl
 
 ```k

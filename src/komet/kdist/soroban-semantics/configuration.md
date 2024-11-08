@@ -472,6 +472,14 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
 
 ```
 
+## Exception throwing
+
 ```k
+    syntax InternalInstr ::= #throw(ErrorType, Int)    [symbol(throw)]
+ // ------------------------------------------------------------------
+    rule [throw]:
+        <instrs> #throw(ERRTYPE, CODE) ~> _REST => .K </instrs>
+        <hostStack> S => Error(ERRTYPE, CODE) : S </hostStack>
+
 endmodule
 ```
