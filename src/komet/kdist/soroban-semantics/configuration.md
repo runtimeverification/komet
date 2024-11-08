@@ -65,7 +65,7 @@ module CONFIG
     Keys and values must be fully resolved `ScVal`s as in `<instanceStorage>`.
 
 ```k
-        <contractData> .Map </contractData> // Map of StorageKey to ScVal
+        <contractData> .Map </contractData> // Map of StorageKey to StorageVal
         <contractCodes>
           <contractCode multiplicity="*" type="Map">
             <codeHash>      .Bytes         </codeHash>
@@ -98,6 +98,8 @@ module CONFIG
                          | "#instance"           [symbol(#instance)]
 
     syntax StorageKey ::= #skey( ContractId , Durability , ScVal )   [symbol(StorageKey)]
+
+    syntax StorageVal ::= #sval( ScVal , Int )                       [symbol(StorageVal)]
 
 endmodule
 ```

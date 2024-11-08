@@ -37,13 +37,25 @@ module HOST-LEDGER
           ...
         </contract>
 
-    rule [putContractData-other]:
+    rule [putContractData-other-existing]:
         <instrs> putContractData(DUR:Durability) => toSmall(Void) ... </instrs>
         <hostStack> KEY : VAL : S => S </hostStack>
         <callee> CONTRACT </callee>
         <contractData>
-          STORAGE => STORAGE [ #skey(CONTRACT, DUR, KEY) <- VAL ]
+          ...
+          #skey(CONTRACT, DUR, KEY) |-> #sval(_ => VAL, _LIVE_UNTIL)
+          ...
         </contractData>
+
+    rule [putContractData-other-new]:
+        <instrs> putContractData(DUR:Durability) => toSmall(Void) ... </instrs>
+        <hostStack> KEY : VAL : S => S </hostStack>
+        <callee> CONTRACT </callee>
+        <contractData>
+          STORAGE => STORAGE [ #skey(CONTRACT, DUR, KEY) <- #sval(VAL, minLiveUntil(DUR, SEQ)) ]
+        </contractData>
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
+      requires notBool( #skey(CONTRACT, DUR, KEY) in_keys(STORAGE) )
 
 ```
 
@@ -126,7 +138,7 @@ module HOST-LEDGER
         </instrs>
         <hostStack> KEY : S => S </hostStack>
         <callee> CONTRACT </callee>
-        <contractData> ... #skey(CONTRACT, DUR, KEY) |-> VAL ... </contractData>
+        <contractData> ... #skey(CONTRACT, DUR, KEY) |-> #sval(VAL, _) ... </contractData>
 
 ```
 
@@ -238,7 +250,8 @@ module HOST-LEDGER
 
     syntax Int ::= extendedLiveUntil(Int, Int, Int, Int)    [function, total]
  // -----------------------------------------------------------------------------------
-    rule extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO) => SEQ +Int EXTEND_TO
+    rule extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO)
+      => minInt( SEQ +Int EXTEND_TO , maxLiveUntil(SEQ) )
       requires LIVE_UNTIL -Int SEQ <=Int THRESHOLD            // CURRENT_TTL <= THRESHOLD
        andBool LIVE_UNTIL          <Int  SEQ +Int EXTEND_TO   // LIVE_UNTIL  <  NEW_LIVE_UNTIL
 
@@ -288,5 +301,19 @@ module HOST-LEDGER
  // ------------------------------------------------------------
     rule Int2StorageTypeValid(I) => 0 <=Int I andBool I <=Int 2
 
+  // make these values variable
+    syntax Int ::= minEntryTtl(Durability)   [function, total]
+                 | "#maxEntryTtl"            [macro]
+ // -------------------------------------------------
+    rule minEntryTtl(#temporary)  => 16 
+    rule minEntryTtl(#persistent) => 4096
+    rule #maxEntryTtl             => 6312000
+
+    syntax Int ::= minLiveUntil(Durability, Int)   [function, total]
+                 | maxLiveUntil(Int)               [function, total]
+ // -----------------------------------------------------------------------
+    rule minLiveUntil(DUR, SEQ) => SEQ +Int minEntryTtl(DUR) -Int 1
+    rule maxLiveUntil(SEQ)      => SEQ +Int #maxEntryTtl -Int 1
+    
 endmodule
 ```
