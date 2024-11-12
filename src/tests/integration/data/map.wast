@@ -27,6 +27,10 @@ deployContract(
   b"test-wasm"
 )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; map_new
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 callTx(
   Account(b"test-caller"),
   Contract(b"test-sc"),
@@ -34,6 +38,11 @@ callTx(
   .List,
   ScMap(.Map)
 )
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; map_has
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 callTx(
   Account(b"test-caller"),
@@ -67,6 +76,31 @@ callTx(
   ))
   ListItem(Symbol(str("qux"))),
   SCBool(false)
+)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; map_len
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "len",
+  ListItem(ScMap(.Map)),
+  U32(0)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "len",
+  ListItem(ScMap(
+    Symbol(str("foo")) |-> U32(123)
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  )),
+  U32(3)
 )
 
 setExitCode(0)

@@ -29,6 +29,14 @@ module HOST-MAP
         <locals> .Map </locals>
 ```
 
+## map_len
+
+```k
+    rule [hostCallAux-map-len]:
+        <instrs> hostCallAux("m", "3") => toSmall(U32(size(M))) ... </instrs>
+        <hostStack> ScMap(M) : S => S </hostStack>
+```
+
 ## map_has
 
 ```k
@@ -36,7 +44,7 @@ module HOST-MAP
         <instrs> hostCall ( "m" , "4" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
               => loadObjectFull(HostVal(KEY))
               ~> loadObject(HostVal(M))
-              ~> mapHas
+              ~> hostCallAux("m", "4")
                  ...
         </instrs>
         <locals>
@@ -44,10 +52,8 @@ module HOST-MAP
           1 |-> < i64 > KEY
         </locals>
 
-    syntax InternalInstr ::= "mapHas"   [symbol(mapHas)]
- // ----------------------------------------------------
-    rule [mapHas]:
-        <instrs> mapHas => toSmall(SCBool( KEY in_keys(M) )) ... </instrs>
+    rule [hostCallAux-map-has]:
+        <instrs> hostCallAux("m", "4") => toSmall(SCBool( KEY in_keys(M) )) ... </instrs>
         <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
 
 ```
