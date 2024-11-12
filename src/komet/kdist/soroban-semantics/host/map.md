@@ -17,6 +17,18 @@ module HOST-MAP
     imports SWITCH-SYNTAX
 ```
 
+## map_new
+
+```k
+    rule [hostfun-map-new]:
+        <instrs> hostCall ( "m" , "_" , [ .ValTypes ] -> [ i64  .ValTypes ] )
+              => allocObject(ScMap(.Map))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals> .Map </locals>
+```
+
 ## map_unpack_to_linear_memory
 
 Writes values from a map (`ScMap`) to a specified memory address.
