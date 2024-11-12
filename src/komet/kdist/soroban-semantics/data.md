@@ -192,11 +192,17 @@ module HOST-OBJECT
     syntax HostVal ::= List "{{" Int "}}" "orDefault" HostVal
         [function, total, symbol(HostVal:getOrDefault)]
  // ---------------------------------------------------------
-    rule OBJS {{ I }} orDefault (D:HostVal) => HostValOrDefault(OBJS [ I ], D)
+    rule OBJS:List {{ I }} orDefault (D:HostVal) => HostValOrDefault(OBJS [ I ], D)
       requires 0 <=Int I andBool I <Int size(OBJS)
 
-    rule _OBJS {{ _I }} orDefault (D:HostVal) => D
+    rule _OBJS:List {{ _I }} orDefault (D:HostVal) => D
       [owise]
+
+    // typed version of builtin MAP [ K ] orDefault V
+    syntax HostVal ::= Map "{{" KItem "}}" "orDefault" HostVal
+        [function, total, symbol(HostVal:lookupOrDefault)]
+ // ---------------------------------------------------------
+    rule OBJS:Map {{ I }} orDefault (D:HostVal) => HostValOrDefault(OBJS [ I ] orDefault D, D)
 
 ```
 
