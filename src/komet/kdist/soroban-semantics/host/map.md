@@ -60,6 +60,37 @@ module HOST-MAP
 
 ```
 
+## map_del
+
+```k
+    rule [hostfun-map-del]:
+        <instrs> hostCall ( "m" , "2" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObjectFull(HostVal(KEY))
+              ~> loadObject(HostVal(M))
+              ~> hostCallAux("m", "2")
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > M
+          1 |-> < i64 > KEY
+        </locals>
+
+    rule [hostCallAux-map-del]:
+        <instrs> hostCallAux("m", "2")
+              => allocObject(ScMap( M [ KEY <- undef ] ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
+      requires KEY in_keys(M)
+
+    rule [hostCallAux-map-del-not-found]:
+        <instrs> hostCallAux("m", "2") => trap ... </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
+      requires notBool( KEY in_keys(M) )
+
+```
+
 ## map_len
 
 ```k

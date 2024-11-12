@@ -120,4 +120,24 @@ callTx(
   U32(123)
 )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; map_del
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "del",
+  ListItem(ScMap(
+    Symbol(str("foo")) |-> U32(123)
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  ))
+  ListItem(Symbol(str("foo"))),
+  ScMap(
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  )
+)
+
 setExitCode(0)
