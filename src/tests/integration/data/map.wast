@@ -35,4 +35,38 @@ callTx(
   ScMap(.Map)
 )
 
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "has",
+  ListItem(ScMap(.Map)) ListItem(Symbol(str("foo"))),
+  SCBool(false)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "has",
+  ListItem(ScMap(
+    Symbol(str("foo")) |-> U32(123)
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  ))
+  ListItem(Symbol(str("foo"))),
+  SCBool(true)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "has",
+  ListItem(ScMap(
+    Symbol(str("foo")) |-> U32(123)
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  ))
+  ListItem(Symbol(str("qux"))),
+  SCBool(false)
+)
+
 setExitCode(0)

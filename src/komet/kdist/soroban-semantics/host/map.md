@@ -29,6 +29,29 @@ module HOST-MAP
         <locals> .Map </locals>
 ```
 
+## map_has
+
+```k
+    rule [hostfun-map-has]:
+        <instrs> hostCall ( "m" , "4" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObjectFull(HostVal(KEY))
+              ~> loadObject(HostVal(M))
+              ~> mapHas
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > M
+          1 |-> < i64 > KEY
+        </locals>
+
+    syntax InternalInstr ::= "mapHas"   [symbol(mapHas)]
+ // ----------------------------------------------------
+    rule [mapHas]:
+        <instrs> mapHas => toSmall(SCBool( KEY in_keys(M) )) ... </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
+
+```
+
 ## map_unpack_to_linear_memory
 
 Writes values from a map (`ScMap`) to a specified memory address.
