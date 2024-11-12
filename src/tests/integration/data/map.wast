@@ -103,4 +103,21 @@ callTx(
   U32(3)
 )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; map_get
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "get",
+  ListItem(ScMap(
+    Symbol(str("foo")) |-> U32(123)
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  ))
+  ListItem(Symbol(str("foo"))),
+  U32(123)
+)
+
 setExitCode(0)
