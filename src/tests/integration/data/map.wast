@@ -140,4 +140,52 @@ callTx(
   )
 )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; map_put
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "put",
+  ListItem(ScMap(.Map)) ListItem(Symbol(str("foo"))) ListItem(U32(123456)),
+  ScMap(Symbol(str("foo")) |-> U32(123456))
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "put",
+  ListItem(ScMap(
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  ))
+  ListItem(Symbol(str("foo")))
+  ListItem(U32(123)),
+  ScMap(
+    Symbol(str("foo")) |-> U32(123)
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  )
+)
+
+;; Overwrite
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "put",
+  ListItem(ScMap(
+    Symbol(str("foo")) |-> U32(1)
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  ))
+  ListItem(Symbol(str("foo")))
+  ListItem(U32(123)),
+  ScMap(
+    Symbol(str("foo")) |-> U32(123)
+    Symbol(str("bar")) |-> Symbol(str("456"))
+    Symbol(str("baz")) |-> U128(789)
+  )
+)
+
 setExitCode(0)

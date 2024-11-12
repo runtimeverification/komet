@@ -29,6 +29,33 @@ module HOST-MAP
         <locals> .Map </locals>
 ```
 
+## map_put
+
+```k
+    rule [hostfun-map-put]:
+        <instrs> hostCall ( "m" , "0" , [ i64  i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => pushStack(HostVal(VAL))
+              ~> loadObjectFull(HostVal(KEY))
+              ~> loadObject(HostVal(M))
+              ~> hostCallAux("m", "0")
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > M
+          1 |-> < i64 > KEY
+          2 |-> < i64 > VAL
+        </locals>
+
+    rule [hostCallAux-map-put]:
+        <instrs> hostCallAux("m", "0")
+              => allocObject(ScMap( M [ KEY <- VAL ] ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : VAL:HostVal : S => S </hostStack>
+
+```
+
 ## map_get
 
 ```k
