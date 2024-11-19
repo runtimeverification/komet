@@ -65,9 +65,9 @@ module WASM-OPERATIONS
 ## Host function operations
 
 - `hostCallAux(MOD,FUNC)`: Helper instruction for implementing host functions with arguments already loaded onto the
-  host stack. Reduces the need for defining `InternalInstr`s for host functions. Reduces the need to define custom
-  `InternalInstr` productions for each host function. The `hostCall-default` rule provides default behavior for host
-  functions without complex argument handling, allowing `hostCallAux` to streamline the process further.
+  host stack. Reduces the need to define custom `InternalInstr` productions for each host function.
+  The `hostCall-default` rule provides default behavior for host functions without complex argument handling, allowing
+  `hostCallAux` to streamline the process further.
 - `loadArgs(N)`: Loads the first `N` arguments onto the host stack using `loadObject` starting from the last argument.
   This positions the first argument at the top of the stack at the end.
 
