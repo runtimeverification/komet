@@ -144,8 +144,8 @@ module HOST-OBJECT
   // https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#tag-values
     syntax Int ::= getTag(ScVal)   [function, total]
  // -----------------------------------------------------
-    rule getTag(SCBool(true))  => 0
-    rule getTag(SCBool(false)) => 1
+    rule getTag(SCBool(false)) => 0
+    rule getTag(SCBool(true))  => 1
     rule getTag(Void)          => 2
     rule getTag(Error(_,_))    => 3
     rule getTag(U32(_))        => 4

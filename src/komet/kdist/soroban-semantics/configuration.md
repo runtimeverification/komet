@@ -65,7 +65,7 @@ module CONFIG
     Keys and values must be fully resolved `ScVal`s as in `<instanceStorage>`.
 
 ```k
-        <contractData> .Map </contractData> // Map of StorageKey to ScVal
+        <contractData> .Map </contractData> // Map of StorageKey to StorageVal
         <contractCodes>
           <contractCode multiplicity="*" type="Map">
             <codeHash>      .Bytes         </codeHash>
@@ -98,6 +98,8 @@ module CONFIG
                          | "#instance"           [symbol(#instance)]
 
     syntax StorageKey ::= #skey( ContractId , Durability , ScVal )   [symbol(StorageKey)]
+
+    syntax StorageVal ::= #sval( ScVal , Int )                       [symbol(StorageVal)]
 
 endmodule
 ```
@@ -470,6 +472,14 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
 
 ```
 
+## Exception throwing
+
 ```k
+    syntax InternalInstr ::= #throw(ErrorType, Int)    [symbol(throw)]
+ // ------------------------------------------------------------------
+    rule [throw]:
+        <instrs> #throw(ERRTYPE, CODE) ~> _REST => .K </instrs>
+        <hostStack> S => Error(ERRTYPE, CODE) : S </hostStack>
+
 endmodule
 ```
