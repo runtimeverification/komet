@@ -37,13 +37,25 @@ module HOST-LEDGER
           ...
         </contract>
 
-    rule [putContractData-other]:
+    rule [putContractData-other-existing]:
         <instrs> putContractData(DUR:Durability) => toSmall(Void) ... </instrs>
         <hostStack> KEY : VAL : S => S </hostStack>
         <callee> CONTRACT </callee>
         <contractData>
-          STORAGE => STORAGE [ #skey(CONTRACT, DUR, KEY) <- VAL ]
+          ...
+          #skey(CONTRACT, DUR, KEY) |-> #sval(_ => VAL, _LIVE_UNTIL)
+          ...
         </contractData>
+
+    rule [putContractData-other-new]:
+        <instrs> putContractData(DUR:Durability) => toSmall(Void) ... </instrs>
+        <hostStack> KEY : VAL : S => S </hostStack>
+        <callee> CONTRACT </callee>
+        <contractData>
+          STORAGE => STORAGE [ #skey(CONTRACT, DUR, KEY) <- #sval(VAL, minLiveUntil(DUR, SEQ)) ]
+        </contractData>
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
+      requires notBool( #skey(CONTRACT, DUR, KEY) in_keys(STORAGE) )
 
 ```
 
@@ -126,7 +138,7 @@ module HOST-LEDGER
         </instrs>
         <hostStack> KEY : S => S </hostStack>
         <callee> CONTRACT </callee>
-        <contractData> ... #skey(CONTRACT, DUR, KEY) |-> VAL ... </contractData>
+        <contractData> ... #skey(CONTRACT, DUR, KEY) |-> #sval(VAL, _) ... </contractData>
 
 ```
 
@@ -164,6 +176,83 @@ module HOST-LEDGER
         <callee> CONTRACT </callee>
         <contractData> MAP => MAP [#skey(CONTRACT, DUR, KEY) <- undef ] </contractData>
       requires #skey(CONTRACT, DUR, KEY) in_keys(MAP)
+
+```
+## update_current_contract_wasm
+
+```k
+    rule [hostfun-update-current-contract-wasm]:
+        <instrs> hostCall ( "l" , "6" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(HASH))
+              ~> updateContractWasm(CALLEE)
+              ~> toSmall(Void)
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > HASH   // Bytes
+        </locals>
+        <callee> CALLEE </callee>
+
+    syntax InternalInstr ::= updateContractWasm(ContractId)   [symbol(updateContractWasm)]
+ // --------------------------------------------------------------------------------------
+    rule [updateContractWasm]:
+        <instrs> updateContractWasm(CONTRACT) => .K ... </instrs>
+        <hostStack> ScBytes(HASH) : S => S </hostStack>
+        <contract>
+          <contractId> CONTRACT </contractId>
+          <wasmHash> _ => HASH </wasmHash>
+          ...
+        </contract>
+        <contractCode>
+          <codeHash> HASH </codeHash>
+          ...
+        </contractCode>
+
+```
+
+## extend_contract_data_ttl
+
+```k
+    rule [hostfun-extend-contract-data-ttl]:
+        <instrs> hostCall ( "l" , "7" , [ i64  i64  i64  i64 .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObject(HostVal(EXTEND_TO))
+              ~> loadObject(HostVal(THRESHOLD))
+              ~> loadObjectFull(HostVal(KEY))
+              ~> extendContractDataTtl(CONTRACT, Int2StorageType(STORAGE_TYPE))
+              ~> toSmall(Void)
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > KEY            // HostVal
+          1 |-> < i64 > STORAGE_TYPE   // 0: temp, 1: persistent, 2: instance
+          2 |-> < i64 > THRESHOLD   // U32
+          3 |-> < i64 > EXTEND_TO   // U32
+        </locals>
+        <callee> CONTRACT </callee>
+      requires Int2StorageTypeValid(STORAGE_TYPE)
+
+    syntax InternalInstr ::= extendContractDataTtl(ContractId, StorageType)   [symbol(extendContractDataTtl)]
+ // --------------------------------------------------------------------------------------------
+    rule [extendContractDataTtl]:
+        <instrs> extendContractDataTtl(CONTRACT, DUR:Durability) => .K ... </instrs>
+        <hostStack> KEY:ScVal : U32(THRESHOLD) : U32(EXTEND_TO) : S => S </hostStack>
+        <contractData>
+          ...
+          #skey(CONTRACT, DUR, KEY)
+            |-> #sval(_VAL, LIVE_UNTIL => extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO))
+          ... 
+        </contractData>
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
+      requires THRESHOLD <=Int EXTEND_TO   // input is valid
+       andBool SEQ <=Int LIVE_UNTIL        // entry is alive
+       andBool ( DUR =/=K #temporary 
+          orBool extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO) <=Int maxLiveUntil(SEQ)
+       ) // #temporary TTLs has to be exact
+
+    rule [extendContractDataTtl-err]:
+        <instrs> extendContractDataTtl(_CONTRACT, _TYP) => #throw(ErrStorage, InvalidAction) ... </instrs>
+        <hostStack> _KEY:ScVal : U32(_THRESHOLD) : U32(_EXTEND_TO) : S => S </hostStack>
+      [owise]
 
 ```
 
@@ -207,7 +296,8 @@ module HOST-LEDGER
 
     syntax Int ::= extendedLiveUntil(Int, Int, Int, Int)    [function, total]
  // -----------------------------------------------------------------------------------
-    rule extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO) => SEQ +Int EXTEND_TO
+    rule extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO)
+      => minInt( SEQ +Int EXTEND_TO , maxLiveUntil(SEQ) )
       requires LIVE_UNTIL -Int SEQ <=Int THRESHOLD            // CURRENT_TTL <= THRESHOLD
        andBool LIVE_UNTIL          <Int  SEQ +Int EXTEND_TO   // LIVE_UNTIL  <  NEW_LIVE_UNTIL
 
@@ -257,5 +347,19 @@ module HOST-LEDGER
  // ------------------------------------------------------------
     rule Int2StorageTypeValid(I) => 0 <=Int I andBool I <=Int 2
 
+  // make these values variable
+    syntax Int ::= minEntryTtl(Durability)   [function, total]
+                 | "#maxEntryTtl"            [macro]
+ // -------------------------------------------------
+    rule minEntryTtl(#temporary)  => 16 
+    rule minEntryTtl(#persistent) => 4096
+    rule #maxEntryTtl             => 6312000
+
+    syntax Int ::= minLiveUntil(Durability, Int)   [function, total]
+                 | maxLiveUntil(Int)               [function, total]
+ // -----------------------------------------------------------------------
+    rule minLiveUntil(DUR, SEQ) => SEQ +Int minEntryTtl(DUR) -Int 1
+    rule maxLiveUntil(SEQ)      => SEQ +Int #maxEntryTtl -Int 1
+    
 endmodule
 ```

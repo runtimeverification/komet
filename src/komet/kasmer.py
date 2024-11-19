@@ -270,6 +270,7 @@ class Kasmer:
         self,
         contract_wasm: Path,
         child_wasms: tuple[Path, ...],
+        id: str | None = None,
         proof_dir: Path | None = None,
         bug_report: BugReport | None = None,
     ) -> None:
@@ -290,9 +291,9 @@ class Kasmer:
 
         conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
 
-        for binding in bindings:
-            if not binding.name.startswith('test_'):
-                continue
+        test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
+
+        for binding in test_bindings:
             proof = self.run_prove(conf, subst, binding, proof_dir, bug_report)
             if proof.status == ProofStatus.FAILED:
                 raise KSorobanError(proof.summary)
