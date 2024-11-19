@@ -24,25 +24,37 @@ fn set_ledger_timestamp(env: &Env, x: u64) {
     }
 }
 
+const MAX_ENTRY_TTL: u32 = 6312000;
+
 #[contractimpl]
 impl TtlContract {
 
     pub fn test_ttl(
         env: Env,
-        init_live_until: u32,
+        ttl: u32,
         seq: u32,
         threshold: u32,
         extend_to: u32
     ) -> bool {
         
-        // Given:
-        //   contract is still alive and extend_ttl inputs are valid
-        if seq <= init_live_until && threshold <= extend_to {
-            env.storage().instance().extend_ttl(0, init_live_until);
-            set_ledger_sequence(seq);
+        // Validate the input
+        if threshold > ttl || threshold > extend_to || ttl == 0 || extend_to == 0 {
+            return true;
+        }
+
+        // Set the initial TTL and ledger sequence number
+        env.storage().instance().extend_ttl(threshold, ttl);
+        let init_ttl = u32::min(ttl, MAX_ENTRY_TTL);
+        let init_seq = env.ledger().sequence();
+        let init_live_until = init_seq.checked_add(init_ttl - 1); // the sequence number at the beginning is 0
         
-        // When:
-            env.storage().instance().extend_ttl(threshold, extend_to);
+        set_ledger_sequence(seq);
+        
+        if let Some(live_until) = init_live_until {
+            // If the contract is still alive extend the instance ttl
+            if seq <= live_until {
+                env.storage().instance().extend_ttl(threshold, extend_to);
+            }
         }
 
         // Since there is no getter function for the TTL value, we cannot verify 
