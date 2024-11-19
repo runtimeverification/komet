@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "komet"
-version = "0.1.39"
+version = "0.1.40"
 description = "K tooling for the Soroban platform"
 authors = [
     "Runtime Verification, Inc. <contact@runtimeverification.com>",
@@ -18,7 +18,7 @@ soroban-semantics = "komet.kdist.plugin"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pykwasm = { git = "https://github.com/runtimeverification/wasm-semantics.git", tag = "v0.1.112", subdirectory = "pykwasm" }
+pykwasm = { git = "https://github.com/runtimeverification/wasm-semantics.git", tag = "v0.1.113", subdirectory = "pykwasm" }
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "*"
