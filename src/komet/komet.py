@@ -51,7 +51,7 @@ def main() -> None:
     elif args.command == 'prove':
         if args.prove_command is None or args.prove_command == 'run':
             wasm = Path(args.wasm.name) if args.wasm is not None else None
-            _exec_prove_run(wasm=wasm, proof_dir=args.proof_dir, bug_report=args.bug_report)
+            _exec_prove_run(wasm=wasm, id=args.id, proof_dir=args.proof_dir, bug_report=args.bug_report)
         if args.prove_command == 'view':
             assert args.proof_dir is not None
             _exec_prove_view(proof_dir=args.proof_dir, id=args.id)
@@ -101,7 +101,9 @@ def _exec_test(*, wasm: Path | None) -> None:
     sys.exit(0)
 
 
-def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None, bug_report: BugReport | None = None) -> None:
+def _exec_prove_run(
+    *, wasm: Path | None, id: str | None, proof_dir: Path | None, bug_report: BugReport | None = None
+) -> None:
     kasmer = Kasmer(symbolic_definition)
 
     child_wasms: tuple[Path, ...] = ()
@@ -110,7 +112,7 @@ def _exec_prove_run(*, wasm: Path | None, proof_dir: Path | None, bug_report: Bu
         wasm = kasmer.build_soroban_contract(Path.cwd())
         child_wasms = _read_config_file()
 
-    kasmer.deploy_and_prove(wasm, child_wasms, proof_dir, bug_report)
+    kasmer.deploy_and_prove(wasm, child_wasms, id, proof_dir, bug_report)
 
     sys.exit(0)
 

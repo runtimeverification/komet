@@ -51,7 +51,7 @@ def test_prove_adder(tmp_path: Path, symbolic_kasmer: Kasmer) -> None:
     contract_wasm = symbolic_kasmer.build_soroban_contract(SOROBAN_CONTRACTS_DIR / 'test_adder', tmp_path)
 
     # Then
-    symbolic_kasmer.deploy_and_prove(contract_wasm, (), tmp_path)
+    symbolic_kasmer.deploy_and_prove(contract_wasm, (), 'test_add', tmp_path)
 
 
 def test_bindings(tmp_path: Path, concrete_kasmer: Kasmer) -> None:
