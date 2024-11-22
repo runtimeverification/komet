@@ -36,7 +36,7 @@ def test_run(program: Path, tmp_path: Path) -> None:
 def test_komet(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> None:
     # Given
     contract_wasm = concrete_kasmer.build_soroban_contract(contract_path, tmp_path)
-    child_wasms = _read_config_file(contract_path)
+    child_wasms = _read_config_file(concrete_kasmer, contract_path)
 
     # Then
     if contract_path.stem.endswith('_fail'):
