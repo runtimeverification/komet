@@ -17,6 +17,136 @@ module HOST-MAP
     imports SWITCH-SYNTAX
 ```
 
+## map_new
+
+```k
+    rule [hostfun-map-new]:
+        <instrs> hostCall ( "m" , "_" , [ .ValTypes ] -> [ i64  .ValTypes ] )
+              => allocObject(ScMap(.Map))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals> .Map </locals>
+```
+
+## map_put
+
+```k
+    rule [hostfun-map-put]:
+        <instrs> hostCall ( "m" , "0" , [ i64  i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => pushStack(HostVal(VAL))
+              ~> loadObjectFull(HostVal(KEY))
+              ~> loadObject(HostVal(M))
+              ~> hostCallAux("m", "0")
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > M
+          1 |-> < i64 > KEY
+          2 |-> < i64 > VAL
+        </locals>
+
+    rule [hostCallAux-map-put]:
+        <instrs> hostCallAux("m", "0")
+              => allocObject(ScMap( M [ KEY <- VAL ] ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : VAL:HostVal : S => S </hostStack>
+
+```
+
+## map_get
+
+```k
+    rule [hostfun-map-get]:
+        <instrs> hostCall ( "m" , "1" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObjectFull(HostVal(KEY))
+              ~> loadObject(HostVal(M))
+              ~> hostCallAux("m", "1")
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > M
+          1 |-> < i64 > KEY
+        </locals>
+
+    rule [hostCallAux-map-get]:
+        <instrs> hostCallAux("m", "1")
+              => pushStack( M {{ KEY }} orDefault HostVal(-1) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
+      requires KEY in_keys(M)
+
+    rule [hostCallAux-map-get-not-found]:
+        <instrs> hostCallAux("m", "1") => trap ... </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
+      requires notBool( KEY in_keys(M) )
+
+```
+
+## map_del
+
+```k
+    rule [hostfun-map-del]:
+        <instrs> hostCall ( "m" , "2" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObjectFull(HostVal(KEY))
+              ~> loadObject(HostVal(M))
+              ~> hostCallAux("m", "2")
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > M
+          1 |-> < i64 > KEY
+        </locals>
+
+    rule [hostCallAux-map-del]:
+        <instrs> hostCallAux("m", "2")
+              => allocObject(ScMap( M [ KEY <- undef ] ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
+      requires KEY in_keys(M)
+
+    rule [hostCallAux-map-del-not-found]:
+        <instrs> hostCallAux("m", "2") => trap ... </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
+      requires notBool( KEY in_keys(M) )
+
+```
+
+## map_len
+
+```k
+    rule [hostCallAux-map-len]:
+        <instrs> hostCallAux("m", "3") => toSmall(U32(size(M))) ... </instrs>
+        <hostStack> ScMap(M) : S => S </hostStack>
+```
+
+## map_has
+
+```k
+    rule [hostfun-map-has]:
+        <instrs> hostCall ( "m" , "4" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => loadObjectFull(HostVal(KEY))
+              ~> loadObject(HostVal(M))
+              ~> hostCallAux("m", "4")
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > M
+          1 |-> < i64 > KEY
+        </locals>
+
+    rule [hostCallAux-map-has]:
+        <instrs> hostCallAux("m", "4") => toSmall(SCBool( KEY in_keys(M) )) ... </instrs>
+        <hostStack> ScMap(M) : KEY:ScVal : S => S </hostStack>
+
+```
+
 ## map_unpack_to_linear_memory
 
 Writes values from a map (`ScMap`) to a specified memory address.
