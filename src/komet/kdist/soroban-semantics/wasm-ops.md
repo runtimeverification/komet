@@ -62,6 +62,42 @@ module WASM-OPERATIONS
       [owise]
 ```
 
+## Host function operations
+
+- `hostCallAux(MOD,FUNC)`: Helper instruction for implementing host functions with arguments already loaded onto the
+  host stack. Reduces the need to define custom `InternalInstr` productions for each host function.
+  The `hostCall-default` rule provides default behavior for host functions without complex argument handling, allowing
+  `hostCallAux` to streamline the process further.
+- `loadArgs(N)`: Loads the first `N` arguments onto the host stack using `loadObject` starting from the last argument.
+  This positions the first argument at the top of the stack at the end.
+
+```k
+    syntax InternalInstr ::= hostCallAux(String, String)        [symbol(hostCallAux)]
+                           | loadArgs(Int)                      [symbol(loadArgs)] 
+
+    // Default implementation for `hostCall`. Loads the arguments to the host stack using `loadObject`
+    rule [hostCall-default]:
+        <instrs> hostCall(MOD, FUNC, [ _ARGS ] -> [ _RET ])
+              => loadArgs(size(LOCALS))
+              ~> hostCallAux(MOD, FUNC)
+                 ...
+        </instrs>
+        <locals> LOCALS </locals>
+      [owise]
+
+    rule [loadArgs-empty]:
+        <instrs> loadArgs(0) => .K ... </instrs>
+    
+    rule [loadArgs]:
+        <instrs> loadArgs(I)
+              => loadObject(HostVal(X))
+              ~> loadArgs(I -Int 1)
+                 ...
+        </instrs>
+        <locals> ... (I -Int 1) |-> <i64> X ... </locals>
+
+```
+
 ```k
 endmodule
 ```

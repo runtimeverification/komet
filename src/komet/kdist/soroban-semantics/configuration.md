@@ -127,6 +127,15 @@ module CONFIG-OPERATIONS
         <k> dropStack => .K ... </k>
         <hostStack> _V : S => S </hostStack>
 
+    // Allows using `pushStack` and `dropStack` in the `<instrs>` cell
+    rule [pushStack-instr]:
+        <instrs> pushStack(V) => .K ... </instrs>
+        <hostStack> S => V : S </hostStack>
+
+    rule [dropStack-instr]:
+        <instrs> dropStack => .K ... </instrs>
+        <hostStack> _V : S => S </hostStack>
+
 ```
 
 ## Call State
