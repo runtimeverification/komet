@@ -119,7 +119,7 @@ class Kasmer:
         Returns:
             The path to the compiled wasm contract.
         """
-        contract_stem = self.contract_manifest(contract_path)['name']
+        contract_stem = self.contract_manifest(contract_path)['name'].replace('-', '_')
         contract_name = f'{contract_stem}.wasm'
         if out_dir is None:
             out_dir = Path(mkdtemp(f'komet_{str(contract_path.stem)}'))
