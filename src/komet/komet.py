@@ -175,7 +175,7 @@ def _argument_parser() -> ArgumentParser:
     test_parser = command_parser.add_parser('test', help='Test the soroban contract in the current working directory')
     test_parser.add_argument('--wasm', type=FileType('r'), help='Test a specific contract wasm file instead')
 
-    prove_parser = command_parser.add_parser('prove', help='Test the soroban contract in the current working directory')
+    prove_parser = command_parser.add_parser('prove', help='Prove the soroban contract in the current working directory')
     prove_parser.add_argument(
         'prove_command',
         default='run',
