@@ -47,7 +47,7 @@ various contexts:
     would be required if `HostVal` were used.
 * Outside the Host:
   * `ScVec`: Represented as a `List` of `ScVal`.
-  * `ScVec`: Represented as a `Map` from `ScVal` to `ScVal`.
+  * `ScMap`: Represented as a `Map` from `ScVal` to `ScVal`.
 
 ```k
     syntax ScVal
@@ -60,8 +60,8 @@ various contexts:
         | I64(Int)                                 [symbol(SCVal:I64)]
         | U128(Int)                                [symbol(SCVal:U128)]
         | I128(Int)                                [symbol(SCVal:I128)]
-        | ScVec(List)                              [symbol(SCVal:Vec)]      // List<HostVal>
-        | ScMap(Map)                               [symbol(SCVal:Map)]      // Map<ScVal, HostVal>
+        | ScVec(List)                              [symbol(SCVal:Vec)]      // List<HostVal> or List<ScVal>
+        | ScMap(Map)                               [symbol(SCVal:Map)]      // Map<ScVal, HostVal> or Map<ScVal, ScVal>
         | ScAddress(Address)                       [symbol(SCVal:Address)]
         | Symbol(String)                           [symbol(SCVal:Symbol)]
         | ScBytes(Bytes)                           [symbol(SCVal:Bytes)]
@@ -187,10 +187,10 @@ module HOST-OBJECT
     syntax ScVal ::= List "{{" Int "}}" "orDefault" ScVal
         [function, total, symbol(List:getOrDefault)]
  // ---------------------------------------------------------
-    rule OBJS {{ I }} orDefault (D:ScVal) => ScValOrDefault(OBJS [ I ], D)
+    rule OBJS:List {{ I }} orDefault (D:ScVal) => ScValOrDefault(OBJS [ I ], D)
       requires 0 <=Int I andBool I <Int size(OBJS)
 
-    rule _OBJS {{ _I }} orDefault (D:ScVal) => D
+    rule _OBJS:List {{ _I }} orDefault (D:ScVal) => D
       [owise]
 
     syntax HostVal ::= List "{{" Int "}}" "orDefault" HostVal
@@ -208,6 +208,11 @@ module HOST-OBJECT
  // ---------------------------------------------------------
     rule OBJS:Map {{ I }} orDefault (D:HostVal) => HostValOrDefault(OBJS [ I ] orDefault D, D)
 
+    // typed version of builtin MAP [ K ] orDefault V
+    syntax ScVal ::= Map "{{" KItem "}}" "orDefault" ScVal
+        [function, total, symbol(ScVal:lookupOrDefault)]
+ // ---------------------------------------------------------
+    rule OBJS:Map {{ I }} orDefault (D:ScVal) => ScValOrDefault(OBJS [ I ] orDefault D, D)
 ```
 
 ## Conversion between `HostVal` and `ScVal`
@@ -343,6 +348,217 @@ module HOST-OBJECT
     rule #width(i128) => 128
     rule #pow(i128)   => 340282366920938463463374607431768211456
     rule #pow1(i128)  => 170141183460469231731687303715884105728
+
+```
+
+## Value Comparison
+
+[CAP 46-1: Comparison](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#comparison)
+
+```k
+    syntax Ordering ::= "Less"       [symbol(Ordering:Less)]
+                      | "Equal"      [symbol(Ordering:Equal)]
+                      | "Greater"    [symbol(Ordering:Greater)]
+
+    syntax Int ::= Ordering2Int(Ordering)     [function, total]
+ // -----------------------------------------------------------
+    rule Ordering2Int(Less)    => -1
+    rule Ordering2Int(Equal)   => 0
+    rule Ordering2Int(Greater) => 1
+```
+
+- `compare(A, B)`: Defines a total order between `ScVal`s.
+  
+
+```k
+    syntax Ordering ::= compare(ScVal, ScVal)    [function, total, symbol(compare)]
+```
+
+If `A` and `B` belong to different variants, their order is determined by the function `ScValTypeOrd(_:ScVal)`.
+`ScValTypeOrd` assigns a unique precedence to each variant type.
+
+```k
+    rule compare(A, B) => compareInt(ScValTypeOrd(A), ScValTypeOrd(B))
+      requires ScValTypeOrd(A) =/=Int ScValTypeOrd(B)
+```
+
+If `A` and `B` are of the same variant, they are compared by their underlying values.
+For scalar types the comparison is straightforward.
+
+```k
+    rule compare(SCBool(A), SCBool(B)) => compareBool(A, B)
+    rule compare(Void, Void)           => Equal
+    rule compare(Error(ATYP, ACODE), Error(BTYP, BCODE))
+      => #if ATYP ==K BTYP
+         #then compareInt(ACODE, BCODE)
+         #else compareInt(ErrorType2Int(ATYP), ErrorType2Int(BTYP))
+         #fi
+    rule compare(U32(A),  U32(B))  => compareInt(A, B)
+    rule compare(I32(A),  I32(B))  => compareInt(A, B)
+    rule compare(U64(A),  U64(B))  => compareInt(A, B)
+    rule compare(I64(A),  I64(B))  => compareInt(A, B)
+    rule compare(U128(A), U128(B)) => compareInt(A, B)
+    rule compare(I128(A), I128(B)) => compareInt(A, B)
+    rule compare(ScAddress(A), ScAddress(B)) => compareAddress(A, B)
+    rule compare(Symbol(A), Symbol(B))       => compareString(A, B)
+    rule compare(ScBytes(A), ScBytes(B))     => compareBytes(A, B)
+```
+
+For container types, the comparison is recursive as defined in `compareVec` and `compareMap`.
+
+- Maps are compared key-by-key in sorted or der of keys
+- Vectors are compared element-by-element in order
+
+```k
+    rule compare(ScVec(A), ScVec(B)) => compareVec(A, B)
+    rule compare(ScMap(A), ScMap(B)) => compareMap(A, sortedKeys(A), B, sortedKeys(B))
+```
+
+### Comparison of scalars
+
+```k
+    syntax Ordering ::= compareBool(Bool, Bool)             [function, total, symbol(compareBool)]
+ // ----------------------------------------------------------------------------------------------
+    rule compareBool(true, true)  => Equal
+    rule compareBool(true, false) => Greater
+    rule compareBool(false,true)  => Less
+    rule compareBool(false,false) => Equal
+
+    syntax Ordering ::= compareAddress(Address, Address)    [function, total, symbol(compareAddress)]
+ // -------------------------------------------------------------------------------------
+    rule compareAddress(Account(_),  Contract(_)) => Less
+    rule compareAddress(Contract(_), Account(_))  => Greater
+    rule compareAddress(Contract(A), Contract(B)) => compareBytes(A, B)
+    rule compareAddress(Account(A),  Account(B))  => compareBytes(A, B)
+
+    syntax Ordering ::= compareBytes(Bytes, Bytes)       [function, total, symbol(compareBytes)]
+                      | compareString(String, String)    [function, total, symbol(compareString)]
+ // ---------------------------------------------------------------------------------------------
+    rule compareBytes(A, B) => compareString(Bytes2String(A), Bytes2String(B))
+    rule compareString(A, B) => Less    requires A  <String B
+    rule compareString(A, B) => Equal   requires A ==String B
+    rule compareString(A, B) => Greater requires A  >String B
+
+    syntax Ordering ::= compareInt(Int, Int)   [function, total]
+ // ------------------------------------------------------------
+    rule compareInt(A, B) => Less    requires A  <Int B
+    rule compareInt(A, B) => Equal   requires A ==Int B
+    rule compareInt(A, B) => Greater requires A  >Int B
+
+```
+
+### Comparison of vectors (`compareVec`)
+
+The `compareVec` function compares two lists of `ScVal` values element by element, determining their order based on the
+first differing element. If one list is shorter, it is considered smaller; if all elements are equal, the lists are equal. 
+If a list contains an element that is not an `ScVal`, which should not occur, the function returns a default value of
+`Equal` to remain total.
+
+```k
+    syntax Ordering ::= compareVec(List, List)    [function, total, symbol(compareVec)]
+ // -----------------------------------------------------------------------------
+    rule compareVec(.List,                .List              ) => Equal
+    rule compareVec(.List,                ListItem(_:ScVal) _) => Less
+    rule compareVec(ListItem(_:ScVal) _, .List               ) => Greater
+    rule compareVec(ListItem(A) AS, ListItem(B) BS)
+      => #let C = compare(A, B) #in
+         #if C =/=K Equal
+         #then C
+         #else compareVec(AS, BS)
+         #fi
+    // invalid type
+    rule compareVec(_, _) => Equal [owise]
+```
+
+### Comparison of maps (`compareMap`)
+
+The `compareMap` function compares two maps by iterating through their sorted keys and comparing the keys and
+corresponding values.
+
+`compareMap(Map1, Keys1, Map2, Keys2)`:
+- `Map1` and `Map2`: Two maps being compared
+- `Keys1` and `Keys2`: Sorted lists of keys for the respective maps, the order in which entries are compared.
+
+```k
+    syntax Ordering ::= compareMap(map1: Map, keys1: List, map2: Map, keys2: List)
+        [function, total, symbol(compareMap)]
+ // -----------------------------------------------------------------------------------
+    rule compareMap(_M1, .List,               _M2, .List)               => Equal
+    rule compareMap(_M1, .List,               _M2, ListItem(_:ScVal) _) => Less
+    rule compareMap(_M1, ListItem(_:ScVal) _, _M2, .List)               => Greater
+    rule compareMap(M1,  ListItem(A) AS,       M2, ListItem(B) BS)
+      => #let C = compareMapItem( A, M1 {{ A }} orDefault Void, B, M2 {{ B }} orDefault Void ) #in
+         #if C =/=K Equal
+         #then C
+         #else compareMap(M1, AS, M2, BS)
+         #fi
+    // invalid type
+    rule compareMap(_, _, _, _) => Equal [owise]
+
+
+    syntax Ordering ::= compareMapItem(key1: ScVal, val1: ScVal, key2: ScVal, val2: ScVal)    [function, total]
+ // -----------------------------------------------------------------------------------------------------------
+    rule compareMapItem(AK, AV, BK, BV)
+      => #let C = compare(AK, BK) #in
+         #if C =/=K Equal
+         #then C
+         #else compare(AV, BV)
+         #fi
+
+    syntax Int ::= ScValTypeOrd(ScVal)    [function, total, symbol(ScValTypeOrd)]
+ // -------------------------------------------------------------------------------------------------
+    rule ScValTypeOrd(SCBool(_))     => 0
+    rule ScValTypeOrd(Void)          => 1
+    rule ScValTypeOrd(Error(_,_))    => 2
+    rule ScValTypeOrd(U32(_))        => 3
+    rule ScValTypeOrd(I32(_))        => 4
+    rule ScValTypeOrd(U64(_))        => 5
+    rule ScValTypeOrd(I64(_))        => 6
+    // Timepoint                     => 7
+    // Duration                      => 8
+    rule ScValTypeOrd(U128(_))       => 9
+    rule ScValTypeOrd(I128(_))       => 10
+    // U256                          => 11
+    // I256                          => 12
+    rule ScValTypeOrd(ScBytes(_))    => 13
+    // String                        => 14
+    rule ScValTypeOrd(Symbol(_))     => 15
+    rule ScValTypeOrd(ScVec(_))      => 16
+    rule ScValTypeOrd(ScMap(_))      => 17
+    rule ScValTypeOrd(ScAddress(_))  => 18
+    // ContractInstance              => 19
+    // LedgerKeyContractInstance     => 20
+    // LedgerKeyNonce                => 21
+```
+
+## Sorted key lists for ScMap
+
+### Insertion
+
+```k
+    syntax List ::= insertKey(ScVal, List)   [function, total, symbol(insertKey)]
+ // ----------------------------------------------------------------------------------------------
+    rule insertKey(KEY, ListItem(X) XS) => ListItem(X) insertKey(KEY, XS) 
+      requires Less ==K compare(X, KEY)
+    rule insertKey(KEY, ListItem(X) XS) => ListItem(X) XS 
+      requires Equal ==K compare(X, KEY)
+    rule insertKey(KEY, XS)             => ListItem(KEY) XS
+      [owise]
+```
+
+### Creation
+
+```k
+    syntax List ::= sortedKeys(Map)   [function, total]
+ // ---------------------------------------------------
+    rule sortedKeys(M) => sortKeys(keys_list(M))
+
+    syntax List ::= sortKeys(List)    [function, total, symbol(sortKeys)]
+ // -------------------------------------------------------------------------
+    rule sortKeys(ListItem(KEY:ScVal) REST) => insertKey(KEY, sortKeys(REST))
+    rule sortKeys(.List)                    => .List
+    // sort mismatch
+    rule sortKeys(ListItem(_) _REST)        => .List    [owise]
 
 endmodule
 ```
