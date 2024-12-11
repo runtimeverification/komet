@@ -236,7 +236,7 @@ class Kasmer:
 
         return run_claim(name, claim, proof_dir, bug_report)
 
-    def deploy_and_run(self, contract_wasm: Path, child_wasms: tuple[Path, ...]) -> None:
+    def deploy_and_run(self, contract_wasm: Path, child_wasms: tuple[Path, ...], id: str | None) -> None:
         """Run all of the tests in a soroban test contract.
 
         Args:
@@ -255,9 +255,15 @@ class Kasmer:
 
         conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
 
-        test_bindings = [b for b in bindings if b.name.startswith('test_')]
+        test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
 
-        print(f'Discovered {len(test_bindings)} test functions:')
+        if id is None:          
+            print(f'Discovered {len(test_bindings)} test functions:')
+        elif not test_bindings:
+            raise KeyError(f'Test function {id!r} not found.')
+        else:
+            print('Selected a single test function:')
+
         for binding in test_bindings:
             print(f'    - {binding.name}')
 

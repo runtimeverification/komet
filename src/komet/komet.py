@@ -47,7 +47,7 @@ def main() -> None:
         _exec_kast(program=args.program, backend=args.backend, output=args.output)
     elif args.command == 'test':
         wasm = Path(args.wasm.name) if args.wasm is not None else None
-        _exec_test(wasm=wasm)
+        _exec_test(wasm=wasm, id=args.id)
     elif args.command == 'prove':
         if args.prove_command is None or args.prove_command == 'run':
             wasm = Path(args.wasm.name) if args.wasm is not None else None
@@ -77,7 +77,7 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
     _exit_with_output(proc_res)
 
 
-def _exec_test(*, wasm: Path | None) -> None:
+def _exec_test(*, wasm: Path | None, id: str | None) -> None:
     """Run a soroban test contract given its compiled wasm file.
 
     This will get the bindings for the contract and run all of the test functions.
@@ -96,7 +96,7 @@ def _exec_test(*, wasm: Path | None) -> None:
         child_wasms = _read_config_file(kasmer)
         wasm = kasmer.build_soroban_contract(Path.cwd())
 
-    kasmer.deploy_and_run(wasm, child_wasms)
+    kasmer.deploy_and_run(wasm, child_wasms, id=id)
 
     sys.exit(0)
 
@@ -173,7 +173,7 @@ def _argument_parser() -> ArgumentParser:
     kast_parser.add_argument('--output', metavar='FORMAT', type=KAstOutput, help='format to output the term in')
 
     test_parser = command_parser.add_parser('test', help='Test the soroban contract in the current working directory')
-    test_parser.add_argument('--wasm', type=FileType('r'), help='Test a specific contract wasm file instead')
+    _add_common_test_arguments(test_parser)
 
     prove_parser = command_parser.add_parser('prove', help='Prove the soroban contract in the current working directory')
     prove_parser.add_argument(
@@ -183,10 +183,9 @@ def _argument_parser() -> ArgumentParser:
         metavar='COMMAND',
         help='Proof command to run. One of (%(choices)s)',
     )
-    prove_parser.add_argument('--wasm', type=FileType('r'), help='Prove a specific contract wasm file instead')
     prove_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
     prove_parser.add_argument('--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs')
-    prove_parser.add_argument('--id', help='Name of the test function in the testing contract')
+    _add_common_test_arguments(prove_parser)
 
     return parser
 
@@ -194,3 +193,7 @@ def _argument_parser() -> ArgumentParser:
 def _add_common_arguments(parser: ArgumentParser) -> None:
     parser.add_argument('program', metavar='PROGRAM', type=file_path, help='path to test file')
     parser.add_argument('--backend', metavar='BACKEND', type=Backend, default=Backend.LLVM, help='K backend to use')
+
+def _add_common_test_arguments(parser: ArgumentParser) -> None:
+    parser.add_argument('--id', help='Name of the test function in the testing contract')
+    parser.add_argument('--wasm', type=FileType('r'), help='Use a specific contract wasm file instead')
