@@ -49,11 +49,13 @@ def main() -> None:
         wasm = Path(args.wasm.name) if args.wasm is not None else None
         if args.max_examples < 1:
             raise ValueError(f'--max-examples must be a positive integer (greater than 0), given {args.max_examples}')
-        _exec_test(wasm=wasm, max_examples=args.max_examples, id=args.id)
+        _exec_test(dir_path=args.directory, wasm=wasm, max_examples=args.max_examples, id=args.id)
     elif args.command == 'prove':
         if args.prove_command is None or args.prove_command == 'run':
             wasm = Path(args.wasm.name) if args.wasm is not None else None
-            _exec_prove_run(wasm=wasm, id=args.id, proof_dir=args.proof_dir, bug_report=args.bug_report)
+            _exec_prove_run(
+                dir_path=args.directory, wasm=wasm, id=args.id, proof_dir=args.proof_dir, bug_report=args.bug_report
+            )
         if args.prove_command == 'view':
             assert args.proof_dir is not None
             _exec_prove_view(proof_dir=args.proof_dir, id=args.id)
@@ -79,7 +81,7 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
     _exit_with_output(proc_res)
 
 
-def _exec_test(*, wasm: Path | None, max_examples: int, id: str | None) -> None:
+def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, id: str | None) -> None:
     """Run a soroban test contract given its compiled wasm file.
 
     This will get the bindings for the contract and run all of the test functions.
@@ -87,6 +89,7 @@ def _exec_test(*, wasm: Path | None, max_examples: int, id: str | None) -> None:
 
     Exits successfully when all the tests pass.
     """
+    dir_path = Path.cwd() if dir_path is None else dir_path
     kasmer = Kasmer(concrete_definition)
 
     child_wasms: tuple[Path, ...] = ()
@@ -96,7 +99,7 @@ def _exec_test(*, wasm: Path | None, max_examples: int, id: str | None) -> None:
         # Knowing where the compiled contract is saved by default when building it would eliminate
         # the need for this step, but at the moment I don't know how to retrieve that information.
         child_wasms = _read_config_file(kasmer)
-        wasm = kasmer.build_soroban_contract(Path.cwd())
+        wasm = kasmer.build_soroban_contract(dir_path)
 
     kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
 
@@ -104,15 +107,21 @@ def _exec_test(*, wasm: Path | None, max_examples: int, id: str | None) -> None:
 
 
 def _exec_prove_run(
-    *, wasm: Path | None, id: str | None, proof_dir: Path | None, bug_report: BugReport | None = None
+    *,
+    dir_path: Path | None,
+    wasm: Path | None,
+    id: str | None,
+    proof_dir: Path | None,
+    bug_report: BugReport | None = None,
 ) -> None:
+    dir_path = Path.cwd() if dir_path is None else dir_path
     kasmer = Kasmer(symbolic_definition)
 
     child_wasms: tuple[Path, ...] = ()
 
     if wasm is None:
         child_wasms = _read_config_file(kasmer)
-        wasm = kasmer.build_soroban_contract(Path.cwd())
+        wasm = kasmer.build_soroban_contract(dir_path)
 
     kasmer.deploy_and_prove(wasm, child_wasms, id, proof_dir, bug_report)
 
@@ -205,3 +214,10 @@ def _add_common_arguments(parser: ArgumentParser) -> None:
 def _add_common_test_arguments(parser: ArgumentParser) -> None:
     parser.add_argument('--id', help='Name of the test function in the testing contract')
     parser.add_argument('--wasm', type=FileType('r'), help='Use a specific contract wasm file instead')
+    parser.add_argument(
+        '--directory',
+        '-C',
+        type=ensure_dir_path,
+        default=None,
+        help='The working directory for the command (defaults to the current working directory).',
+    )
