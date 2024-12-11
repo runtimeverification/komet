@@ -179,7 +179,7 @@ class Kasmer:
 
         return conf, subst
 
-    def run_test(self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding) -> None:
+    def run_test(self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding, max_examples: int) -> None:
         """Given a configuration with a deployed test contract, fuzz over the tests for the supplied binding.
 
         Raises:
@@ -202,7 +202,9 @@ class Kasmer:
         steps_strategy = binding.strategy.map(lambda args: make_steps(*args))
         template_subst = {EVar('VarSTEPS', SortApp('SortSteps')): steps_strategy}
 
-        fuzz(self.definition.path, template_config_kore, template_subst, check_exit_code=True)
+        fuzz(
+            self.definition.path, template_config_kore, template_subst, check_exit_code=True, max_examples=max_examples
+        )
 
     def run_prove(
         self,
@@ -236,7 +238,9 @@ class Kasmer:
 
         return run_claim(name, claim, proof_dir, bug_report)
 
-    def deploy_and_run(self, contract_wasm: Path, child_wasms: tuple[Path, ...], id: str | None) -> None:
+    def deploy_and_run(
+        self, contract_wasm: Path, child_wasms: tuple[Path, ...], max_examples: int = 100, id: str | None = None
+    ) -> None:
         """Run all of the tests in a soroban test contract.
 
         Args:
@@ -257,7 +261,7 @@ class Kasmer:
 
         test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
 
-        if id is None:          
+        if id is None:
             print(f'Discovered {len(test_bindings)} test functions:')
         elif not test_bindings:
             raise KeyError(f'Test function {id!r} not found.')
@@ -269,7 +273,7 @@ class Kasmer:
 
         for binding in test_bindings:
             print(f'\n  Running {binding.name}...')
-            self.run_test(conf, subst, binding)
+            self.run_test(conf, subst, binding, max_examples)
             print('    Test passed.')
 
     def deploy_and_prove(
