@@ -98,7 +98,7 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
         # We build the contract here, specifying where it's saved so we know where to find it.
         # Knowing where the compiled contract is saved by default when building it would eliminate
         # the need for this step, but at the moment I don't know how to retrieve that information.
-        child_wasms = _read_config_file(kasmer)
+        child_wasms = _read_config_file(kasmer, dir_path)
         wasm = kasmer.build_soroban_contract(dir_path)
 
     kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
@@ -120,7 +120,7 @@ def _exec_prove_run(
     child_wasms: tuple[Path, ...] = ()
 
     if wasm is None:
-        child_wasms = _read_config_file(kasmer)
+        child_wasms = _read_config_file(kasmer, dir_path)
         wasm = kasmer.build_soroban_contract(dir_path)
 
     kasmer.deploy_and_prove(wasm, child_wasms, id, proof_dir, bug_report)
