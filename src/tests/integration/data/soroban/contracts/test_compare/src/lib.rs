@@ -72,7 +72,16 @@ impl CompareContract {
     }
 
     /// Checks whether the comparison of two `Bytes` values produces the
-    /// same result as comparing their corresponding slices after copying
+    /// same result as comparing their corresponding slices after copying.
+    ///
+    /// In the Soroban host environment, `Bytes` host objects are compared
+    /// by their underlying slices.
+    /// 
+    /// https://github.com/stellar/rs-soroban-env/blob/c1b238b65bfd13666be4ac14e0e390c31b549caf/soroban-env-host/src/host/comparison.rs#L63
+    /// 
+    /// This test verifies that the behavior of
+    /// `obj_cmp` for Bytes matches the behavior of comparing the byte slices
+    /// created from `Bytes` objects.
     pub fn test_cmp_bytes(_env: Env, a: Bytes, b: Bytes) -> bool {
         // Initialize fixed-length arrays for storing byte data of `a` and `b`.
         let mut arr_a = [0 as u8; ARR_LENGTH];
