@@ -14,6 +14,22 @@ module HOST-BUFFER
 
 ```
 
+## bytes_copy_to_linear_memory
+
+```k
+    rule [hostCallAux-bytes-copy-to-linear-memory]:
+        <instrs> hostCallAux ( "b" , "1" )
+              => #memStore(LM_POS, substrBytes(BYTES, B_POS, B_POS +Int LEN))
+              ~> toSmall(Void)
+                  ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : U32(B_POS) : U32(LM_POS) : U32(LEN) : S => S </hostStack>
+      requires 0 <=Int B_POS
+       andBool B_POS <=Int lengthBytes(BYTES)
+       andBool 0 <=Int LEN
+       andBool B_POS +Int LEN <=Int lengthBytes(BYTES)
+```
+
 ## bytes_new_from_linear_memory
 
 ```k

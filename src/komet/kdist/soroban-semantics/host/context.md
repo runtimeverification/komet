@@ -21,29 +21,14 @@ module HOST-CONTEXT
             0 |-> <i64> OBJ_A
             1 |-> <i64> OBJ_B
         </locals>
+      requires isObject(HostVal(OBJ_A))
+        orBool isObject(HostVal(OBJ_B))
 
-    // TODO This only works for addresses. Implement it properly for other cases.
-    // https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#comparison
     syntax InternalInstr ::= "objCmp"   [symbol(objCmp)]
  // ----------------------------------------------------
     rule [objCmp-equal]:
-        <instrs> objCmp => i64.const compareAddress(A, B) ... </instrs>
-        <hostStack> ScAddress(A) : ScAddress(B) : S => S </hostStack>
-
-    syntax Int ::= compareAddress(Address, Address)    [function, total, symbol(compareAddress)]
- // -------------------------------------------------------------------------------------
-    rule compareAddress(Account(_),  Contract(_)) => -1
-    rule compareAddress(Contract(_), Account(_))  => 1
-    rule compareAddress(Contract(A), Contract(B)) => compareBytes(A, B)
-    rule compareAddress(Account(A),  Account(B))  => compareBytes(A, B)
-
-    syntax Int ::= compareBytes(Bytes, Bytes)       [function, total, symbol(compareBytes)]
-                 | compareString(String, String)    [function, total, symbol(compareString)]
- // -------------------------------------------------------------------------------------
-    rule compareBytes(A, B) => compareString(Bytes2String(A), Bytes2String(B))
-    rule compareString(A, B) => -1 requires A  <String B
-    rule compareString(A, B) =>  0 requires A ==String B
-    rule compareString(A, B) =>  1 requires A  >String B
+        <instrs> objCmp => i64.const Ordering2Int(compare(A, B)) ... </instrs>
+        <hostStack> A : B : S => S </hostStack>
 
 ```
 
