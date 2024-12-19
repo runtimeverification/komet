@@ -9,6 +9,8 @@ uploadWasm( b"test-wasm",
   (import "m" "2" (func $del (param i64 i64)     (result i64)))
   (import "m" "3" (func $len (param i64)         (result i64)))
   (import "m" "4" (func $has (param i64 i64)     (result i64)))
+  (import "m" "5" (func $key_by_pos (param i64 i64) (result i64)))
+  (import "m" "6" (func $val_by_pos (param i64 i64) (result i64)))
 
   (export "new" (func $new))
   (export "put" (func $put))
@@ -16,6 +18,8 @@ uploadWasm( b"test-wasm",
   (export "del" (func $del))
   (export "len" (func $len))
   (export "has" (func $has))
+  (export "key_by_pos" (func $key_by_pos))
+  (export "val_by_pos" (func $val_by_pos))
 )
 )
 
@@ -186,6 +190,108 @@ callTx(
     Symbol(str("bar")) |-> Symbol(str("456"))
     Symbol(str("baz")) |-> U128(789)
   )
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; map_key_by_pos
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "key_by_pos",
+  ListItem(ScMap(
+    Symbol(str("foo")) |-> U32(1)
+  )) 
+  ListItem(U32(0)),
+  Symbol(str("foo"))
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "key_by_pos",
+  ListItem(ScMap(
+    Symbol(str("b")) |-> U32(1)
+    Symbol(str("a")) |-> U32(2)
+  )) 
+  ListItem(U32(0)),
+  Symbol(str("a"))
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "key_by_pos",
+  ListItem(ScMap(
+    Symbol(str("b")) |-> U32(1)
+    Symbol(str("a")) |-> U32(2)
+  )) 
+  ListItem(U32(1)),
+  Symbol(str("b"))
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "key_by_pos",
+  ListItem(ScMap(
+    Symbol(str("b")) |-> U32(1)
+    Symbol(str("a")) |-> U32(2)
+  )) 
+  ListItem(U32(2)),
+  Error(ErrObject, 1) ;; IndexBounds
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; map_val_by_pos
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "val_by_pos",
+  ListItem(ScMap(
+    Symbol(str("foo")) |-> U32(1)
+  )) 
+  ListItem(U32(0)),
+  U32(1)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "val_by_pos",
+  ListItem(ScMap(
+    Symbol(str("b")) |-> U32(1)
+    Symbol(str("a")) |-> U32(2)
+  )) 
+  ListItem(U32(0)),
+  U32(2)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "val_by_pos",
+  ListItem(ScMap(
+    Symbol(str("b")) |-> U32(1)
+    Symbol(str("a")) |-> U32(2)
+  )) 
+  ListItem(U32(1)),
+  U32(1)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "val_by_pos",
+  ListItem(ScMap(
+    Symbol(str("b")) |-> U32(1)
+    Symbol(str("a")) |-> U32(2)
+  )) 
+  ListItem(U32(2)),
+  Error(ErrObject, 1) ;; IndexBounds
 )
 
 setExitCode(0)
