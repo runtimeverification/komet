@@ -136,10 +136,18 @@ class Kasmer:
     def deploy_test(
         contract: KInner, child_contracts: tuple[KInner, ...], init: bool
     ) -> tuple[KInner, dict[str, KInner]]:
-        """Takes a wasm soroban contract as a kast term and deploys it in a fresh configuration.
+        """Takes a wasm soroban contract and its dependencies as kast terms and deploys them in a fresh configuration.
+
+        Args:
+            contract: The test contract to deploy, represented as a kast term.
+            child_contracts: A tuple of child contracts required by the test contract.
+            init: Whether to initialize the contract by calling its 'init' function after deployment.
 
         Returns:
             A configuration with the contract deployed.
+
+        Raises:
+            AssertionError if the deployment fails
         """
 
         def wasm_hash(i: int) -> bytes:
@@ -179,11 +187,18 @@ class Kasmer:
 
         return conf, subst
 
-    def run_test(self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding) -> None:
+    def run_test(self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding, max_examples: int) -> None:
         """Given a configuration with a deployed test contract, fuzz over the tests for the supplied binding.
 
+        Args:
+            conf: The template configuration.
+            subst: A substitution mapping such that 'Subst(subst).apply(conf)' gives the initial configuration with the
+                   deployed contract.
+            binding: The contract binding that specifies the test name and parameters.
+            max_examples: The maximum number of fuzzing test cases to generate and execute.
+
         Raises:
-            CalledProcessError if the test fails
+            AssertionError if the test fails
         """
 
         from_acct = account_id(b'test-account')
@@ -202,7 +217,9 @@ class Kasmer:
         steps_strategy = binding.strategy.map(lambda args: make_steps(*args))
         template_subst = {EVar('VarSTEPS', SortApp('SortSteps')): steps_strategy}
 
-        fuzz(self.definition.path, template_config_kore, template_subst, check_exit_code=True)
+        fuzz(
+            self.definition.path, template_config_kore, template_subst, check_exit_code=True, max_examples=max_examples
+        )
 
     def run_prove(
         self,
@@ -212,6 +229,16 @@ class Kasmer:
         proof_dir: Path | None = None,
         bug_report: BugReport | None = None,
     ) -> APRProof:
+        """Given a configuration with a deployed test contract, prove the test case defined by the supplied binding.
+
+        Args:
+            conf: The template configuration with configuration variables.
+            subst: A substitution mapping such that `Subst(subst).apply(conf)` produces the initial configuration with
+                   the deployed contract.
+            binding: The contract binding specifying the test name and parameters.
+            proof_dir: An optional directory to save the generated proof.
+            bug_report: An optional object to log and collect details about the proof for debugging purposes.
+        """
         from_acct = account_id(b'test-account')
         to_acct = contract_id(b'test-contract')
         name = binding.name
@@ -236,14 +263,19 @@ class Kasmer:
 
         return run_claim(name, claim, proof_dir, bug_report)
 
-    def deploy_and_run(self, contract_wasm: Path, child_wasms: tuple[Path, ...]) -> None:
+    def deploy_and_run(
+        self, contract_wasm: Path, child_wasms: tuple[Path, ...], max_examples: int = 100, id: str | None = None
+    ) -> None:
         """Run all of the tests in a soroban test contract.
 
         Args:
             contract_wasm: The path to the compiled wasm contract.
+            child_wasms: A tuple of paths to the compiled wasm contracts required as dependencies by the test contract.
+            max_examples: The maximum number of test inputs to generate for fuzzing.
+            id: The specific test function name to run. If None, all tests are executed.
 
         Raises:
-            CalledProcessError if any of the tests fail
+            AssertionError if any of the tests fail
         """
         print(f'Processing contract: {contract_wasm.stem}')
 
@@ -255,15 +287,21 @@ class Kasmer:
 
         conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
 
-        test_bindings = [b for b in bindings if b.name.startswith('test_')]
+        test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
 
-        print(f'Discovered {len(test_bindings)} test functions:')
+        if id is None:
+            print(f'Discovered {len(test_bindings)} test functions:')
+        elif not test_bindings:
+            raise KeyError(f'Test function {id!r} not found.')
+        else:
+            print('Selected a single test function:')
+
         for binding in test_bindings:
             print(f'    - {binding.name}')
 
         for binding in test_bindings:
             print(f'\n  Running {binding.name}...')
-            self.run_test(conf, subst, binding)
+            self.run_test(conf, subst, binding, max_examples)
             print('    Test passed.')
 
     def deploy_and_prove(
@@ -278,7 +316,10 @@ class Kasmer:
 
         Args:
             contract_wasm: The path to the compiled wasm contract.
-            proof_dir: The optional location to save the proof.
+            child_wasms: A tuple of paths to the compiled wasm contracts required as dependencies by the test contract.
+            id: The specific test function name to run. If None, all tests are executed.
+            proof_dir: An optional location to save the proof.
+            bug_report: An optional BugReport object to log and collect details about the proof for debugging.
 
         Raises:
             KSorobanError if a proof fails

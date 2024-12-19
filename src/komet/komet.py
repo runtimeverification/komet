@@ -47,11 +47,15 @@ def main() -> None:
         _exec_kast(program=args.program, backend=args.backend, output=args.output)
     elif args.command == 'test':
         wasm = Path(args.wasm.name) if args.wasm is not None else None
-        _exec_test(wasm=wasm)
+        if args.max_examples < 1:
+            raise ValueError(f'--max-examples must be a positive integer (greater than 0), given {args.max_examples}')
+        _exec_test(dir_path=args.directory, wasm=wasm, max_examples=args.max_examples, id=args.id)
     elif args.command == 'prove':
         if args.prove_command is None or args.prove_command == 'run':
             wasm = Path(args.wasm.name) if args.wasm is not None else None
-            _exec_prove_run(wasm=wasm, id=args.id, proof_dir=args.proof_dir, bug_report=args.bug_report)
+            _exec_prove_run(
+                dir_path=args.directory, wasm=wasm, id=args.id, proof_dir=args.proof_dir, bug_report=args.bug_report
+            )
         if args.prove_command == 'view':
             assert args.proof_dir is not None
             _exec_prove_view(proof_dir=args.proof_dir, id=args.id)
@@ -77,7 +81,7 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
     _exit_with_output(proc_res)
 
 
-def _exec_test(*, wasm: Path | None) -> None:
+def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, id: str | None) -> None:
     """Run a soroban test contract given its compiled wasm file.
 
     This will get the bindings for the contract and run all of the test functions.
@@ -85,6 +89,7 @@ def _exec_test(*, wasm: Path | None) -> None:
 
     Exits successfully when all the tests pass.
     """
+    dir_path = Path.cwd() if dir_path is None else dir_path
     kasmer = Kasmer(concrete_definition)
 
     child_wasms: tuple[Path, ...] = ()
@@ -93,24 +98,30 @@ def _exec_test(*, wasm: Path | None) -> None:
         # We build the contract here, specifying where it's saved so we know where to find it.
         # Knowing where the compiled contract is saved by default when building it would eliminate
         # the need for this step, but at the moment I don't know how to retrieve that information.
-        child_wasms = _read_config_file(kasmer)
-        wasm = kasmer.build_soroban_contract(Path.cwd())
+        child_wasms = _read_config_file(kasmer, dir_path)
+        wasm = kasmer.build_soroban_contract(dir_path)
 
-    kasmer.deploy_and_run(wasm, child_wasms)
+    kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
 
     sys.exit(0)
 
 
 def _exec_prove_run(
-    *, wasm: Path | None, id: str | None, proof_dir: Path | None, bug_report: BugReport | None = None
+    *,
+    dir_path: Path | None,
+    wasm: Path | None,
+    id: str | None,
+    proof_dir: Path | None,
+    bug_report: BugReport | None = None,
 ) -> None:
+    dir_path = Path.cwd() if dir_path is None else dir_path
     kasmer = Kasmer(symbolic_definition)
 
     child_wasms: tuple[Path, ...] = ()
 
     if wasm is None:
-        child_wasms = _read_config_file(kasmer)
-        wasm = kasmer.build_soroban_contract(Path.cwd())
+        child_wasms = _read_config_file(kasmer, dir_path)
+        wasm = kasmer.build_soroban_contract(dir_path)
 
     kasmer.deploy_and_prove(wasm, child_wasms, id, proof_dir, bug_report)
 
@@ -173,9 +184,14 @@ def _argument_parser() -> ArgumentParser:
     kast_parser.add_argument('--output', metavar='FORMAT', type=KAstOutput, help='format to output the term in')
 
     test_parser = command_parser.add_parser('test', help='Test the soroban contract in the current working directory')
-    test_parser.add_argument('--wasm', type=FileType('r'), help='Test a specific contract wasm file instead')
+    test_parser.add_argument(
+        '--max-examples', type=int, default=100, help='Maximum number of inputs for fuzzing (default: 100)'
+    )
+    _add_common_test_arguments(test_parser)
 
-    prove_parser = command_parser.add_parser('prove', help='Test the soroban contract in the current working directory')
+    prove_parser = command_parser.add_parser(
+        'prove', help='Prove the soroban contract in the current working directory'
+    )
     prove_parser.add_argument(
         'prove_command',
         default='run',
@@ -183,10 +199,9 @@ def _argument_parser() -> ArgumentParser:
         metavar='COMMAND',
         help='Proof command to run. One of (%(choices)s)',
     )
-    prove_parser.add_argument('--wasm', type=FileType('r'), help='Prove a specific contract wasm file instead')
     prove_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
     prove_parser.add_argument('--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs')
-    prove_parser.add_argument('--id', help='Name of the test function in the testing contract')
+    _add_common_test_arguments(prove_parser)
 
     return parser
 
@@ -194,3 +209,15 @@ def _argument_parser() -> ArgumentParser:
 def _add_common_arguments(parser: ArgumentParser) -> None:
     parser.add_argument('program', metavar='PROGRAM', type=file_path, help='path to test file')
     parser.add_argument('--backend', metavar='BACKEND', type=Backend, default=Backend.LLVM, help='K backend to use')
+
+
+def _add_common_test_arguments(parser: ArgumentParser) -> None:
+    parser.add_argument('--id', help='Name of the test function in the testing contract')
+    parser.add_argument('--wasm', type=FileType('r'), help='Use a specific contract wasm file instead')
+    parser.add_argument(
+        '--directory',
+        '-C',
+        type=ensure_dir_path,
+        default=None,
+        help='The working directory for the command (defaults to the current working directory).',
+    )
