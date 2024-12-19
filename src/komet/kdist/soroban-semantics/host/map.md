@@ -199,6 +199,36 @@ increasing order. Its primary use is alongside [`map_val_by_pos`](#map_val_by_po
         orBool size(M) <=Int I
 ```
 
+## map_keys
+
+```k
+
+    rule [hostCallAux-map-keys]:
+        <instrs> hostCallAux("m", "7")
+              => allocObject(ScVec(sortedKeys(M)))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : S => S </hostStack>
+
+```
+
+## map_vals
+
+```k
+
+    rule [hostCallAux-map-vals]:
+        <instrs> hostCallAux("m", "8")
+              => allocObject(ScVec(
+                    lookupMany(M, sortedKeys(M), Void)
+                 ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : S => S </hostStack>
+
+```
+
 ## map_unpack_to_linear_memory
 
 Writes values from a map (`ScMap`) to a specified memory address.
