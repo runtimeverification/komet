@@ -147,6 +147,88 @@ module HOST-MAP
 
 ```
 
+## map_key_by_pos
+
+The `map_key_by_pos` function retrieves the **key** at a specified index from a sorted map, where keys are ordered in
+increasing order. Its primary use is alongside [`map_val_by_pos`](#map_val_by_pos) in map iterators within the Soroban SDK.
+
+```k
+
+    rule [hostCallAux-map-key-by-pos]:
+        <instrs> hostCallAux("m", "5")
+              => allocObject(sortedKeys(M) {{ I }} orDefault Void)
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : U32(I) : S => S </hostStack>
+      requires 0 <=Int I
+       andBool I <Int size(M)
+
+
+    rule [hostCallAux-map-key-by-pos-err]:
+        <instrs> hostCallAux("m", "5")
+              => #throw(ErrObject, IndexBounds)
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : U32(I) : S => S </hostStack>
+      requires I <Int 0
+        orBool size(M) <=Int I
+```
+
+## map_val_by_pos
+
+```k
+
+    rule [hostCallAux-map-val-by-pos]:
+        <instrs> hostCallAux("m", "6")
+              => #let KEY = sortedKeys(M) {{ I }} orDefault Void
+                 #in M {{ KEY }} orDefault HostVal(-1)
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : U32(I) : S => S </hostStack>
+      requires 0 <=Int I
+       andBool I <Int size(M)
+
+    rule [hostCallAux-map-val-by-pos-err]:
+        <instrs> hostCallAux("m", "6")
+              => #throw(ErrObject, IndexBounds)
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : U32(I) : S => S </hostStack>
+      requires I <Int 0
+        orBool size(M) <=Int I
+```
+
+## map_keys
+
+```k
+
+    rule [hostCallAux-map-keys]:
+        <instrs> hostCallAux("m", "7")
+              => allocObject(ScVec(sortedKeys(M)))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : S => S </hostStack>
+
+```
+
+## map_vals
+
+```k
+
+    rule [hostCallAux-map-vals]:
+        <instrs> hostCallAux("m", "8")
+              => allocObject(ScVec(
+                    lookupMany(M, sortedKeys(M), Void)
+                 ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScMap(M) : S => S </hostStack>
+
+```
+
 ## map_unpack_to_linear_memory
 
 Writes values from a map (`ScMap`) to a specified memory address.
