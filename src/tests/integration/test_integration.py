@@ -4,7 +4,7 @@ import pytest
 from pyk.kdist import kdist
 from pyk.ktool.krun import _krun
 
-from komet.kasmer import Kasmer
+from komet.kasmer import FuzzError, Kasmer
 from komet.komet import _read_config_file
 from komet.utils import concrete_definition, symbolic_definition
 
@@ -40,7 +40,7 @@ def test_komet(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> 
 
     # Then
     if contract_path.stem.endswith('_fail'):
-        with pytest.raises(AssertionError):
+        with pytest.raises(FuzzError):
             concrete_kasmer.deploy_and_run(contract_wasm, child_wasms)
     else:
         concrete_kasmer.deploy_and_run(contract_wasm, child_wasms)
