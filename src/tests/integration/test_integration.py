@@ -6,7 +6,7 @@ from pyk.ktool.krun import _krun
 
 from komet.kasmer import Kasmer
 from komet.komet import _read_config_file
-from komet.utils import concrete_definition, symbolic_definition
+from komet.utils import KSorobanError, concrete_definition, symbolic_definition
 
 TEST_DATA = (Path(__file__).parent / 'data').resolve(strict=True)
 TEST_FILES = TEST_DATA.glob('*.wast')
@@ -40,7 +40,7 @@ def test_komet(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> 
 
     # Then
     if contract_path.stem.endswith('_fail'):
-        with pytest.raises(AssertionError):
+        with pytest.raises(KSorobanError):
             concrete_kasmer.deploy_and_run(contract_wasm, child_wasms)
     else:
         concrete_kasmer.deploy_and_run(contract_wasm, child_wasms)

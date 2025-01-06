@@ -20,7 +20,7 @@ from pyk.utils import abs_or_rel_to, ensure_dir_path
 from pykwasm.scripts.preprocessor import preprocess
 
 from .kasmer import Kasmer
-from .utils import concrete_definition, symbolic_definition
+from .utils import KSorobanError, concrete_definition, symbolic_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -101,9 +101,11 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
         child_wasms = _read_config_file(kasmer, dir_path)
         wasm = kasmer.build_soroban_contract(dir_path)
 
-    kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
-
-    sys.exit(0)
+    try:
+        kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
+        sys.exit(0)
+    except KSorobanError:
+        sys.exit(1)
 
 
 def _exec_prove_run(

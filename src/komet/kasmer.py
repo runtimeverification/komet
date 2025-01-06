@@ -22,6 +22,7 @@ from pyk.prelude.utils import token
 from pyk.proof import ProofStatus
 from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
+from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
 from .kast.syntax import (
@@ -311,11 +312,25 @@ class Kasmer:
             print('Selected a single test function:')
         print()
 
+        failed = []
         with FuzzProgress(test_bindings, max_examples) as progress:
             for task in progress.fuzz_tasks:
-                task.start()
-                self.run_test(conf, subst, task.binding, max_examples, task)
-                task.end()
+                try:
+                    task.start()
+                    self.run_test(conf, subst, task.binding, max_examples, task)
+                    task.end()
+                except AssertionError:
+                    failed.append(task.binding.name)
+
+        if not failed:
+            return
+
+        console = Console(stderr=True)
+        console.print(f'[bold red]{len(failed)}[/bold red] test/s failed:')
+        for test_name in failed:
+            console.print(f'  {test_name}')
+
+        raise KSorobanError(failed)
 
     def deploy_and_prove(
         self,
