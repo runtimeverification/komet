@@ -321,23 +321,26 @@ class Kasmer:
             print('Selected a single test function:')
         print()
 
-        failed = []
+        failed: list[FuzzError] = []
         with FuzzProgress(test_bindings, max_examples) as progress:
             for task in progress.fuzz_tasks:
                 try:
                     task.start()
                     self.run_test(conf, subst, task.binding, max_examples, task)
                     task.end()
-                except AssertionError:
-                    failed.append(task.binding.name)
+                except FuzzError as e:
+                    failed.append(e)
 
         if not failed:
             return
 
         console = Console(stderr=True)
+
         console.print(f'[bold red]{len(failed)}[/bold red] test/s failed:')
-        for test_name in failed:
-            console.print(f'  {test_name}')
+
+        for err in failed:
+            pretty_args = ', '.join(self.definition.krun.pretty_print(a) for a in err.falsifying_example)
+            console.print(f'  {err.test_name} ({pretty_args})')
 
         raise KSorobanError(failed)
 
@@ -469,3 +472,16 @@ class KometFuzzHandler(KFuzzHandler):
         if not self.failed:
             self.failed = True
             self.task.fail()
+
+        sorted_keys = sorted(args.keys(), key=lambda k: k.name)
+        falsifying = tuple(self.definition.krun.kore_to_kast(args[k]) for k in sorted_keys)
+        raise FuzzError(self.task.binding.name, falsifying)
+
+
+class FuzzError(Exception):
+    test_name: str
+    falsifying_example: tuple[KInner, ...]
+
+    def __init__(self, test_name: str, falsifying_example: tuple[KInner, ...]):
+        self.test_name = test_name
+        self.falsifying_example = falsifying_example
