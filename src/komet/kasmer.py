@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from pyk.utils import BugReport
     from rich.progress import TaskID
 
+    from .scval import SCValue
     from .utils import SorobanDefinition
 
 
@@ -216,16 +217,24 @@ class Kasmer:
         name = binding.name
         result = sc_bool(True)
 
-        def make_steps(*args: KInner) -> Pattern:
-            steps_kast = steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
-            return kast_to_kore(self.definition.kdefinition, steps_kast, KSort('Steps'))
+        def make_kvar(i: int) -> KInner:
+            return KVariable(f'ARG_{i}', KSort('ScVal'))
 
-        subst['PROGRAM_CELL'] = KVariable('STEPS')
+        def make_evar(i: int) -> EVar:
+            return EVar(f"VarARG\'Unds\'{i}", SortApp('SortScVal'))
+
+        def make_steps(args: Iterable[KInner]) -> KInner:
+            return steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
+
+        def scval_to_kore(val: SCValue) -> Pattern:
+            return kast_to_kore(self.definition.kdefinition, val.to_kast(), KSort('ScVal'))
+
+        vars = [make_kvar(i) for i in range(len(binding.inputs))]
+        subst['PROGRAM_CELL'] = make_steps(vars)
         template_config = Subst(subst).apply(conf)
         template_config_kore = kast_to_kore(self.definition.kdefinition, template_config, KSort('GeneratedTopCell'))
 
-        steps_strategy = binding.strategy.map(lambda args: make_steps(*args))
-        template_subst = {EVar('VarSTEPS', SortApp('SortSteps')): steps_strategy}
+        template_subst = {make_evar(i): b.strategy().map(scval_to_kore) for i, b in enumerate(binding.inputs)}
 
         fuzz(
             self.definition.path,
