@@ -23,7 +23,7 @@ from pyk.proof import ProofStatus
 from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
 from rich.console import Console
-from rich.progress import Progress, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
 from .kast.syntax import (
     SC_VOID,
@@ -321,7 +321,6 @@ class Kasmer:
             print('Selected a single test function:')
         print()
 
-        failed: list[tuple[ContractBinding, FuzzError]] = []
         with FuzzProgress(test_bindings, max_examples) as progress:
             for task in progress.fuzz_tasks:
                 task.start()
@@ -330,7 +329,7 @@ class Kasmer:
                     task.end()
                 except FuzzError as e:
                     console = Console(stderr=True)
-                    console.print(f'[bold red]Test failed:[/bold red]')
+                    console.print('[bold red]Test failed:[/bold red]')
                     pretty_args = ', '.join(self.definition.krun.pretty_print(a) for a in e.falsifying_example)
                     console.print(f'  {task.binding.name}({pretty_args})')
 
@@ -455,7 +454,7 @@ class KometFuzzHandler(KFuzzHandler):
 
     def handle_test(self, args: Mapping[EVar, Pattern]) -> None:
         # Hypothesis reruns failing examples to confirm the failure.
-        # To avoid misleading progress updates, the progress bar is not advanced 
+        # To avoid misleading progress updates, the progress bar is not advanced
         # when a test fails and Hypothesis reruns the same example.
         if not self.failed:
             self.task.advance()
