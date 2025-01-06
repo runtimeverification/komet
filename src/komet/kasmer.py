@@ -7,7 +7,6 @@ from functools import cached_property
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import TYPE_CHECKING
-from collections.abc import Iterable
 
 from hypothesis import strategies
 from pyk.cterm import CTerm, cterm_build_claim
@@ -45,8 +44,8 @@ from .scval import SCType
 from .utils import KSorobanError, concrete_definition
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
     from typing import Any
-    from collections.abc import Mapping
 
     from hypothesis.strategies import SearchStrategy
     from pyk.kast.inner import KInner
