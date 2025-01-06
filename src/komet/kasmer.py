@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 from hypothesis import strategies
 from pyk.cterm import CTerm, cterm_build_claim
@@ -15,13 +15,14 @@ from pyk.kast.manip import Subst, split_config_from
 from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.kore.syntax import EVar, SortApp
-from pyk.ktool.kfuzz import fuzz
+from pyk.ktool.kfuzz import KFuzzHandler, fuzz
 from pyk.ktool.krun import KRunOutput
 from pyk.prelude.ml import mlEqualsTrue
 from pyk.prelude.utils import token
 from pyk.proof import ProofStatus
 from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
 from .kast.syntax import (
     SC_VOID,
@@ -42,13 +43,14 @@ from .scval import SCType
 from .utils import KSorobanError, concrete_definition
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Mapping
 
     from hypothesis.strategies import SearchStrategy
     from pyk.kast.inner import KInner
     from pyk.kore.syntax import Pattern
     from pyk.proof import APRProof
     from pyk.utils import BugReport
+    from rich.progress import TaskID
 
     from .utils import SorobanDefinition
 
@@ -187,7 +189,14 @@ class Kasmer:
 
         return conf, subst
 
-    def run_test(self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding, max_examples: int) -> None:
+    def run_test(
+        self,
+        conf: KInner,
+        subst: dict[str, KInner],
+        binding: ContractBinding,
+        max_examples: int,
+        task: FuzzTask,
+    ) -> None:
         """Given a configuration with a deployed test contract, fuzz over the tests for the supplied binding.
 
         Args:
@@ -218,7 +227,12 @@ class Kasmer:
         template_subst = {EVar('VarSTEPS', SortApp('SortSteps')): steps_strategy}
 
         fuzz(
-            self.definition.path, template_config_kore, template_subst, check_exit_code=True, max_examples=max_examples
+            self.definition.path,
+            template_config_kore,
+            template_subst,
+            check_exit_code=True,
+            max_examples=max_examples,
+            handler=KometFuzzHandler(self.definition, task),
         )
 
     def run_prove(
@@ -295,14 +309,13 @@ class Kasmer:
             raise KeyError(f'Test function {id!r} not found.')
         else:
             print('Selected a single test function:')
+        print()
 
-        for binding in test_bindings:
-            print(f'    - {binding.name}')
-
-        for binding in test_bindings:
-            print(f'\n  Running {binding.name}...')
-            self.run_test(conf, subst, binding, max_examples)
-            print('    Test passed.')
+        with FuzzProgress(test_bindings, max_examples) as progress:
+            for task in progress.fuzz_tasks:
+                task.start()
+                self.run_test(conf, subst, task.binding, max_examples, task)
+                task.end()
 
     def deploy_and_prove(
         self,
@@ -360,3 +373,75 @@ class ContractBinding:
             args += (v,)
             constraints += c
         return args, constraints
+
+
+class FuzzProgress(Progress):
+    fuzz_tasks: list[FuzzTask]
+
+    def __init__(self, bindings: Iterable[ContractBinding], max_examples: int):
+        super().__init__(
+            TextColumn('[progress.description]{task.description}'),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            TextColumn('{task.fields[status]}'),
+        )
+
+        self.fuzz_tasks = []
+
+        # Add all tests to the progress display before running them
+        for binding in bindings:
+            task_id = self.add_task(binding.name, total=max_examples, start=False, status='Waiting')
+            self.fuzz_tasks.append(FuzzTask(binding, task_id, self))
+
+
+class FuzzTask:
+    binding: ContractBinding
+    task_id: TaskID
+    progress: FuzzProgress
+
+    def __init__(self, binding: ContractBinding, task_id: TaskID, progress: FuzzProgress):
+        self.binding = binding
+        self.task_id = task_id
+        self.progress = progress
+
+    def start(self) -> None:
+        self.progress.start_task(self.task_id)
+        self.progress.update(self.task_id, status='[bold]Running')
+
+    def end(self) -> None:
+        self.progress.update(
+            self.task_id, total=self.progress._tasks[self.task_id].completed, status='[bold green]Passed'
+        )
+
+    def advance(self) -> None:
+        self.progress.advance(self.task_id)
+
+    def fail(self) -> None:
+        self.progress.update(self.task_id, status='[bold red]Failed')
+        self.progress.stop_task(self.task_id)
+
+
+class KometFuzzHandler(KFuzzHandler):
+    # Fuzz handler with progress tracking
+
+    definition: SorobanDefinition
+    task: FuzzTask
+    failed: bool
+
+    def __init__(self, definition: SorobanDefinition, task: FuzzTask):
+        self.definition = definition
+        self.task = task
+        self.failed = False
+
+    def handle_test(self, args: Mapping[EVar, Pattern]) -> None:
+        # Hypothesis reruns failing examples to confirm the failure.
+        # To avoid misleading progress updates, the progress bar is not advanced
+        # when a test fails and Hypothesis reruns the same example.
+        if not self.failed:
+            self.task.advance()
+
+    def handle_failure(self, args: Mapping[EVar, Pattern]) -> None:
+        if not self.failed:
+            self.failed = True
+            self.task.fail()
