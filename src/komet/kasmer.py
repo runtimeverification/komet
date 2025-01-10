@@ -340,7 +340,7 @@ class Kasmer:
         console.print(f'[bold red]{len(failed)}[/bold red] test/s failed:')
 
         for err in failed:
-            pretty_args = ', '.join(self.definition.krun.pretty_print(a) for a in err.falsifying_example)
+            pretty_args = ', '.join(self.definition.krun.pretty_print(a) for a in err.counterexample)
             console.print(f'  {err.test_name} ({pretty_args})')
 
         raise KSorobanError(failed)
@@ -475,14 +475,14 @@ class KometFuzzHandler(KFuzzHandler):
             self.task.fail()
 
         sorted_keys = sorted(args.keys(), key=lambda k: k.name)
-        falsifying = tuple(self.definition.krun.kore_to_kast(args[k]) for k in sorted_keys)
-        raise FuzzError(self.task.binding.name, falsifying)
+        counterexample = tuple(self.definition.krun.kore_to_kast(args[k]) for k in sorted_keys)
+        raise FuzzError(self.task.binding.name, counterexample)
 
 
 class FuzzError(Exception):
     test_name: str
-    falsifying_example: tuple[KInner, ...]
+    counterexample: tuple[KInner, ...]
 
-    def __init__(self, test_name: str, falsifying_example: tuple[KInner, ...]):
+    def __init__(self, test_name: str, counterexample: tuple[KInner, ...]):
         self.test_name = test_name
-        self.falsifying_example = falsifying_example
+        self.counterexample = counterexample
