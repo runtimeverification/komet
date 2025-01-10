@@ -15,13 +15,15 @@ from pyk.kast.manip import Subst, split_config_from
 from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.kore.syntax import EVar, SortApp
-from pyk.ktool.kfuzz import fuzz
+from pyk.ktool.kfuzz import KFuzzHandler, fuzz
 from pyk.ktool.krun import KRunOutput
 from pyk.prelude.ml import mlEqualsTrue
 from pyk.prelude.utils import token
 from pyk.proof import ProofStatus
 from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
+from rich.console import Console
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
 from .kast.syntax import (
     SC_VOID,
@@ -42,6 +44,7 @@ from .scval import SCType
 from .utils import KSorobanError, concrete_definition
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
     from typing import Any
 
     from hypothesis.strategies import SearchStrategy
@@ -49,7 +52,9 @@ if TYPE_CHECKING:
     from pyk.kore.syntax import Pattern
     from pyk.proof import APRProof
     from pyk.utils import BugReport
+    from rich.progress import TaskID
 
+    from .scval import SCValue
     from .utils import SorobanDefinition
 
 
@@ -187,7 +192,14 @@ class Kasmer:
 
         return conf, subst
 
-    def run_test(self, conf: KInner, subst: dict[str, KInner], binding: ContractBinding, max_examples: int) -> None:
+    def run_test(
+        self,
+        conf: KInner,
+        subst: dict[str, KInner],
+        binding: ContractBinding,
+        max_examples: int,
+        task: FuzzTask,
+    ) -> None:
         """Given a configuration with a deployed test contract, fuzz over the tests for the supplied binding.
 
         Args:
@@ -206,19 +218,32 @@ class Kasmer:
         name = binding.name
         result = sc_bool(True)
 
-        def make_steps(*args: KInner) -> Pattern:
-            steps_kast = steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
-            return kast_to_kore(self.definition.kdefinition, steps_kast, KSort('Steps'))
+        def make_kvar(i: int) -> KInner:
+            return KVariable(f'ARG_{i}', KSort('ScVal'))
 
-        subst['PROGRAM_CELL'] = KVariable('STEPS')
+        def make_evar(i: int) -> EVar:
+            return EVar(f"VarARG\'Unds\'{i}", SortApp('SortScVal'))
+
+        def make_steps(args: Iterable[KInner]) -> KInner:
+            return steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
+
+        def scval_to_kore(val: SCValue) -> Pattern:
+            return kast_to_kore(self.definition.kdefinition, val.to_kast(), KSort('ScVal'))
+
+        vars = [make_kvar(i) for i in range(len(binding.inputs))]
+        subst['PROGRAM_CELL'] = make_steps(vars)
         template_config = Subst(subst).apply(conf)
         template_config_kore = kast_to_kore(self.definition.kdefinition, template_config, KSort('GeneratedTopCell'))
 
-        steps_strategy = binding.strategy.map(lambda args: make_steps(*args))
-        template_subst = {EVar('VarSTEPS', SortApp('SortSteps')): steps_strategy}
+        template_subst = {make_evar(i): b.strategy().map(scval_to_kore) for i, b in enumerate(binding.inputs)}
 
         fuzz(
-            self.definition.path, template_config_kore, template_subst, check_exit_code=True, max_examples=max_examples
+            self.definition.path,
+            template_config_kore,
+            template_subst,
+            check_exit_code=True,
+            max_examples=max_examples,
+            handler=KometFuzzHandler(self.definition, task),
         )
 
     def run_prove(
@@ -295,14 +320,30 @@ class Kasmer:
             raise KeyError(f'Test function {id!r} not found.')
         else:
             print('Selected a single test function:')
+        print()
 
-        for binding in test_bindings:
-            print(f'    - {binding.name}')
+        failed: list[FuzzError] = []
+        with FuzzProgress(test_bindings, max_examples) as progress:
+            for task in progress.fuzz_tasks:
+                try:
+                    task.start()
+                    self.run_test(conf, subst, task.binding, max_examples, task)
+                    task.end()
+                except FuzzError as e:
+                    failed.append(e)
 
-        for binding in test_bindings:
-            print(f'\n  Running {binding.name}...')
-            self.run_test(conf, subst, binding, max_examples)
-            print('    Test passed.')
+        if not failed:
+            return
+
+        console = Console(stderr=True)
+
+        console.print(f'[bold red]{len(failed)}[/bold red] test/s failed:')
+
+        for err in failed:
+            pretty_args = ', '.join(self.definition.krun.pretty_print(a) for a in err.counterexample)
+            console.print(f'  {err.test_name} ({pretty_args})')
+
+        raise KSorobanError(failed)
 
     def deploy_and_prove(
         self,
@@ -360,3 +401,88 @@ class ContractBinding:
             args += (v,)
             constraints += c
         return args, constraints
+
+
+class FuzzProgress(Progress):
+    fuzz_tasks: list[FuzzTask]
+
+    def __init__(self, bindings: Iterable[ContractBinding], max_examples: int):
+        super().__init__(
+            TextColumn('[progress.description]{task.description}'),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            TextColumn('{task.fields[status]}'),
+        )
+
+        self.fuzz_tasks = []
+
+        # Add all tests to the progress display before running them
+        for binding in bindings:
+            task_id = self.add_task(binding.name, total=max_examples, start=False, status='Waiting')
+            self.fuzz_tasks.append(FuzzTask(binding, task_id, self))
+
+
+class FuzzTask:
+    binding: ContractBinding
+    task_id: TaskID
+    progress: FuzzProgress
+
+    def __init__(self, binding: ContractBinding, task_id: TaskID, progress: FuzzProgress):
+        self.binding = binding
+        self.task_id = task_id
+        self.progress = progress
+
+    def start(self) -> None:
+        self.progress.start_task(self.task_id)
+        self.progress.update(self.task_id, status='[bold]Running')
+
+    def end(self) -> None:
+        self.progress.update(
+            self.task_id, total=self.progress._tasks[self.task_id].completed, status='[bold green]Passed'
+        )
+
+    def advance(self) -> None:
+        self.progress.advance(self.task_id)
+
+    def fail(self) -> None:
+        self.progress.update(self.task_id, status='[bold red]Failed')
+        self.progress.stop_task(self.task_id)
+
+
+class KometFuzzHandler(KFuzzHandler):
+    # Fuzz handler with progress tracking
+
+    definition: SorobanDefinition
+    task: FuzzTask
+    failed: bool
+
+    def __init__(self, definition: SorobanDefinition, task: FuzzTask):
+        self.definition = definition
+        self.task = task
+        self.failed = False
+
+    def handle_test(self, args: Mapping[EVar, Pattern]) -> None:
+        # Hypothesis reruns failing examples to confirm the failure.
+        # To avoid misleading progress updates, the progress bar is not advanced
+        # when a test fails and Hypothesis reruns the same example.
+        if not self.failed:
+            self.task.advance()
+
+    def handle_failure(self, args: Mapping[EVar, Pattern]) -> None:
+        if not self.failed:
+            self.failed = True
+            self.task.fail()
+
+        sorted_keys = sorted(args.keys(), key=lambda k: k.name)
+        counterexample = tuple(self.definition.krun.kore_to_kast(args[k]) for k in sorted_keys)
+        raise FuzzError(self.task.binding.name, counterexample)
+
+
+class FuzzError(Exception):
+    test_name: str
+    counterexample: tuple[KInner, ...]
+
+    def __init__(self, test_name: str, counterexample: tuple[KInner, ...]):
+        self.test_name = test_name
+        self.counterexample = counterexample
