@@ -83,6 +83,17 @@ module CONFIG
         <ledgerSequenceNumber> 0 </ledgerSequenceNumber>
         <ledgerTimestamp> 0 </ledgerTimestamp>
         <logging> .List </logging>
+```
+
+- `alwaysAllocate`: This cell controls the behavior of `allocObject` during property tests.
+  By default, the cell is set to `false`, meaning the allocation behavior of `allocObject` is determined based on the
+  type and size of the value.
+
+  When set to `true`, all `ScVal`s that have both small and host object representations (e.g., small/big I64s, symbols)
+  are allocated as host objects in `pushArg`. This eliminates exponential branching during symbolic execution.
+
+```k
+        <alwaysAllocate> false </alwaysAllocate>
       </soroban>
 
     syntax HostStack ::= List{HostStackVal, ":"}  [symbol(hostStackList)]
