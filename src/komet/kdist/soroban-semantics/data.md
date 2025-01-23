@@ -165,6 +165,15 @@ module HOST-OBJECT
     rule getTag(Symbol(BS))    => 74    requires lengthString(BS) >Int  9
     rule getTag(ScBytes(_))    => 72
 
+    syntax Int ::= getTagWithFlag(alwaysAllocate: Bool, ScVal)   [function, total]
+ // -------------------------------------------------------------------------------
+    rule getTagWithFlag(true, U64(_))    => 64
+    rule getTagWithFlag(true, I64(_))    => 65
+    rule getTagWithFlag(true, U128(_))   => 68
+    rule getTagWithFlag(true, I128(_))   => 69
+    rule getTagWithFlag(true, Symbol(_)) => 74
+    rule getTagWithFlag(_,    SCV)       => getTag(SCV)      [owise]
+   
     // 64-bit integers that fit in 56 bits
     syntax Int ::= "#maxU64small"     [macro]
                  | "#maxI64small"     [macro]
@@ -287,6 +296,15 @@ module HOST-OBJECT
  // ---------------------------------------------------------------------------------
     rule toSmallValid(VAL) => toSmall(VAL) =/=K HostVal(-1)
 
+    syntax Bool ::= alwaysSmall(ScVal)
+        [function, total, symbol(alwaysSmall)]
+ // ---------------------------------------------------------------------------------
+    rule alwaysSmall(SCBool(_))   => true
+    rule alwaysSmall(Void)        => true
+    rule alwaysSmall(Error(_, _)) => true
+    rule alwaysSmall(U32(_))      => true
+    rule alwaysSmall(I32(_))      => true
+    rule alwaysSmall(_)           => false [owise]
 
     syntax String ::= decode6bit(Int)       [function, total, symbol(decode6bit)]
  // --------------------------------------------------------------------------------

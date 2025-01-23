@@ -240,7 +240,9 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
     rule [allocObject-small]:
         <k> allocObject(SCV) => .K ... </k>
         <hostStack> STACK => toSmall(SCV) : STACK </hostStack>
-      requires toSmallValid(SCV)
+        <alwaysAllocate> ALWAYS_ALLOCATE </alwaysAllocate>
+      requires alwaysSmall(SCV)
+        orBool ( toSmallValid(SCV) andBool notBool ALWAYS_ALLOCATE )
 
     // recursively allocate vector items
     rule [allocObject-vec]:
@@ -299,8 +301,9 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
         <k> addObject(SCV) => .K ... </k>
         <hostObjects> OBJS => OBJS ListItem(SCV) </hostObjects>
         <hostStack> STACK
-                 => fromHandleAndTag(indexToHandle(size(OBJS), false), getTag(SCV)) : STACK
+                 => fromHandleAndTag(indexToHandle(size(OBJS), false), getTagWithFlag(AA, SCV)) : STACK
         </hostStack>
+        <alwaysAllocate> AA </alwaysAllocate>
 
     syntax InternalCmd ::= allocObjects       (List)       [symbol(allocObjects)]
                          | allocObjectsAux    (List)       [symbol(allocObjectsAux)]
