@@ -122,6 +122,21 @@ Updates the byte at given index.
        andBool V <Int 256
 ```
 
+## bytes_get
+
+Gets the byte at given index.
+
+```k
+    rule [hostCallAux-bytes-get]:
+        <instrs> hostCallAux ( "b" , "6" )
+              => toSmall( U32( BYTES [I] ) )
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : U32(I) : S => S </hostStack>
+      requires 0 <=Int I
+       andBool I <Int lengthBytes(BYTES)
+```
+
 ## bytes_len
 
 ```k
