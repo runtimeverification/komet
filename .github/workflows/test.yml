@@ -71,3 +71,29 @@ jobs:
       - name: 'Tear down Docker'
         if: always()
         run: docker stop --time=0 ${CONTAINER}
+
+  lemma-tests:
+    needs: code-quality-checks
+    name: 'Lemma Tests'
+    runs-on: [self-hosted, linux, normal]
+    env:
+      CONTAINER: komet-lemmas-${{ github.sha }}
+    steps:
+      - name: 'Check out code'
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: 'Set up Docker'
+        uses: ./.github/actions/with-docker
+        with:
+          container-name: ${CONTAINER}
+      - name: 'Build komet'
+        run: docker exec --user user ${CONTAINER} poetry install
+      - name: 'Build semantics'
+        run: docker exec --user user ${CONTAINER} make kdist-build
+      - name: 'Run lemma tests'
+        run: docker exec --user user ${CONTAINER} make test-lemmas
+      - name: 'Tear down Docker'
+        if: always()
+        run: docker stop --time=0 ${CONTAINER}

@@ -60,6 +60,12 @@ def main() -> None:
             assert args.proof_dir is not None
             _exec_prove_view(proof_dir=args.proof_dir, id=args.id)
 
+    elif args.command == 'prove-raw':
+        assert args.claim_file is not None
+        _exec_prove_raw(
+            claim_file=args.claim_file, label=args.label, proof_dir=args.proof_dir, bug_report=args.bug_report
+        )
+
     raise AssertionError()
 
 
@@ -70,6 +76,18 @@ def _exec_run(*, program: Path, backend: Backend) -> None:
         proc_res = _krun(definition_dir=definition_dir, input_file=input_file, check=False)
 
     _exit_with_output(proc_res)
+
+
+def _exec_prove_raw(
+    *,
+    claim_file: Path,
+    label: str | None,
+    proof_dir: Path | None,
+    bug_report: BugReport | None = None,
+) -> None:
+    kasmer = Kasmer(symbolic_definition)
+    kasmer.prove_raw(claim_file, label, proof_dir, bug_report)
+    exit(0)
 
 
 def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) -> None:
@@ -204,6 +222,17 @@ def _argument_parser() -> ArgumentParser:
     prove_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
     prove_parser.add_argument('--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs')
     _add_common_test_arguments(prove_parser)
+
+    prove_raw_parser = command_parser.add_parser(
+        'prove-raw',
+        help='Prove K claims directly from a file, bypassing the usual test contract structure; intended for development and advanced users.',
+    )
+    prove_raw_parser.add_argument('claim_file', metavar='CLAIM_FILE', type=file_path, help='path to claim file')
+    prove_raw_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
+    prove_raw_parser.add_argument(
+        '--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs'
+    )
+    prove_raw_parser.add_argument('--label', help='Label of the K claim in the file')
 
     return parser
 

@@ -7,6 +7,7 @@ from pyk.kast.outer import read_kast_definition
 from pyk.kdist import kdist
 from pyk.konvert import kast_to_kore
 from pyk.ktool.kompile import DefinitionInfo
+from pyk.ktool.kprove import KProve
 from pyk.ktool.krun import KRun
 
 if TYPE_CHECKING:
@@ -45,6 +46,10 @@ class SorobanDefinition:
     @cached_property
     def krun(self) -> KRun:
         return KRun(self.path)
+
+    @cached_property
+    def kprove(self) -> KProve:
+        return KProve(self.path)
 
     def krun_with_kast(self, pgm: KInner, sort: KSort | None = None, **kwargs: Any) -> CompletedProcess:
         """Run the semantics on a kast term.
