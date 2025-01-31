@@ -8,6 +8,7 @@ uploadWasm( b"test-wasm",
   (import "b" "4" (func $bytes_new                                             (result i64)))
   (import "b" "5" (func $bytes_put                     (param i64 i64 i64)     (result i64)))
   (import "b" "6" (func $bytes_get                     (param i64 i64)         (result i64)))
+  (import "b" "7" (func $bytes_del                     (param i64 i64)         (result i64)))
   (import "b" "8" (func $bytes_len                     (param i64)             (result i64)))
   (func $u32 (param i32) (result i64)
     local.get 0
@@ -31,6 +32,7 @@ uploadWasm( b"test-wasm",
   (export "bytes_new" (func $bytes_new))
   (export "bytes_put" (func $bytes_put))
   (export "bytes_get" (func $bytes_get))
+  (export "bytes_del" (func $bytes_del))
 )
 )
 
@@ -128,6 +130,30 @@ callTx(
   "bytes_get",
   ListItem(ScBytes(b"\x00\x01\x02")) ListItem(U32(2)),
   U32(2)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_del",
+  ListItem(ScBytes(b"abc")) ListItem(U32(0)),
+  ScBytes(b"bc")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_del",
+  ListItem(ScBytes(b"abc")) ListItem(U32(1)),
+  ScBytes(b"ac")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_del",
+  ListItem(ScBytes(b"abc")) ListItem(U32(2)),
+  ScBytes(b"ab")
 )
 
 setExitCode(0)

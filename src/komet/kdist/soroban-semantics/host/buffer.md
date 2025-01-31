@@ -141,6 +141,26 @@ Gets the byte at given index.
        andBool I <Int lengthBytes(BYTES)
 ```
 
+## bytes_del
+
+Updates the byte at given index.
+
+```k
+    rule [hostCallAux-bytes-del]:
+        <instrs> hostCallAux ( "b" , "7" )
+              => allocObject(
+                  ScBytes( substrBytes(BYTES, 0, I) 
+                    +Bytes substrBytes(BYTES, I +Int 1, lengthBytes(BYTES))
+                  )
+                )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : U32(I) : S => S </hostStack>
+      requires 0 <=Int I
+       andBool I <Int lengthBytes(BYTES)
+```
+
 ## bytes_len
 
 ```k
