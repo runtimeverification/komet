@@ -90,6 +90,21 @@ The `Bytes` object expands if needed, and any gap between the starting position 
 
 ```
 
+## bytes_new
+
+Creates an empty `Bytes` object.
+
+```k
+    rule [hostfun-bytes-new]:
+        <instrs> hostCall ( "b" , "4" , [ .ValTypes ] -> [ i64  .ValTypes ] )
+              => allocObject(ScBytes(.Bytes))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals> .Map </locals>
+```
+
+
 ## bytes_len
 
 ```k

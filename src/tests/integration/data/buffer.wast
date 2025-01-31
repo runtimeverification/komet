@@ -5,6 +5,7 @@ uploadWasm( b"test-wasm",
 (module
   (import "b" "1" (func $bytes_copy_to_linear_memory   (param i64 i64 i64 i64) (result i64)))
   (import "b" "2" (func $bytes_copy_from_linear_memory (param i64 i64 i64 i64) (result i64)))
+  (import "b" "4" (func $bytes_new                                             (result i64)))
   (import "b" "8" (func $bytes_len                     (param i64)             (result i64)))
   (func $u32 (param i32) (result i64)
     local.get 0
@@ -24,7 +25,9 @@ uploadWasm( b"test-wasm",
     )
   )
   (memory (;0;) 16)
-  (export "to_and_from" (func $to_and_from)))
+  (export "to_and_from" (func $to_and_from))
+  (export "bytes_new" (func $bytes_new))
+)
 )
 
 setAccount(Account(b"test-account"), 9876543210)
@@ -66,5 +69,14 @@ callTx(
   ListItem(ScBytes(b"abc")) ListItem(ScBytes(b"def")) ListItem(U32(5)),
   ScBytes(b"def\x00\x00abc")
 )
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_new",
+  .List,
+  ScBytes(b"")
+)
+
 
 setExitCode(0)
