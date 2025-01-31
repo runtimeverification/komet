@@ -10,8 +10,9 @@ from typing import TYPE_CHECKING
 
 from hypothesis import strategies
 from pyk.cterm import CTerm, cterm_build_claim
-from pyk.kast.inner import KSort, KVariable
+from pyk.kast.inner import KSequence, KSort, KVariable
 from pyk.kast.manip import Subst, split_config_from
+from pyk.kast.outer import KClaim
 from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.kore.syntax import EVar, SortApp
@@ -376,7 +377,30 @@ class Kasmer:
         test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
 
         for binding in test_bindings:
+            print(binding.name)
             proof = self.run_prove(conf, subst, binding, proof_dir, bug_report)
+            if proof.status == ProofStatus.FAILED:
+                raise KSorobanError(proof.summary)
+
+    def prove_raw(
+        self,
+        claim_file: Path,
+        label: str | None = None,
+        proof_dir: Path | None = None,
+        bug_report: BugReport | None = None,
+    ) -> None:
+
+        modules = self.definition.kprove.parse_modules(claim_file).modules
+        claims = [
+            sent
+            for module in modules
+            for sent in module.sentences
+            if isinstance(sent, KClaim) and (label is None or sent.label == label)
+        ]
+
+        for claim in claims:
+            print('Proving:', claim.label, 'at', claim.source)
+            proof = run_claim(claim.label, claim, proof_dir, bug_report)
             if proof.status == ProofStatus.FAILED:
                 raise KSorobanError(proof.summary)
 
