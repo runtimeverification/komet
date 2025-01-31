@@ -30,6 +30,38 @@ module HOST-BUFFER
        andBool B_POS +Int LEN <=Int lengthBytes(BYTES)
 ```
 
+## bytes_copy_from_linear_memory
+
+Reads a slice from linear memory and writes into a `Bytes` object, returning a new object.
+The `Bytes` object expands if needed, and any gap between the starting position and its current size is filled with zeros.
+
+```k
+    rule [hostCallAux-bytes-copy-from-linear-memory]:
+        <instrs> hostCallAux ( "b" , "2" )
+              => #memLoad(LM_POS, LEN)
+              ~> bytesCopyFromLinearMemory
+                  ...
+        </instrs>
+        <hostStack> ScBytes(_) : U32(B_POS) : U32(LM_POS) : U32(LEN) : _ </hostStack>
+      requires 0 <=Int B_POS
+       andBool 0 <=Int LEN
+
+    syntax InternalInstr ::= "bytesCopyFromLinearMemory"  [symbol(bytesCopyFromLinearMemory)]
+ // ------------------------------------------------------------------------------------------
+    rule [bytesCopyFromLinearMemory]:
+        <instrs> bytesCopyFromLinearMemory
+              => allocObject(
+                    ScBytes(
+                      substrBytes(padRightBytes(BYTES, B_POS, 0), 0, B_POS) +Bytes BS
+                    )
+                  )
+              ~> returnHostVal
+                  ...
+        </instrs>
+        <hostStack> BS:Bytes : ScBytes(BYTES) : U32(B_POS) : U32(_) : U32(_) : S => S </hostStack>
+
+```
+
 ## bytes_new_from_linear_memory
 
 ```k
