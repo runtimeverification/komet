@@ -52,13 +52,17 @@ The `Bytes` object expands if needed, and any gap between the starting position 
         <instrs> bytesCopyFromLinearMemory
               => allocObject(
                     ScBytes(
-                      substrBytes(padRightBytes(BYTES, B_POS, 0), 0, B_POS) +Bytes BS
+                      replaceAtBytes(
+                        padRightBytes(BYTES, B_POS +Int LEN, 0),
+                        B_POS,
+                        BS
+                      )
                     )
                   )
               ~> returnHostVal
                   ...
         </instrs>
-        <hostStack> BS:Bytes : ScBytes(BYTES) : U32(B_POS) : U32(_) : U32(_) : S => S </hostStack>
+        <hostStack> BS:Bytes : ScBytes(BYTES) : U32(B_POS) : U32(_) : U32(LEN) : S => S </hostStack>
 
 ```
 
