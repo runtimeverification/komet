@@ -104,6 +104,23 @@ Creates an empty `Bytes` object.
         <locals> .Map </locals>
 ```
 
+## bytes_put
+
+Updates the byte at given index.
+
+```k
+    rule [hostCallAux-bytes-put]:
+        <instrs> hostCallAux ( "b" , "5" )
+              => allocObject(ScBytes( BYTES [ I <- V ] ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : U32(I) : U32(V) : S => S </hostStack>
+      requires 0 <=Int I
+       andBool I <Int lengthBytes(BYTES)
+       andBool 0 <=Int V
+       andBool V <Int 256
+```
 
 ## bytes_len
 
