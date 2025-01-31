@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from hypothesis import strategies
 from pyk.cterm import CTerm, cterm_build_claim
-from pyk.kast.inner import KSequence, KSort, KVariable
+from pyk.kast.inner import KSort, KVariable
 from pyk.kast.manip import Subst, split_config_from
 from pyk.kast.outer import KClaim
 from pyk.konvert import kast_to_kore, kore_to_kast
