@@ -6,6 +6,13 @@ module KSOROBAN-LEMMAS [symbolic]
   imports KWASM-LEMMAS
   imports INT-BITWISE-LEMMAS
   imports HOST-OBJECT-LEMMAS
+  imports SOROBAN
+
+  syntax InternalCmd ::= runLemma(ProofStep) | doneLemma(ProofStep)
+  syntax ProofStep ::= HostVal | ScVal | Int | Bool
+
+  rule <k> runLemma(S) => doneLemma(S) ... </k>
+
 endmodule
 
 module INT-BITWISE-LEMMAS [symbolic]
@@ -31,7 +38,9 @@ module INT-BITWISE-LEMMAS [symbolic]
   rule fullMask(I:Int) => (1 <<Int I) -Int 1 requires 0 <Int I
   rule fullMask(I:Int) => 0                  requires I <=Int 0
 
-  rule I modInt M => I &Int (M -Int 1) requires isPowerOf2(M) [simplification, concrete(M)]
+  rule [modInt-to-bit-mask]:
+      I modInt M => I &Int (M -Int 1) requires isPowerOf2(M)
+    [simplification, concrete(M)]
 
 endmodule
 
@@ -39,7 +48,8 @@ module HOST-OBJECT-LEMMAS [symbolic]
   imports HOST-OBJECT
   imports INT-BITWISE-LEMMAS
 
-  rule (_I <<Int SHIFT |Int T) &Int MASK => T &Int MASK
+  rule [bitwise-mk-hostval-then-mask]:
+      (_I <<Int SHIFT |Int T) &Int MASK => T &Int MASK
     requires isFullMask(MASK) andBool SHIFT >=Int log2Int(MASK +Int 1)
     [simplification, concrete(SHIFT, MASK)]
 
