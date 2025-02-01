@@ -15,6 +15,7 @@ uploadWasm( b"test-wasm",
   (import "b" "b" (func $bytes_front                   (param i64)             (result i64)))
   (import "b" "c" (func $bytes_back                    (param i64)             (result i64)))
   (import "b" "d" (func $bytes_insert                  (param i64 i64 i64)     (result i64)))
+  (import "b" "e" (func $bytes_append                  (param i64 i64)         (result i64)))
   (func $u32 (param i32) (result i64)
     local.get 0
     i64.extend_i32_u
@@ -59,6 +60,7 @@ uploadWasm( b"test-wasm",
   (export "bytes_front" (func $bytes_front_as_bytes))
   (export "bytes_back"  (func $bytes_back_as_bytes))
   (export "bytes_insert" (func $bytes_insert))
+  (export "bytes_append" (func $bytes_append))
 )
 )
 
@@ -244,6 +246,38 @@ callTx(
   "bytes_insert",
   ListItem(ScBytes(b"komet")) ListItem(U32(4)) ListItem(U32(7)),
   ScBytes(b"kome\x07t")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_append",
+  ListItem(ScBytes(b"abc")) ListItem(ScBytes(b"def")),
+  ScBytes(b"abcdef")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_append",
+  ListItem(ScBytes(b"")) ListItem(ScBytes(b"def")),
+  ScBytes(b"def")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_append",
+  ListItem(ScBytes(b"abc")) ListItem(ScBytes(b"")),
+  ScBytes(b"abc")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_append",
+  ListItem(ScBytes(b"")) ListItem(ScBytes(b"")),
+  ScBytes(b"")
 )
 
 setExitCode(0)

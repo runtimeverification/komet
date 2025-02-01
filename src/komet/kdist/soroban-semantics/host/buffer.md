@@ -250,6 +250,23 @@ Inserts a byte at given index. Shifts rest of the bytes to the right.
        andBool V <Int 256
 ```
 
+## bytes_append
+
+Concatenate two `Bytes` objects. Ensures that the total length fits in `u32`.
+
+```k
+    rule [hostCallAux-bytes-append]:
+        <instrs> hostCallAux ( "b" , "e" )
+              => allocObject(
+                  ScBytes( BYTES1 +Bytes BYTES2 )
+                )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES1) : ScBytes(BYTES2) : S => S </hostStack>
+      requires lengthBytes(BYTES1) +Int lengthBytes(BYTES2) <Int #pow(i32) // total length should be less than max u32
+```
+
 ```k
 endmodule
 ```
