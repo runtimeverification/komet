@@ -69,18 +69,13 @@ The `Bytes` object expands if needed, and any gap between the starting position 
 ## bytes_new_from_linear_memory
 
 ```k
-    rule [hostfun-bytes-new-from-linear-memory]:
-        <instrs> hostCall ( "b" , "3" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => #memLoad(getMajor(HostVal(LM_POS)), getMajor(HostVal(LEN)))
+    rule [hostCallAux-bytes-new-from-linear-memory]:
+        <instrs> hostCallAux ( "b" , "3" )
+              => #memLoad(LM_POS, LEN)
               ~> bytesNewFromLinearMemory
                  ...
         </instrs>
-        <locals>
-          0 |-> < i64 > LM_POS      // U32
-          1 |-> < i64 > LEN         // U32
-        </locals>
-      requires fromSmallValid(HostVal(LM_POS))
-       andBool fromSmallValid(HostVal(LEN))
+        <hostStack> U32(LM_POS) : U32(LEN) : S => S </hostStack>
 
     syntax InternalInstr ::= "bytesNewFromLinearMemory"      [symbol(bytesNewFromLinearMemory)]
  // ---------------------------------------------------------------------------------
@@ -165,20 +160,8 @@ Updates the byte at given index.
 
 ```k
 
-    rule [hostfun-bytes-len]:
-        <instrs> hostCall ( "b" , "8" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => loadObject(HostVal(BYTES))
-              ~> bytesLen
-                 ...
-        </instrs>
-        <locals>
-          0 |-> < i64 > BYTES      // Bytes HostVal
-        </locals>
-
-    syntax InternalInstr ::= "bytesLen"      [symbol(bytesLen)]
- // ---------------------------------------------------------------------------------
-    rule [bytesLen]:
-        <instrs> bytesLen
+    rule [hostCallAux-bytes-len]:
+        <instrs> hostCallAux ( "b" , "8" )
               => toSmall(U32(lengthBytes(BS)))
                  ...
         </instrs>
