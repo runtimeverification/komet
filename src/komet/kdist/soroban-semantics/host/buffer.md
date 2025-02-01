@@ -227,6 +227,29 @@ Returns the last byte of a `Bytes` object.
       requires 0 <Int lengthBytes(BYTES)
 ```
 
+## bytes_insert
+
+Inserts a byte at given index. Shifts rest of the bytes to the right.
+
+```k
+    rule [hostCallAux-bytes-insert]:
+        <instrs> hostCallAux ( "b" , "d" )
+              => allocObject(
+                  ScBytes( substrBytes(BYTES, 0, I)
+                    +Bytes Int2Bytes(1, V, LE)
+                    +Bytes substrBytes(BYTES, I, lengthBytes(BYTES))
+                  )
+                )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : U32(I) : U32(V) : S => S </hostStack>
+      requires 0 <=Int I
+       andBool I <Int lengthBytes(BYTES)
+       andBool 0 <=Int V
+       andBool V <Int 256
+```
+
 ```k
 endmodule
 ```
