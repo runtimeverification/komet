@@ -267,6 +267,23 @@ Concatenate two `Bytes` objects. Ensures that the total length fits in `u32`.
       requires lengthBytes(BYTES1) +Int lengthBytes(BYTES2) <Int #pow(i32) // total length should be less than max u32
 ```
 
+## bytes_slice
+
+Returns a slice of the `Bytes` object from the given start index (inclusive) to the end index (exclusive).
+
+```k
+    rule [hostCallAux-bytes-slice]:
+        <instrs> hostCallAux ( "b" , "f" )
+              => allocObject( ScBytes( substrBytes(BYTES, START, END) ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : U32(START) : U32(END) : S => S </hostStack>
+      requires 0     <=Int START
+       andBool START <=Int END
+       andBool END   <=Int lengthBytes(BYTES)
+```
+
 ```k
 endmodule
 ```

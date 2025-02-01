@@ -16,6 +16,7 @@ uploadWasm( b"test-wasm",
   (import "b" "c" (func $bytes_back                    (param i64)             (result i64)))
   (import "b" "d" (func $bytes_insert                  (param i64 i64 i64)     (result i64)))
   (import "b" "e" (func $bytes_append                  (param i64 i64)         (result i64)))
+  (import "b" "f" (func $bytes_slice                   (param i64 i64 i64)     (result i64)))
   (func $u32 (param i32) (result i64)
     local.get 0
     i64.extend_i32_u
@@ -61,6 +62,7 @@ uploadWasm( b"test-wasm",
   (export "bytes_back"  (func $bytes_back_as_bytes))
   (export "bytes_insert" (func $bytes_insert))
   (export "bytes_append" (func $bytes_append))
+  (export "bytes_slice"  (func $bytes_slice))
 )
 )
 
@@ -277,6 +279,64 @@ callTx(
   Contract(b"test-sc"),
   "bytes_append",
   ListItem(ScBytes(b"")) ListItem(ScBytes(b"")),
+  ScBytes(b"")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_slice",
+  ListItem(ScBytes(b"abc")) ListItem(U32(0)) ListItem(U32(0)),
+  ScBytes(b"")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_slice",
+  ListItem(ScBytes(b"abc")) ListItem(U32(0)) ListItem(U32(1)),
+  ScBytes(b"a")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_slice",
+  ListItem(ScBytes(b"abc")) ListItem(U32(0)) ListItem(U32(2)),
+  ScBytes(b"ab")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_slice",
+  ListItem(ScBytes(b"abc")) ListItem(U32(0)) ListItem(U32(3)),
+  ScBytes(b"abc")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_slice",
+  ListItem(ScBytes(b"abc")) ListItem(U32(1)) ListItem(U32(2)),
+  ScBytes(b"b")
+)
+
+;; empty slice from the middle
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_slice",
+  ListItem(ScBytes(b"abc")) ListItem(U32(1)) ListItem(U32(1)),
+  ScBytes(b"")
+)
+
+;; empty slice from the end
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_slice",
+  ListItem(ScBytes(b"abc")) ListItem(U32(3)) ListItem(U32(3)),
   ScBytes(b"")
 )
 
