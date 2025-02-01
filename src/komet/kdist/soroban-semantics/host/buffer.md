@@ -245,7 +245,7 @@ Inserts a byte at given index. Shifts rest of the bytes to the right.
         </instrs>
         <hostStack> ScBytes(BYTES) : U32(I) : U32(V) : S => S </hostStack>
       requires 0 <=Int I
-       andBool I <Int lengthBytes(BYTES)
+       andBool I <=Int lengthBytes(BYTES)
        andBool 0 <=Int V
        andBool V <Int 256
 ```

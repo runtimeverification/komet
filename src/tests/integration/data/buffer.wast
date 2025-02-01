@@ -253,6 +253,14 @@ callTx(
 callTx(
   Account(b"test-caller"),
   Contract(b"test-sc"),
+  "bytes_insert",
+  ListItem(ScBytes(b"")) ListItem(U32(0)) ListItem(U32(7)),
+  ScBytes(b"\x07")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
   "bytes_append",
   ListItem(ScBytes(b"abc")) ListItem(ScBytes(b"def")),
   ScBytes(b"abcdef")
