@@ -199,6 +199,34 @@ Removes the last byte of a `Bytes` object and returns the new object.
       requires 0 <Int lengthBytes(BYTES)
 ```
 
+## bytes_front
+
+Returns the first byte of a `Bytes` object.
+
+```k
+    rule [hostCallAux-bytes-front]:
+        <instrs> hostCallAux ( "b" , "b" )
+              => toSmall(U32( BYTES[0] ))
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : S => S </hostStack>
+      requires 0 <Int lengthBytes(BYTES)
+```
+
+## bytes_back
+
+Returns the last byte of a `Bytes` object.
+
+```k
+    rule [hostCallAux-bytes-last]:
+        <instrs> hostCallAux ( "b" , "c" )
+              => toSmall(U32( BYTES[lengthBytes(BYTES) -Int 1] ))
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : S => S </hostStack>
+      requires 0 <Int lengthBytes(BYTES)
+```
+
 ```k
 endmodule
 ```

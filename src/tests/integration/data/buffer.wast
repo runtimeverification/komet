@@ -12,6 +12,8 @@ uploadWasm( b"test-wasm",
   (import "b" "8" (func $bytes_len                     (param i64)             (result i64)))
   (import "b" "9" (func $bytes_push                    (param i64 i64)         (result i64)))
   (import "b" "a" (func $bytes_pop                     (param i64)             (result i64)))
+  (import "b" "b" (func $bytes_front                   (param i64)             (result i64)))
+  (import "b" "c" (func $bytes_back                    (param i64)             (result i64)))
   (func $u32 (param i32) (result i64)
     local.get 0
     i64.extend_i32_u
@@ -33,8 +35,17 @@ uploadWasm( b"test-wasm",
     ;; get the first byte of SRC and push to DEST
     (call $bytes_push 
       (local.get 1)
-      (call $bytes_get (local.get 0) (call $u32 (i32.const 0)))
+      (call $bytes_front (local.get 0))
     )
+  )
+  (func $u32_to_bytes (param i64) (result i64)
+    (call $bytes_push (call $bytes_new) (local.get 0))
+  )
+  (func $bytes_front_as_bytes (param i64) (result i64)
+    (call $u32_to_bytes (call $bytes_front (local.get 0)))
+  )
+  (func $bytes_back_as_bytes (param i64) (result i64)
+    (call $u32_to_bytes (call $bytes_back (local.get 0)))
   )
   (memory (;0;) 16)
   (export "to_and_from" (func $to_and_from))
@@ -44,6 +55,8 @@ uploadWasm( b"test-wasm",
   (export "bytes_del" (func $bytes_del))
   (export "push_first" (func $push_first))
   (export "bytes_pop"  (func $bytes_pop))
+  (export "bytes_front" (func $bytes_front_as_bytes))
+  (export "bytes_back"  (func $bytes_back_as_bytes))
 )
 )
 
@@ -189,6 +202,22 @@ callTx(
   "bytes_pop",
   ListItem(ScBytes(b"komet")),
   ScBytes(b"kome")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_front",
+  ListItem(ScBytes(b"komet")),
+  ScBytes(b"k")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_back",
+  ListItem(ScBytes(b"komet")),
+  ScBytes(b"t")
 )
 
 setExitCode(0)
