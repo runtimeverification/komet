@@ -159,7 +159,6 @@ Updates the byte at given index.
 ## bytes_len
 
 ```k
-
     rule [hostCallAux-bytes-len]:
         <instrs> hostCallAux ( "b" , "8" )
               => toSmall(U32(lengthBytes(BS)))
@@ -167,5 +166,24 @@ Updates the byte at given index.
         </instrs>
         <hostStack> ScBytes(BS) : S => S </hostStack>
 
+```
+
+## bytes_push
+
+Add an element to the back of the `Bytes` object
+
+```k
+    rule [hostCallAux-bytes-push]:
+        <instrs> hostCallAux ( "b" , "9" )
+              => allocObject(ScBytes( BYTES +Bytes Int2Bytes(1, V, LE) ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : U32(V) : S => S </hostStack>
+      requires 0 <=Int V
+       andBool V <Int 256
+```
+
+```k
 endmodule
 ```
