@@ -11,6 +11,7 @@ uploadWasm( b"test-wasm",
   (import "b" "7" (func $bytes_del                     (param i64 i64)         (result i64)))
   (import "b" "8" (func $bytes_len                     (param i64)             (result i64)))
   (import "b" "9" (func $bytes_push                    (param i64 i64)         (result i64)))
+  (import "b" "a" (func $bytes_pop                     (param i64)             (result i64)))
   (func $u32 (param i32) (result i64)
     local.get 0
     i64.extend_i32_u
@@ -42,6 +43,7 @@ uploadWasm( b"test-wasm",
   (export "bytes_get" (func $bytes_get))
   (export "bytes_del" (func $bytes_del))
   (export "push_first" (func $push_first))
+  (export "bytes_pop"  (func $bytes_pop))
 )
 )
 
@@ -179,6 +181,14 @@ callTx(
   "push_first",
   ListItem(ScBytes(b"komet")) ListItem(ScBytes(b"")),
   ScBytes(b"k")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "bytes_pop",
+  ListItem(ScBytes(b"komet")),
+  ScBytes(b"kome")
 )
 
 setExitCode(0)

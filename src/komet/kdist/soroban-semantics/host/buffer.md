@@ -184,6 +184,21 @@ Add an element to the back of the `Bytes` object
        andBool V <Int 256
 ```
 
+## bytes_pop
+
+Removes the last byte of a `Bytes` object and returns the new object.
+
+```k
+    rule [hostCallAux-bytes-pop]:
+        <instrs> hostCallAux ( "b" , "a" )
+              => allocObject(ScBytes( substrBytes(BYTES, 0, lengthBytes(BYTES) -Int 1) ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BYTES) : S => S </hostStack>
+      requires 0 <Int lengthBytes(BYTES)
+```
+
 ```k
 endmodule
 ```
