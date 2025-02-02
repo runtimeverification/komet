@@ -4,22 +4,9 @@ setExitCode(1)
 uploadWasm( b"test-wasm",
 (module
   (import "v" "_" (func $vec_new (result i64)))
-  (import "v" "3" (func $vec_len (param i64) (result i64)))
   (import "v" "1" (func $vec_get (param i64 i64) (result i64)))
+  (import "v" "3" (func $vec_len (param i64) (result i64)))
   (import "v" "6" (func $vec_push_back (param i64 i64) (result i64)))
-  (func $create_vec (result i64)
-    call $vec_new)
-  (func $get_len (param i64) (result i64)
-    local.get 0
-    call $vec_len)
-  (func $get_item (param i64 i64) (result i64)
-    local.get 0
-    local.get 1
-    call $vec_get)
-  (func $push_back (param i64 i64) (result i64)
-    local.get 0
-    local.get 1
-    call $vec_push_back)
   (func $push_back_immutable (param i64 i64) (result i64)
     ;; push back and return the original vector
     local.get 0
@@ -27,11 +14,12 @@ uploadWasm( b"test-wasm",
     call $vec_push_back
     drop
     local.get 0)
-  (export "create_vec" (func $create_vec))
-  (export "get_len" (func $get_len))
-  (export "get_item" (func $get_item))
-  (export "push_back" (func $push_back))
-  (export "push_back_immutable" (func $push_back_immutable)))
+  (export "vec_new" (func $vec_new))
+  (export "vec_len" (func $vec_len))
+  (export "vec_get" (func $vec_get))
+  (export "vec_push_back" (func $vec_push_back))
+  (export "push_back_immutable" (func $push_back_immutable))
+)
 )
 
 setAccount(Account(b"test-account"), 9876543210)
@@ -45,7 +33,7 @@ deployContract(
 callTx(
   Account(b"test-caller"),
   Contract(b"test-sc"),
-  "create_vec",
+  "vec_new",
   .List,
   ScVec(.List)
 )
@@ -53,7 +41,7 @@ callTx(
 callTx(
   Account(b"test-caller"),
   Contract(b"test-sc"),
-  "get_len",
+  "vec_len",
   ListItem(
     ScVec(
       ListItem(U32(1))
@@ -69,7 +57,7 @@ callTx(
 callTx(
   Account(b"test-caller"),
   Contract(b"test-sc"),
-  "get_len",
+  "vec_len",
   ListItem(
     ScVec(
       .List
@@ -81,7 +69,7 @@ callTx(
 callTx(
   Account(b"test-caller"),
   Contract(b"test-sc"),
-  "get_item",
+  "vec_get",
   ListItem(
     ScVec(
       ListItem(U32(1))
@@ -98,7 +86,7 @@ callTx(
 callTx(
   Account(b"test-caller"),
   Contract(b"test-sc"),
-  "push_back",
+  "vec_push_back",
   ListItem(
     ScVec(
       ListItem(U32(1))
@@ -119,7 +107,7 @@ callTx(
 callTx(
   Account(b"test-caller"),
   Contract(b"test-sc"),
-  "push_back",
+  "vec_push_back",
   ListItem(ScVec(.List))
   ListItem(U32(1)),
   ScVec(ListItem(U32(1)))
