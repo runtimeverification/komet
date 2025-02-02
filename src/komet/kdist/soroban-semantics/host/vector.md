@@ -27,47 +27,25 @@ module HOST-VECTOR
 ## vec_get
 
 ```k
-    rule [hostfun-vec-get]:
-        <instrs> hostCall ( "v" , "1" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => loadObject(HostVal(INDEX))
-              ~> loadObject(HostVal(VEC))
-              ~> vecGet
+    rule [hostCallAux-vec-get]:
+        <instrs> hostCallAux ( "v" , "1" )
+              => VEC {{ I }} orDefault HostVal(0)
                  ...
         </instrs>
-        <locals>
-          0 |-> < i64 > VEC
-          1 |-> < i64 > INDEX
-        </locals>
-
-    syntax InternalInstr ::= "vecGet"   [symbol(vecGet)]
- // ----------------------------------------------------
-    rule [vecGet]:
-        <instrs> vecGet => VEC {{ I }} orDefault HostVal(0) ... </instrs> // use 'orDefault' to avoid non-total list lookup
         <hostStack> ScVec(VEC) : U32(I) : S => S </hostStack>
       requires 0 <=Int I
        andBool I <Int size(VEC)
-
 ```
 
 ## vec_len
 
 ```k
-    rule [hostfun-vec-len]:
-        <instrs> hostCall ( "v" , "3" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => loadObject(HostVal(VEC))
-              ~> vecLen
+    rule [hostCallAux-vec-len]:
+        <instrs> hostCallAux ( "v" , "3" )
+              => toSmall(U32(size(VEC)))
                  ...
         </instrs>
-        <locals>
-          0 |-> < i64 > VEC
-        </locals>
-
-    syntax InternalInstr ::= "vecLen"   [symbol(vecLen)]
- // ----------------------------------------------------
-    rule [vecLen]:
-        <instrs> vecLen => toSmall(U32(size(VEC))) ... </instrs>
         <hostStack> ScVec(VEC) : S => S </hostStack>
-
 ```
 
 ## vec_push_back
@@ -107,20 +85,14 @@ Returns a new vector with the appended item.
 ## vec_unpack_to_linear_memory
 
 ```k
-    rule [hostfun-vec-unpack-to-linear-memory]:
-        <instrs> hostCall ( "v" , "h" , [ i64  i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => loadObject(HostVal(LEN))
-              ~> loadObject(HostVal(VALS_POS))
-              ~> loadObject(HostVal(VEC))
-              ~> vecUnpackToLinearMemory
+    rule [hostCallAux-vec-unpack-to-linear-memory]:
+        <instrs> hostCallAux ( "v" , "h" )
+              => #memStore(VALS_POS, Vals2Bytes(VEC))
               ~> toSmall(Void)
                  ...
         </instrs>
-        <locals>
-          0 |-> < i64 > VEC         // Vec
-          1 |-> < i64 > VALS_POS    // U32
-          2 |-> < i64 > LEN         // U32
-        </locals>
+        <hostStack> ScVec(VEC) : U32(VALS_POS) : U32(LEN) : S => S </hostStack>
+      requires size(VEC) ==Int LEN
 
     syntax InternalInstr ::= "vecUnpackToLinearMemory"    [symbol(vecUnpackToLinearMemory)]
  // ---------------------------------------------------------------------------------------
@@ -128,44 +100,38 @@ Returns a new vector with the appended item.
         <instrs> vecUnpackToLinearMemory => #memStore(VALS_POS, Vals2Bytes(VEC)) ... </instrs>
         <hostStack> ScVec(VEC) : U32(VALS_POS) : U32(LEN) : S => S </hostStack>
       requires size(VEC) ==Int LEN
+```
 
-    // vec_new_from_linear_memory
-    rule [hostfun-vec-new-from-linear-memory]:
-        <instrs> hostCall ( "v" , "g" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => loadObject(HostVal(LEN))
-              ~> loadObject(HostVal(VALS_POS))
-              ~> vecNewFromLinearMemory
-              ~> returnHostVal
-                 ...
-        </instrs>
-        <locals>
-          0 |-> < i64 > VALS_POS    // U32
-          1 |-> < i64 > LEN         // U32
-        </locals>
+## vec_new_from_linear_memory
 
-    syntax InternalInstr ::= "vecNewFromLinearMemory"      [symbol(vecNewFromLinearMemory)]
-                           | "vecNewFromLinearMemoryAux"   [symbol(vecNewFromLinearMemoryAux)]
-    
- // --------------------------------------------------------------------------------------------------------------------
-    rule [vecNewFromLinearMemory]:
-        <instrs> vecNewFromLinearMemory
+```k
+    rule [hostCallAux-vec-new-from-linear-memory]:
+        <instrs> hostCallAux( "v" , "g" )
               => #memLoad(VALS_POS, LEN *Int 8)
               ~> vecNewFromLinearMemoryAux
                  ...
         </instrs>
         <hostStack> U32(VALS_POS) : U32(LEN) : S => S </hostStack>
 
+    syntax InternalInstr ::= "vecNewFromLinearMemoryAux"   [symbol(vecNewFromLinearMemoryAux)]
+ // --------------------------------------------------------------------------------------------------------------------
     rule [vecNewFromLinearMemoryAux]:
         <instrs> vecNewFromLinearMemoryAux
               => allocObject(
                     ScVec(
                       rel2absMany(RELS, Bytes2Vals(BS))
                     )
-                  ) ...
+                  )
+              ~> returnHostVal
+                 ...
         </instrs>
         <hostStack> BS : S => S </hostStack>
         <relativeObjects> RELS </relativeObjects>
+```
 
+## Helper Functions
+
+```k
 
     syntax Bytes ::= Vals2Bytes(List)    [function, total]
  // -----------------------------------------------------------------------------------------
