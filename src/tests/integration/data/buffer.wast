@@ -17,6 +17,7 @@ uploadWasm( b"test-wasm",
   (import "b" "d" (func $bytes_insert                  (param i64 i64 i64)     (result i64)))
   (import "b" "e" (func $bytes_append                  (param i64 i64)         (result i64)))
   (import "b" "f" (func $bytes_slice                   (param i64 i64 i64)     (result i64)))
+  (import "b" "l" (func $symbol_len                    (param i64)             (result i64)))
   (func $u32 (param i32) (result i64)
     local.get 0
     i64.extend_i32_u
@@ -63,6 +64,7 @@ uploadWasm( b"test-wasm",
   (export "bytes_insert" (func $bytes_insert))
   (export "bytes_append" (func $bytes_append))
   (export "bytes_slice"  (func $bytes_slice))
+  (export "symbol_len"   (func $symbol_len))
 )
 )
 
@@ -346,6 +348,22 @@ callTx(
   "bytes_slice",
   ListItem(ScBytes(b"abc")) ListItem(U32(3)) ListItem(U32(3)),
   ScBytes(b"")
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "symbol_len",
+  ListItem(Symbol(str("abc"))),
+  U32(3)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "symbol_len",
+  ListItem(Symbol(str("1234567890"))),
+  U32(10)
 )
 
 setExitCode(0)
