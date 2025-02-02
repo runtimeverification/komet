@@ -181,6 +181,35 @@ Returns a new vector with the appended item.
         <hostStack> ScVec(_VEC ListItem(HV:HostVal)) : S => S </hostStack>
 ```
 
+## vec_insert
+
+```k
+    rule [hostCallAux-vec-insert]:
+        <instrs> hostCallAux ( "v" , "a" )
+              => allocObject(
+                    ScVec(
+                      insertList(VEC, I, rel2abs(RELS, HostVal(VAL)))
+                    )
+                 )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals>
+          ... 2 |-> < i64 > VAL ...
+        </locals>
+        <hostStack> ScVec(VEC) : U32(I) : _ : S => S </hostStack>
+        <relativeObjects> RELS </relativeObjects>
+      requires 0 <=Int I
+       andBool I <=Int size(VEC)
+
+    syntax List ::= insertList(List, Int, KItem)    [function, total, symbol(insertList)]
+ // -----------------------------------------------------------------
+    rule insertList(REST,             N, V) => ListItem(V) REST                          requires 0 ==Int N
+    rule insertList(ListItem(X) REST, N, V) => ListItem(X) insertList(REST, N -Int 1, V) requires 0 <Int N
+    // invalid arguments
+    rule insertList(_, _, _) => .List                                                    [owise]
+```
+
 ## vec_unpack_to_linear_memory
 
 ```k
