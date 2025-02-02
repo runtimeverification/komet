@@ -8,6 +8,7 @@ uploadWasm( b"test-wasm",
   (import "v" "1" (func $vec_get (param i64 i64) (result i64)))
   (import "v" "2" (func $vec_del (param i64 i64) (result i64)))
   (import "v" "3" (func $vec_len (param i64) (result i64)))
+  (import "v" "4" (func $vec_push_front (param i64 i64) (result i64)))
   (import "v" "6" (func $vec_push_back (param i64 i64) (result i64)))
   (func $push_back_immutable (param i64 i64) (result i64)
     ;; push back and return the original vector
@@ -21,6 +22,7 @@ uploadWasm( b"test-wasm",
   (export "vec_put" (func $vec_put))
   (export "vec_get" (func $vec_get))
   (export "vec_del" (func $vec_del))
+  (export "vec_push_front" (func $vec_push_front))
   (export "vec_push_back" (func $vec_push_back))
   (export "push_back_immutable" (func $push_back_immutable))
 )
@@ -144,6 +146,39 @@ callTx(
   )
   ListItem(U32(0)),
   ScVec(.List)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "vec_push_front",
+  ListItem(
+    ScVec(
+      ListItem(U32(1))
+      ListItem(U32(2))
+      ListItem(U32(3))
+    )
+  )
+  ListItem(U32(0)),
+  ScVec(
+    ListItem(U32(0))
+    ListItem(U32(1))
+    ListItem(U32(2))
+    ListItem(U32(3))
+  )
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "vec_push_front",
+  ListItem(
+    ScVec(.List)
+  )
+  ListItem(U32(0)),
+  ScVec(
+    ListItem(U32(0))
+  )
 )
 
 callTx(

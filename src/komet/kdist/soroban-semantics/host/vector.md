@@ -93,6 +93,26 @@ Updates the vector item at the given index.
         <hostStack> ScVec(VEC) : S => S </hostStack>
 ```
 
+## vec_push_front
+
+```k
+    rule [hostCallAux-vec-push-front]:
+        <instrs> hostCallAux ( "v" , "4" )
+              => allocObject(
+                    ScVec(
+                      ListItem(rel2abs(RELS, HostVal(VAL))) VEC
+                    )
+                 )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScVec(VEC) : _:ScVal : S => S </hostStack>
+        <locals>
+          ... 1 |-> < i64 > VAL ...
+        </locals>
+        <relativeObjects> RELS </relativeObjects>
+```
+
 ## vec_push_back
 
 Creates a new vector by appending a given item to the end of the provided vector.
@@ -100,30 +120,20 @@ This function does not modify the original vector, maintaining immutability.
 Returns a new vector with the appended item.
 
 ```k
-    rule [hostfun-vec-push-back]:
-        <instrs> hostCall ( "v" , "6" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => loadObject(HostVal(VEC))
-              ~> vecPushBack(HostVal(ITEM))
-                 ...
-        </instrs>
-        <locals>
-          0 |-> < i64 > VEC
-          1 |-> < i64 > ITEM
-        </locals>
-
-    syntax InternalInstr ::= vecPushBack(HostVal)   [symbol(vecPushBack)]
- // ----------------------------------------------------
-    rule [vecPushBack]:
-        <instrs> vecPushBack(ITEM)
+    rule [hostCallAux-vec-push-back]:
+        <instrs> hostCallAux ( "v" , "6" )
               => allocObject(
-                  ScVec(
-                    VEC ListItem(rel2abs(RELS, ITEM))
-                  )
+                    ScVec(
+                      VEC ListItem(rel2abs(RELS, HostVal(VAL)))
+                    )
                  )
               ~> returnHostVal
-              ...
+                 ...
         </instrs>
-        <hostStack> ScVec(VEC) : S => S </hostStack>
+        <hostStack> ScVec(VEC) : _:ScVal : S => S </hostStack>
+        <locals>
+          ... 1 |-> < i64 > VAL ...
+        </locals>
         <relativeObjects> RELS </relativeObjects>
 ```
 
