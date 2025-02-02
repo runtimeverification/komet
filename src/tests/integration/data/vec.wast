@@ -4,6 +4,7 @@ setExitCode(1)
 uploadWasm( b"test-wasm",
 (module
   (import "v" "_" (func $vec_new (result i64)))
+  (import "v" "0" (func $vec_put (param i64 i64 i64) (result i64)))
   (import "v" "1" (func $vec_get (param i64 i64) (result i64)))
   (import "v" "3" (func $vec_len (param i64) (result i64)))
   (import "v" "6" (func $vec_push_back (param i64 i64) (result i64)))
@@ -16,6 +17,7 @@ uploadWasm( b"test-wasm",
     local.get 0)
   (export "vec_new" (func $vec_new))
   (export "vec_len" (func $vec_len))
+  (export "vec_put" (func $vec_put))
   (export "vec_get" (func $vec_get))
   (export "vec_push_back" (func $vec_push_back))
   (export "push_back_immutable" (func $push_back_immutable))
@@ -64,6 +66,30 @@ callTx(
     )
   ),
   U32(0)
+)
+
+callTx(
+  Account(b"test-caller"),
+  Contract(b"test-sc"),
+  "vec_put",
+  ListItem(
+    ScVec(
+      ListItem(U32(1))
+      ListItem(U32(2))
+      ListItem(U32(3))
+      ListItem(U32(4))
+      ListItem(U32(5))
+    )
+  )
+  ListItem(U32(3))
+  ListItem(U32(777)),
+  ScVec(
+    ListItem(U32(1))
+    ListItem(U32(2))
+    ListItem(U32(3))
+    ListItem(U32(777))
+    ListItem(U32(5))
+  )
 )
 
 callTx(

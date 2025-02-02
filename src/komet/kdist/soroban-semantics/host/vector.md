@@ -24,6 +24,30 @@ module HOST-VECTOR
         <locals> .Map </locals>
 ```
 
+## vec_put
+
+Updates the vector item at the given index.
+
+```k
+    rule [hostCallAux-vec-put]:
+        <instrs> hostCallAux ( "v" , "0" )
+              => allocObject(
+                    ScVec(
+                      VEC [ I <- rel2abs(RELS, HostVal(VAL) ) ]
+                    )
+                 )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScVec(VEC) : U32(I) : _:ScVal : S => S </hostStack>
+        <locals>
+          ... 2 |-> < i64 > VAL ...
+        </locals>
+        <relativeObjects> RELS </relativeObjects>
+      requires 0 <=Int I
+       andBool I <Int size(VEC)
+```
+
 ## vec_get
 
 ```k
