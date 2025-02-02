@@ -223,6 +223,25 @@ Returns a new vector with the appended item.
       requires size(VEC1) +Int size(VEC2) <Int #pow(i32) // total length should be less than max u32
 ```
 
+## vec_slice
+
+Returns a slice of the `Vec` object from the given start index (inclusive) to the end index (exclusive).
+
+```k
+    rule [hostCallAux-vec-slice]:
+        <instrs> hostCallAux ( "v" , "c" )
+              => allocObject(ScVec(
+                    range(VEC, START, size(VEC) -Int END)
+                 ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScVec(VEC) : U32(START) : U32(END) : S => S </hostStack>
+      requires 0     <=Int START
+       andBool START <=Int END
+       andBool END   <=Int size(VEC)
+```
+
 ## vec_unpack_to_linear_memory
 
 ```k
