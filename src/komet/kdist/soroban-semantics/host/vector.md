@@ -61,6 +61,27 @@ Updates the vector item at the given index.
        andBool I <Int size(VEC)
 ```
 
+## vec_del
+
+```k
+    rule [hostCallAux-vec-del]:
+        <instrs> hostCallAux ( "v" , "2" )
+              => allocObject(ScVec(delListItem(VEC, I)))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScVec(VEC) : U32(I) : S => S </hostStack>
+      requires 0 <=Int I
+       andBool I <Int size(VEC)
+
+    syntax List ::= delListItem(List, Int)    [function, total]
+ // -----------------------------------------------------------
+    rule delListItem(ListItem(X) REST, N) => ListItem(X) delListItem(REST, N -Int 1) requires 0 <Int N
+    rule delListItem(ListItem(_) REST, N) => REST                                    requires 0 ==Int N
+    // invalid arguments
+    rule delListItem(LIST, _N)            => LIST                                    [owise]
+```
+
 ## vec_len
 
 ```k
