@@ -161,6 +161,26 @@ Returns a new vector with the appended item.
         <hostStack> ScVec(VEC ListItem(_)) : S => S </hostStack>
 ```
 
+## vec_front
+
+```k
+    rule [hostCallAux-vec-front]:
+        <instrs> hostCallAux ( "v" , "8" )
+              => HV ...
+        </instrs>
+        <hostStack> ScVec(ListItem(HV:HostVal) _VEC) : S => S </hostStack>
+```
+
+## vec_back
+
+```k
+    rule [hostCallAux-vec-back]:
+        <instrs> hostCallAux ( "v" , "9" )
+              => HV ...
+        </instrs>
+        <hostStack> ScVec(_VEC ListItem(HV:HostVal)) : S => S </hostStack>
+```
+
 ## vec_unpack_to_linear_memory
 
 ```k
