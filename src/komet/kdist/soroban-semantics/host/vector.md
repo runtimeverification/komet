@@ -113,6 +113,18 @@ Updates the vector item at the given index.
         <relativeObjects> RELS </relativeObjects>
 ```
 
+## vec_pop_front
+
+```k
+    rule [hostCallAux-vec-pop-front]:
+        <instrs> hostCallAux ( "v" , "5" )
+              => allocObject( ScVec( VEC ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScVec(ListItem(_) VEC) : S => S </hostStack>
+```
+
 ## vec_push_back
 
 Creates a new vector by appending a given item to the end of the provided vector.
@@ -135,6 +147,18 @@ Returns a new vector with the appended item.
           ... 1 |-> < i64 > VAL ...
         </locals>
         <relativeObjects> RELS </relativeObjects>
+```
+
+## vec_pop_back
+
+```k
+    rule [hostCallAux-vec-pop-back]:
+        <instrs> hostCallAux ( "v" , "7" )
+              => allocObject( ScVec( VEC ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScVec(VEC ListItem(_)) : S => S </hostStack>
 ```
 
 ## vec_unpack_to_linear_memory
