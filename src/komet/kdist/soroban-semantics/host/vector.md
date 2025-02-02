@@ -210,6 +210,19 @@ Returns a new vector with the appended item.
     rule insertList(_, _, _) => .List                                                    [owise]
 ```
 
+## vec_append
+
+```k
+    rule [hostCallAux-vec-append]:
+        <instrs> hostCallAux ( "v" , "b" )
+              => allocObject(ScVec(VEC1 VEC2))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScVec(VEC1) : ScVec(VEC2) : S => S </hostStack>
+      requires size(VEC1) +Int size(VEC2) <Int #pow(i32) // total length should be less than max u32
+```
+
 ## vec_unpack_to_linear_memory
 
 ```k
