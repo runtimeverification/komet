@@ -49,6 +49,17 @@ module HOST-SYMBOL
         <hostStack> (BS => Symbol(Bytes2String(BS))) : _ </hostStack>
 ```
 
+## symbol_len
+
+```k
+    rule [hostCallAux-symbol-len]:
+        <instrs> hostCallAux ( "b" , "l" )
+              => toSmall(U32(lengthString(SYM)))
+                 ...
+        </instrs>
+        <hostStack> Symbol(SYM) : S => S </hostStack>
+```
+
 ## symbol_index_in_linear_memory
 
 Linear search a `Symbol` in an array of byte slices. Return the index of the element or trap if not found.
