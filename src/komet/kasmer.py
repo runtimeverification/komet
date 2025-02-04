@@ -251,6 +251,7 @@ class Kasmer:
         conf: KInner,
         subst: dict[str, KInner],
         binding: ContractBinding,
+        always_allocate: bool,
         proof_dir: Path | None = None,
         bug_report: BugReport | None = None,
     ) -> APRProof:
@@ -276,12 +277,14 @@ class Kasmer:
 
         lhs_subst = subst.copy()
         lhs_subst['PROGRAM_CELL'] = make_steps(*vars)
+        lhs_subst['ALWAYSALLOCATE_CELL'] = token(always_allocate)
         lhs = CTerm(Subst(lhs_subst).apply(conf), [mlEqualsTrue(c) for c in ctrs])
 
         rhs_subst = subst.copy()
         rhs_subst['PROGRAM_CELL'] = STEPS_TERMINATOR
         rhs_subst['EXITCODE_CELL'] = token(0)
         del rhs_subst['LOGGING_CELL']
+        del rhs_subst['ALWAYSALLOCATE_CELL']
         rhs = CTerm(Subst(rhs_subst).apply(conf))
 
         claim, _ = cterm_build_claim(name, lhs, rhs)
@@ -350,6 +353,7 @@ class Kasmer:
         contract_wasm: Path,
         child_wasms: tuple[Path, ...],
         id: str | None = None,
+        always_allocate: bool = False,
         proof_dir: Path | None = None,
         bug_report: BugReport | None = None,
     ) -> None:
@@ -376,7 +380,7 @@ class Kasmer:
         test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
 
         for binding in test_bindings:
-            proof = self.run_prove(conf, subst, binding, proof_dir, bug_report)
+            proof = self.run_prove(conf, subst, binding, always_allocate, proof_dir, bug_report)
             if proof.status == ProofStatus.FAILED:
                 raise KSorobanError(proof.summary)
 
