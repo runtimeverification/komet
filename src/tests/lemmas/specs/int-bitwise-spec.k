@@ -9,7 +9,7 @@ module INT-BITWISE-SPEC
         <k>
             runLemma( ( (I <<Int 32) |Int 4) modInt 256 )
           =>
-            runLemma( ( (I <<Int 32) |Int 4) &Int 255 )
+            doneLemma( ( (I <<Int 32) |Int 4) &Int 255 )
         </k>
       requires 0 <=Int I
 
