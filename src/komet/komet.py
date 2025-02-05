@@ -14,10 +14,12 @@ from pyk.cli.utils import file_path
 from pyk.kdist import kdist
 from pyk.ktool.kprint import KAstOutput, _kast
 from pyk.ktool.krun import _krun
-from pyk.proof.reachability import APRProof
+from pyk.proof import APRProof, EqualityProof
 from pyk.proof.tui import APRProofViewer
 from pyk.utils import abs_or_rel_to, ensure_dir_path
 from pykwasm.scripts.preprocessor import preprocess
+
+from komet.proof import simplify
 
 from .kasmer import Kasmer
 from .utils import KSorobanError, concrete_definition, symbolic_definition
@@ -91,8 +93,27 @@ def _exec_prove_raw(
     bug_report: BugReport | None = None,
 ) -> None:
     kasmer = Kasmer(symbolic_definition)
-    kasmer.prove_raw(claim_file, label, proof_dir, bug_report)
-    exit(0)
+    try:
+        kasmer.prove_raw(claim_file, label, proof_dir, bug_report)
+        exit(0)
+    except KSorobanError as e:
+        if isinstance(e.args[0], EqualityProof):
+            proof: EqualityProof = e.args[0]
+
+            # Simplify the LHS and RHS of the equality separately to show why the proof failed.
+            # We do not use proof.simplified_equality because for a failed proof, it is usually #Bottom and provides no additional insight.
+            lhs = simplify(proof.lhs_body)
+            rhs = simplify(proof.rhs_body)
+            constraints = [simplify(c) for c in proof.constraints]
+
+            print('LHS:', kasmer.definition.krun.pretty_print(lhs), file=sys.stderr)
+            print('RHS:', kasmer.definition.krun.pretty_print(rhs), file=sys.stderr)
+
+            print('Constraints:', file=sys.stderr)
+            for c in constraints:
+                print('    ', kasmer.definition.krun.pretty_print(c), file=sys.stderr)
+
+        exit(1)
 
 
 def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) -> None:

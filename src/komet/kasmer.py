@@ -40,7 +40,7 @@ from .kast.syntax import (
     steps_of,
     upload_wasm,
 )
-from .proof import run_claim
+from .proof import is_functional, run_claim, run_functional_claim
 from .scval import SCType
 from .utils import KSorobanError, concrete_definition
 
@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from hypothesis.strategies import SearchStrategy
     from pyk.kast.inner import KInner
     from pyk.kore.syntax import Pattern
-    from pyk.proof import APRProof
+    from pyk.proof import APRProof, EqualityProof
     from pyk.utils import BugReport
     from rich.progress import TaskID
 
@@ -404,9 +404,16 @@ class Kasmer:
 
         for claim in claims:
             print('Proving:', claim.label, 'at', claim.source)
-            proof = run_claim(claim.label, claim, proof_dir, bug_report)
-            if proof.status == ProofStatus.FAILED:
-                raise KSorobanError(proof.summary)
+
+            proof: EqualityProof | APRProof
+            if is_functional(claim):
+                proof = run_functional_claim(claim, proof_dir, bug_report)
+                if proof.status == ProofStatus.FAILED:
+                    raise KSorobanError(proof)
+            else:
+                proof = run_claim(claim.label, claim, proof_dir, bug_report)
+                if proof.status == ProofStatus.FAILED:
+                    raise KSorobanError(proof.summary)
 
 
 @dataclass(frozen=True)
