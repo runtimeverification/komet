@@ -54,7 +54,12 @@ def main() -> None:
         if args.prove_command is None or args.prove_command == 'run':
             wasm = Path(args.wasm.name) if args.wasm is not None else None
             _exec_prove_run(
-                dir_path=args.directory, wasm=wasm, id=args.id, proof_dir=args.proof_dir, bug_report=args.bug_report
+                dir_path=args.directory,
+                wasm=wasm,
+                id=args.id,
+                always_allocate=args.always_allocate,
+                proof_dir=args.proof_dir,
+                bug_report=args.bug_report,
             )
         if args.prove_command == 'view':
             assert args.proof_dir is not None
@@ -131,6 +136,7 @@ def _exec_prove_run(
     dir_path: Path | None,
     wasm: Path | None,
     id: str | None,
+    always_allocate: bool,
     proof_dir: Path | None,
     bug_report: BugReport | None = None,
 ) -> None:
@@ -143,7 +149,7 @@ def _exec_prove_run(
         child_wasms = _read_config_file(kasmer, dir_path)
         wasm = kasmer.build_soroban_contract(dir_path)
 
-    kasmer.deploy_and_prove(wasm, child_wasms, id, proof_dir, bug_report)
+    kasmer.deploy_and_prove(wasm, child_wasms, id, always_allocate, proof_dir, bug_report)
 
     sys.exit(0)
 
@@ -212,6 +218,7 @@ def _argument_parser() -> ArgumentParser:
     prove_parser = command_parser.add_parser(
         'prove', help='Prove the soroban contract in the current working directory'
     )
+    prove_parser.add_argument('--always-allocate', default=False, action='store_true')
     prove_parser.add_argument(
         'prove_command',
         default='run',

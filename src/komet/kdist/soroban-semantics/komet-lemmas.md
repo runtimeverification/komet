@@ -53,5 +53,18 @@ module HOST-OBJECT-LEMMAS [symbolic]
     requires isFullMask(MASK) andBool SHIFT >=Int log2Int(MASK +Int 1)
     [simplification, concrete(SHIFT, MASK)]
 
+  // #getRange(_,_,8)'s result always fits in 64-bit
+  rule #getRange(SB, ADDR, 8) &Int 18446744073709551615 => #getRange(SB, ADDR, 8)
+    [simplification]
+
+
+  rule #getRange(#setRange(_BM, ADDR, VAL,  WIDTH), ADDR', WIDTH') => #wrap(WIDTH', VAL)
+    requires 0 <=Int ADDR
+     andBool 0  <Int WIDTH
+     andBool 0 <=Int VAL andBool VAL <Int 2 ^Int (8 *Int WIDTH)
+     andBool ADDR'  ==Int ADDR
+     andBool WIDTH' <=Int WIDTH
+    [simplification]
+
 endmodule
 ```
