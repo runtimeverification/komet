@@ -44,6 +44,8 @@ test-unit: poetry-install
 test-integration: poetry-install
 	$(POETRY_RUN) pytest src/tests/integration --maxfail=1 --verbose --durations=0 --numprocesses=4 --dist=worksteal $(TEST_ARGS)
 
+test-lemmas: poetry-install
+	$(POETRY_RUN) pytest src/tests/lemmas --maxfail=1 --verbose --durations=0 --numprocesses=4 --dist=worksteal $(TEST_ARGS)
 
 # Coverage
 
