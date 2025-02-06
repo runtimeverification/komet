@@ -12,6 +12,7 @@ from hypothesis import strategies
 from pyk.cterm import CTerm, cterm_build_claim
 from pyk.kast.inner import KSort, KVariable
 from pyk.kast.manip import Subst, split_config_from
+from pyk.kast.outer import KClaim
 from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.kore.syntax import EVar, SortApp
@@ -39,7 +40,7 @@ from .kast.syntax import (
     steps_of,
     upload_wasm,
 )
-from .proof import run_claim
+from .proof import is_functional, run_claim, run_functional_claim
 from .scval import SCType
 from .utils import KSorobanError, concrete_definition
 
@@ -50,7 +51,7 @@ if TYPE_CHECKING:
     from hypothesis.strategies import SearchStrategy
     from pyk.kast.inner import KInner
     from pyk.kore.syntax import Pattern
-    from pyk.proof import APRProof
+    from pyk.proof import APRProof, EqualityProof
     from pyk.utils import BugReport
     from rich.progress import TaskID
 
@@ -380,9 +381,39 @@ class Kasmer:
         test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
 
         for binding in test_bindings:
+            print(binding.name)
             proof = self.run_prove(conf, subst, binding, always_allocate, proof_dir, bug_report)
             if proof.status == ProofStatus.FAILED:
                 raise KSorobanError(proof.summary)
+
+    def prove_raw(
+        self,
+        claim_file: Path,
+        label: str | None = None,
+        proof_dir: Path | None = None,
+        bug_report: BugReport | None = None,
+    ) -> None:
+
+        modules = self.definition.kprove.parse_modules(claim_file).modules
+        claims = [
+            sent
+            for module in modules
+            for sent in module.sentences
+            if isinstance(sent, KClaim) and (label is None or sent.label == label)
+        ]
+
+        for claim in claims:
+            print('Proving:', claim.label, 'at', claim.source)
+
+            proof: EqualityProof | APRProof
+            if is_functional(claim):
+                proof = run_functional_claim(claim, proof_dir, bug_report)
+                if proof.status == ProofStatus.FAILED:
+                    raise KSorobanError(proof)
+            else:
+                proof = run_claim(claim.label, claim, proof_dir, bug_report)
+                if proof.status == ProofStatus.FAILED:
+                    raise KSorobanError(proof.summary)
 
 
 @dataclass(frozen=True)
