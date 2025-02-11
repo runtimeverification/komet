@@ -309,25 +309,12 @@ class Kasmer:
         Raises:
             AssertionError if any of the tests fail
         """
-        print(f'Processing contract: {contract_wasm.stem}')
-
-        bindings = self.contract_bindings(contract_wasm)
-        has_init = 'init' in (b.name for b in bindings)
+        test_bindings, has_init = self.read_bindings(contract_wasm, id)
 
         contract_kast = self.kast_from_wasm(contract_wasm)
         child_kasts = tuple(self.kast_from_wasm(c) for c in child_wasms)
 
         conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
-
-        test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
-
-        if id is None:
-            print(f'Discovered {len(test_bindings)} test functions:')
-        elif not test_bindings:
-            raise KeyError(f'Test function {id!r} not found.')
-        else:
-            print('Selected a single test function:')
-        print()
 
         failed: list[FuzzError] = []
         with FuzzProgress(test_bindings, max_examples) as progress:
@@ -373,21 +360,23 @@ class Kasmer:
         Raises:
             KSorobanError if a proof fails
         """
-        bindings = self.contract_bindings(contract_wasm)
-        has_init = 'init' in (b.name for b in bindings)
+        test_bindings, has_init = self.read_bindings(contract_wasm, id)
 
         contract_kast = self.kast_from_wasm(contract_wasm)
         child_kasts = tuple(self.kast_from_wasm(c) for c in child_wasms)
 
         conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
 
-        test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
-
-        for binding in test_bindings:
-            print(binding.name)
-            proof = self.run_prove(conf, subst, binding, always_allocate, proof_dir, bug_report)
-            if proof.status == ProofStatus.FAILED:
-                raise KSorobanError(proof.summary)
+        with FuzzProgress(test_bindings, 1) as progress:
+            for task in progress.fuzz_tasks:
+                task.start()
+                proof = self.run_prove(conf, subst, task.binding, always_allocate, proof_dir, bug_report)
+                if proof.status == ProofStatus.PASSED:
+                    task.advance()
+                    task.end()
+                else:
+                    task.fail()
+                    raise KSorobanError(proof.summary)
 
     def prove_raw(
         self,
@@ -417,6 +406,23 @@ class Kasmer:
                 proof = run_claim(claim.label, claim, self.extra_module, proof_dir, bug_report)
                 if proof.status == ProofStatus.FAILED:
                     raise KSorobanError(proof.summary)
+
+    def read_bindings(self, contract_wasm: Path, id: str | None) -> tuple[list[ContractBinding], bool]:
+        print(f'Processing contract: {contract_wasm.stem}')
+
+        bindings = self.contract_bindings(contract_wasm)
+        has_init = 'init' in (b.name for b in bindings)
+        test_bindings = [b for b in bindings if b.name.startswith('test_') and (id is None or b.name == id)]
+
+        if id is None:
+            print(f'Discovered {len(test_bindings)} test functions:')
+        elif not test_bindings:
+            raise KeyError(f'Test function {id!r} not found.')
+        else:
+            print('Selected a single test function:')
+        print()
+
+        return test_bindings, has_init
 
 
 @dataclass(frozen=True)
