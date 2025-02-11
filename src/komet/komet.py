@@ -68,6 +68,16 @@ def main() -> None:
             assert args.proof_dir is not None
             _exec_prove_view(proof_dir=args.proof_dir, id=args.id)
 
+        if args.prove_command == 'view-node':
+            assert args.proof_dir is not None
+            assert args.id is not None
+            assert args.node is not None
+            _exec_prove_view_node(proof_dir=args.proof_dir, id=args.id, node=args.node)
+        if args.prove_command == 'remove-node':
+            assert args.proof_dir is not None
+            assert args.id is not None
+            assert args.node is not None
+            _exec_prove_remove_node(proof_dir=args.proof_dir, id=args.id, node=args.node)
     elif args.command == 'prove-raw':
         assert args.claim_file is not None
         _exec_prove_raw(
@@ -209,6 +219,20 @@ def _exec_prove_view(*, proof_dir: Path, id: str) -> None:
     sys.exit(0)
 
 
+def _exec_prove_view_node(*, proof_dir: Path, id: str, node: int) -> None:
+    proof = APRProof.read_proof_data(proof_dir, id)
+    config = proof.kcfg.node(node).cterm.config
+    print(symbolic_definition.krun.pretty_print(config))
+    sys.exit(0)
+
+
+def _exec_prove_remove_node(*, proof_dir: Path, id: str, node: int) -> None:
+    proof = APRProof.read_proof_data(proof_dir, id)
+    proof.prune(node)
+    proof.write_proof_data()
+    sys.exit(0)
+
+
 @contextmanager
 def _preprocessed(program: Path) -> Iterator[Path]:
     program_text = program.read_text()
@@ -258,10 +282,11 @@ def _argument_parser() -> ArgumentParser:
     prove_parser.add_argument(
         'prove_command',
         default='run',
-        choices=('run', 'view'),
+        choices=('run', 'view', 'view-node', 'remove-node'),
         metavar='COMMAND',
         help='Proof command to run. One of (%(choices)s)',
     )
+    prove_parser.add_argument('--node', type=int)
     _add_common_prove_arguments(prove_parser)
 
     _add_common_test_arguments(prove_parser)
