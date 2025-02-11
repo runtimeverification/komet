@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from pyk.kast.inner import KInner
-    from pyk.kast.outer import KClaim
+    from pyk.kast.outer import KClaim, KFlatModule
     from pyk.utils import BugReport
 
 
@@ -37,14 +37,20 @@ def _explore_context(id: str, bug_report: BugReport | None) -> Iterator[KCFGExpl
 class SorobanSemantics(DefaultSemantics): ...
 
 
-def run_claim(id: str, claim: KClaim, proof_dir: Path | None = None, bug_report: BugReport | None = None) -> APRProof:
+def run_claim(
+    id: str,
+    claim: KClaim,
+    extra_module: KFlatModule | None = None,
+    proof_dir: Path | None = None,
+    bug_report: BugReport | None = None,
+) -> APRProof:
     if proof_dir is not None and APRProof.proof_data_exists(id, proof_dir):
         proof = APRProof.read_proof_data(proof_dir, id)
     else:
         proof = APRProof.from_claim(symbolic_definition.kdefinition, claim=claim, logs={}, proof_dir=proof_dir)
 
     with _explore_context(id, bug_report) as kcfg_explore:
-        prover = APRProver(kcfg_explore)
+        prover = APRProver(kcfg_explore, extra_module=extra_module)
         prover.advance_proof(proof)
 
     proof.write_proof_data()

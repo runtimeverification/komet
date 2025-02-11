@@ -28,10 +28,10 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from subprocess import CompletedProcess
 
+    from pyk.kast.outer import KFlatModule
     from pyk.utils import BugReport
 
-
-sys.setrecursionlimit(4000)
+sys.setrecursionlimit(8000)
 
 
 class Backend(Enum):
@@ -59,6 +59,7 @@ def main() -> None:
                 dir_path=args.directory,
                 wasm=wasm,
                 id=args.id,
+                extra_module=args.extra_module,
                 always_allocate=args.always_allocate,
                 proof_dir=args.proof_dir,
                 bug_report=args.bug_report,
@@ -70,7 +71,11 @@ def main() -> None:
     elif args.command == 'prove-raw':
         assert args.claim_file is not None
         _exec_prove_raw(
-            claim_file=args.claim_file, label=args.label, proof_dir=args.proof_dir, bug_report=args.bug_report
+            claim_file=args.claim_file,
+            label=args.label,
+            extra_module=args.extra_module,
+            proof_dir=args.proof_dir,
+            bug_report=args.bug_report,
         )
 
     raise AssertionError()
@@ -89,10 +94,11 @@ def _exec_prove_raw(
     *,
     claim_file: Path,
     label: str | None,
+    extra_module: KFlatModule | None,
     proof_dir: Path | None,
     bug_report: BugReport | None = None,
 ) -> None:
-    kasmer = Kasmer(symbolic_definition)
+    kasmer = Kasmer(symbolic_definition, extra_module)
     try:
         kasmer.prove_raw(claim_file, label, proof_dir, bug_report)
         exit(0)
@@ -157,12 +163,13 @@ def _exec_prove_run(
     dir_path: Path | None,
     wasm: Path | None,
     id: str | None,
+    extra_module: KFlatModule | None,
     always_allocate: bool,
     proof_dir: Path | None,
     bug_report: BugReport | None = None,
 ) -> None:
     dir_path = Path.cwd() if dir_path is None else dir_path
-    kasmer = Kasmer(symbolic_definition)
+    kasmer = Kasmer(symbolic_definition, extra_module)
 
     child_wasms: tuple[Path, ...] = ()
 
@@ -219,6 +226,14 @@ def _exit_with_output(cp: CompletedProcess) -> None:
     sys.exit(status)
 
 
+def extra_module_arg(extra_module: str) -> KFlatModule:
+    extra_module_file, extra_module_name, *_ = extra_module.split(':')
+    extra_module_path = Path(extra_module_file)
+    if not extra_module_path.is_file():
+        raise ValueError(f'Supplied --extra-module path is not a file: {extra_module_path}')
+    return symbolic_definition.parse_lemmas_module(extra_module_path, extra_module_name)
+
+
 def _argument_parser() -> ArgumentParser:
     parser = ArgumentParser(prog='komet')
     command_parser = parser.add_subparsers(dest='command', required=True)
@@ -247,8 +262,8 @@ def _argument_parser() -> ArgumentParser:
         metavar='COMMAND',
         help='Proof command to run. One of (%(choices)s)',
     )
-    prove_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
-    prove_parser.add_argument('--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs')
+    _add_common_prove_arguments(prove_parser)
+
     _add_common_test_arguments(prove_parser)
 
     prove_raw_parser = command_parser.add_parser(
@@ -256,11 +271,8 @@ def _argument_parser() -> ArgumentParser:
         help='Prove K claims directly from a file, bypassing the usual test contract structure; intended for development and advanced users.',
     )
     prove_raw_parser.add_argument('claim_file', metavar='CLAIM_FILE', type=file_path, help='path to claim file')
-    prove_raw_parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
-    prove_raw_parser.add_argument(
-        '--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs'
-    )
     prove_raw_parser.add_argument('--label', help='Label of the K claim in the file')
+    _add_common_prove_arguments(prove_raw_parser)
 
     return parser
 
@@ -279,4 +291,19 @@ def _add_common_test_arguments(parser: ArgumentParser) -> None:
         type=ensure_dir_path,
         default=None,
         help='The working directory for the command (defaults to the current working directory).',
+    )
+
+
+def _add_common_prove_arguments(parser: ArgumentParser) -> None:
+    parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
+    parser.add_argument('--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs')
+    parser.add_argument(
+        '--extra-module',
+        dest='extra_module',
+        default=None,
+        type=extra_module_arg,
+        help=(
+            'Extra module with user-defined lemmas to include for verification (which must import KASMER module).'
+            'Format is <file>:<module name>.'
+        ),
     )

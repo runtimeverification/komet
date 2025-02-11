@@ -50,6 +50,7 @@ if TYPE_CHECKING:
 
     from hypothesis.strategies import SearchStrategy
     from pyk.kast.inner import KInner
+    from pyk.kast.outer import KFlatModule
     from pyk.kore.syntax import Pattern
     from pyk.proof import APRProof, EqualityProof
     from pyk.utils import BugReport
@@ -63,9 +64,11 @@ class Kasmer:
     """Reads soroban contracts, and runs tests for them."""
 
     definition: SorobanDefinition
+    extra_module: KFlatModule | None
 
-    def __init__(self, definition: SorobanDefinition) -> None:
+    def __init__(self, definition: SorobanDefinition, extra_module: KFlatModule | None = None) -> None:
         self.definition = definition
+        self.extra_module = extra_module
 
     def _which(self, cmd: str) -> Path:
         path_str = shutil.which(cmd)
@@ -290,7 +293,7 @@ class Kasmer:
 
         claim, _ = cterm_build_claim(name, lhs, rhs)
 
-        return run_claim(name, claim, proof_dir, bug_report)
+        return run_claim(name, claim, self.extra_module, proof_dir, bug_report)
 
     def deploy_and_run(
         self, contract_wasm: Path, child_wasms: tuple[Path, ...], max_examples: int = 100, id: str | None = None
@@ -411,7 +414,7 @@ class Kasmer:
                 if proof.status == ProofStatus.FAILED:
                     raise KSorobanError(proof)
             else:
-                proof = run_claim(claim.label, claim, proof_dir, bug_report)
+                proof = run_claim(claim.label, claim, self.extra_module, proof_dir, bug_report)
                 if proof.status == ProofStatus.FAILED:
                     raise KSorobanError(proof.summary)
 
