@@ -20,8 +20,8 @@ module HOST-INTEGER
       [preserves-definedness] // definedness of '#unsigned(,)' is checked
 
     rule [returnHostVal]:
-        <instrs> returnHostVal => i64.const I ... </instrs>
-        <hostStack> HostVal(I) : S => S </hostStack>
+        <instrs> returnHostVal => HV ... </instrs>
+        <hostStack> HV:HostVal : S => S </hostStack>
 
     rule [hostfun-obj-to-u64]:
         <instrs> hostCall ( "i" , "0" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
