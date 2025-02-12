@@ -102,40 +102,44 @@ module HOST-OBJECT
     imports HOST-OBJECT-SYNTAX
     imports WASM
 
+    syntax Int ::= unwrap(HostVal)    [function, total, symbol(HostVal:unwrap)]
+ // ---------------------------------------------------
+    rule unwrap(HostVal(I)) => I
+
     syntax Int ::= getMajor(HostVal)        [function, total, symbol(getMajor)]
                  | getMinor(HostVal)        [function, total, symbol(getMinor)]
                  | getTag(HostVal)          [function, total, symbol(getTag)]
                  | getBody(HostVal)         [function, total, symbol(getBody)]
  // -----------------------------------------------------------------------
-    rule getMajor(HostVal(I)) => I >>Int 32
-    rule getMinor(HostVal(I)) => (I &Int (#pow(i32) -Int 1)) >>Int 8
-    rule getTag(HostVal(I))   => I &Int 255
-    rule getBody(HostVal(I))  => I >>Int 8
+    rule getMajor(HostVal(I)) => I >>Int 32                            [concrete]
+    rule getMinor(HostVal(I)) => (I &Int (#pow(i32) -Int 1)) >>Int 8   [concrete]
+    rule getTag(HostVal(I))   => I &Int 255                            [concrete]
+    rule getBody(HostVal(I))  => I >>Int 8                             [concrete]
 
     syntax Bool ::= isObject(HostVal)                   [function, total, symbol(isObject)]
                   | isObjectTag(Int)                    [function, total, symbol(isObjectTag)]
                   | isRelativeObjectHandle(HostVal)     [function, total, symbol(isRelativeObjectHandle)]
  // --------------------------------------------------------------------------------
     rule isObject(V)               => isObjectTag(getTag(V))
-    rule isObjectTag(TAG)          => 64 <=Int TAG andBool TAG <=Int 77
+    rule isObjectTag(TAG)          => 64 <=Int TAG andBool TAG <=Int 77    [concrete]
     rule isRelativeObjectHandle(V) => getMajor(V) &Int 1 ==Int 0
 
     syntax Int ::= indexToHandle(Int, Bool)       [function, total, symbol(indexToHandle)]
  // --------------------------------------------------------------------------------
-    rule indexToHandle(I, false) => (I <<Int 1) |Int 1
-    rule indexToHandle(I, true)  =>  I <<Int 1
+    rule indexToHandle(I, false) => (I <<Int 1) |Int 1             [concrete]
+    rule indexToHandle(I, true)  =>  I <<Int 1                     [concrete]
 
     syntax Int ::= getIndex(HostVal)   [function, total, symbol(getIndex)]
  // ----------------------------------------------------------------------------
-    rule getIndex(V) => getMajor(V) >>Int 1
+    rule getIndex(V) => getMajor(V) >>Int 1                     [concrete]
 
     syntax HostVal ::= fromHandleAndTag(Int, Int)                [function, total, symbol(fromHandleAndTag)]
                      | fromMajorMinorAndTag(Int, Int, Int)       [function, total, symbol(fromMajorMinorAndTag)]
                      | fromBodyAndTag(Int, Int)                  [function, total, symbol(fromBodyAndTag)]
  // --------------------------------------------------------------------------------
     rule fromHandleAndTag(H, T)              => fromMajorMinorAndTag(H, 0, T)
-    rule fromMajorMinorAndTag(MAJ, MIN, TAG) => fromBodyAndTag((MAJ <<Int 24) |Int MIN, TAG)
-    rule fromBodyAndTag(BODY, TAG)           => HostVal((BODY <<Int 8) |Int TAG)
+    rule fromMajorMinorAndTag(MAJ, MIN, TAG) => fromBodyAndTag((MAJ <<Int 24) |Int MIN, TAG)    [concrete]
+    rule fromBodyAndTag(BODY, TAG)           => HostVal((BODY <<Int 8) |Int TAG)                [concrete]
 
     syntax WasmStringToken ::= #unparseWasmString ( String )         [function, total, hook(STRING.string2token)]
                              | #quoteUnparseWasmString ( String )   [function, total]
