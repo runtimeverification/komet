@@ -18,10 +18,19 @@ module WASM-AUTO-ALLOCATE
 
     syntax Stmt ::= "newEmptyModule" WasmString
  // -------------------------------------------
-    rule <instrs> newEmptyModule MODNAME => .K ... </instrs>
+
+    rule [newEmptyModule-trap]:
+        <instrs> newEmptyModule _MODNAME => trap ... </instrs>
+        <nextModuleIdx> NEXT </nextModuleIdx>
+        <moduleInst> <modIdx> NEXT </modIdx> ... </moduleInst>
+      [priority(10)]
+
+    rule [newEmptyModule]:
+         <instrs> newEmptyModule MODNAME => .K ... </instrs>
          <moduleRegistry> MR => MR [ MODNAME <- NEXT ] </moduleRegistry>
          <nextModuleIdx> NEXT => NEXT +Int 1 </nextModuleIdx>
          <moduleInstances> ( .Bag => <moduleInst> <modIdx> NEXT </modIdx> ... </moduleInst>) ... </moduleInstances>
+      [preserves-definedness]
 
     syntax Stmts ::=  autoAllocModules ( ModuleDecl, Map ) [function]
                    | #autoAllocModules ( Defns     , Map ) [function]
