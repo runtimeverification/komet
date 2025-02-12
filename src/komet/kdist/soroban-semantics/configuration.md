@@ -242,7 +242,7 @@ If `SCV` is a small value, `allocObject(SCV)` returns a small `HostVal` directly
         <hostStack> STACK => toSmall(SCV) : STACK </hostStack>
         <alwaysAllocate> ALWAYS_ALLOCATE </alwaysAllocate>
       requires alwaysSmall(SCV)
-        orBool ( toSmallValid(SCV) andBool notBool ALWAYS_ALLOCATE )
+        orBool ( isSmall(SCV) andBool notBool ALWAYS_ALLOCATE )
 
     // recursively allocate vector items
     rule [allocObject-vec]:
