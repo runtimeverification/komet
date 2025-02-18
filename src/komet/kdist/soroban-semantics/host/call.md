@@ -7,10 +7,9 @@ requires "../soroban.md"
 requires "integer.md"
 
 module HOST-CALL
-    imports CONFIG-OPERATIONS
+    imports WASM-OPERATIONS
     imports SOROBAN-SYNTAX
     imports HOST-INTEGER
-    imports SWITCH-SYNTAX
 
 ```
 
@@ -18,24 +17,8 @@ module HOST-CALL
 
 ```k
     // TODO Check reentry
-    rule [hostfun-call]:
-        <instrs> hostCall ( "d" , "_" , [ i64  i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => loadObject(HostVal(ARGS))
-              ~> loadObject(HostVal(FUNC))
-              ~> loadObject(HostVal(ADDR))
-              ~> call
-                 ...
-        </instrs>
-        <locals>
-          0 |-> < i64 > ADDR      // Address
-          1 |-> < i64 > FUNC      // Symbol
-          2 |-> < i64 > ARGS      // Vec
-        </locals>
-
-    syntax InternalInstr ::= "call"   [symbol(call)]
- // ------------------------------------------
-    rule [call]:
-        <instrs> call
+    rule [hostCallAux-call]:
+        <instrs> hostCallAux ( "d" , "_" )
               => #waitCommands
               ~> returnCallResult
                  ...
