@@ -18,7 +18,7 @@ module HOST-CALL
 
 ```k
     // TODO Check reentry
-    rule [hostfun-require-auth]:
+    rule [hostfun-call]:
         <instrs> hostCall ( "d" , "_" , [ i64  i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
               => loadObject(HostVal(ARGS))
               ~> loadObject(HostVal(FUNC))
