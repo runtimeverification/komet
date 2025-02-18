@@ -1,23 +1,28 @@
 from __future__ import annotations
 
+import logging
 from functools import cached_property
+from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 
-from pyk.kast.outer import read_kast_definition
+from pyk.kast.outer import KRule, read_kast_definition
 from pyk.kdist import kdist
 from pyk.konvert import kast_to_kore
 from pyk.ktool.kompile import DefinitionInfo
 from pyk.ktool.kprove import KProve
 from pyk.ktool.krun import KRun
+from pyk.utils import single
 
 if TYPE_CHECKING:
     from pathlib import Path
     from subprocess import CompletedProcess
-    from typing import Any
+    from typing import Any, Final
 
     from pyk.kast.inner import KInner, KSort
-    from pyk.kast.outer import KDefinition
+    from pyk.kast.outer import KDefinition, KFlatModule
     from pyk.ktool.kompile import KompileBackend
+
+_LOGGER: Final = logging.getLogger(__name__)
 
 
 class KSorobanError(RuntimeError): ...
@@ -66,6 +71,22 @@ class SorobanDefinition:
         """
         kore_term = kast_to_kore(self.kdefinition, pgm, sort=sort)
         return self.krun.run_process(kore_term, **kwargs)
+
+    def parse_lemmas_module(self, module_path: Path, module_name: str) -> KFlatModule:
+        try:
+            modules = self.kprove.parse_modules(module_path, module_name=module_name)
+        except CalledProcessError as e:
+            _LOGGER.error('Could not parse extra module:')
+            _LOGGER.error(e.stderr)
+            raise e
+
+        module = single(module for module in modules.modules if module.name == module_name)
+
+        non_rule_sentences = [sent for sent in module.sentences if not isinstance(sent, KRule)]
+        if non_rule_sentences:
+            raise ValueError(f'Supplied --extra-module contains non-Rule sentences: {non_rule_sentences}')
+
+        return module
 
 
 concrete_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm'))
