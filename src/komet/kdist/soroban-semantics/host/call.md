@@ -69,7 +69,7 @@ module HOST-CALL
               ~> returnHostVal
                  ...
         </instrs>
-        <hostStack> Error(ET,CODE) #as ERR : S => S </hostStack>
+        <hostStack> (Error(ET,CODE) #as ERR) : S => S </hostStack>
       requires isRecoverable(ET, CODE)
 
     rule [returnTryCallResult-not-recoverable]:
