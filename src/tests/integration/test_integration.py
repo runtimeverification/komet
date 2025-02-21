@@ -35,8 +35,8 @@ def test_run(program: Path, tmp_path: Path) -> None:
 @pytest.mark.parametrize('contract_path', SOROBAN_TEST_CONTRACTS, ids=lambda p: str(p.stem))
 def test_komet(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> None:
     # Given
-    contract_wasm = concrete_kasmer.build_soroban_contract(contract_path, tmp_path)
     child_wasms = _read_config_file(concrete_kasmer, contract_path)
+    contract_wasm = concrete_kasmer.build_soroban_contract(contract_path, tmp_path)
 
     # Then
     if contract_path.stem.endswith('_fail'):
