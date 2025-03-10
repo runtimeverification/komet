@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from hypothesis import strategies
 from pyk.cterm import CTerm, cterm_build_claim
-from pyk.kast.inner import KSort, KVariable
+from pyk.kast.inner import KSequence, KSort, KVariable
 from pyk.kast.manip import Subst, split_config_from
 from pyk.kast.outer import KClaim
 from pyk.konvert import kast_to_kore, kore_to_kast
@@ -284,11 +284,12 @@ class Kasmer:
         lhs_subst['ALWAYSALLOCATE_CELL'] = token(always_allocate)
         lhs = CTerm(Subst(lhs_subst).apply(conf), [mlEqualsTrue(c) for c in ctrs])
 
-        rhs_subst = subst.copy()
-        rhs_subst['PROGRAM_CELL'] = STEPS_TERMINATOR
-        rhs_subst['EXITCODE_CELL'] = token(0)
-        del rhs_subst['LOGGING_CELL']
-        del rhs_subst['ALWAYSALLOCATE_CELL']
+        # Expect the root contract call to terminate successfully while allowing changes to the blockchain state
+        rhs_subst = {
+            'PROGRAM_CELL': STEPS_TERMINATOR,
+            'EXITCODE_CELL': token(0),
+            'K_CELL': KSequence(),
+        }
         rhs = CTerm(Subst(rhs_subst).apply(conf))
 
         claim, _ = cterm_build_claim(name, lhs, rhs)

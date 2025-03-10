@@ -160,7 +160,7 @@ module SOROBAN
        andBool (notBool isRelativeObjectHandle(VAL))
 
     rule [push-HostVal]:
-        <instrs> HostVal(I) => i64.const I ... </instrs>
+        <instrs> HV:HostVal => i64.const unwrap(HV) ... </instrs>
 
 ```
 

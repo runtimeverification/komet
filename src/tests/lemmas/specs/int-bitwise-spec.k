@@ -9,4 +9,12 @@ module INT-BITWISE-SPEC
         ( (I <<Int 32) |Int 4) &Int 255 
       requires 0 <=Int I
 
+    // Tested lemmas:
+    // - bitwise-mk-hostval-then-mask
+    claim [test-bitwise-mk-hostval-then-mask]:
+        ( (I <<Int 32) |Int 4) &Int 255
+          =>
+        4
+      requires 0 <=Int I
+
 endmodule
