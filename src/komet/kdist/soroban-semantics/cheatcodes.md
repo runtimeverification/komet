@@ -44,22 +44,10 @@ module CHEATCODES
 
 ```k
     rule [kasmer-set-ledger-timestamp]:
-        <instrs> hostCall ( "env" , "kasmer_set_ledger_timestamp" , [ i64  .ValTypes ] -> [ .ValTypes ] )
-              => loadObject(HostVal(TIMESTAMP))
-              ~> setLedgerTimestamp
-              ~> toSmall(Void)
+        <instrs> hostCallAux ( "env" , "kasmer_set_ledger_timestamp" )
+              => toSmall(Void)
                  ...
         </instrs>
-        <locals>
-          0 |-> < i64 > TIMESTAMP // U64 HostVal
-        </locals>
-      requires getTag(HostVal(TIMESTAMP)) ==Int 6 // check `NEW_SEQ_NUM` is a U64
-        orBool getTag(HostVal(TIMESTAMP)) ==Int 64
-    
-    syntax InternalInstr ::= "setLedgerTimestamp"
- // ---------------------------------------------
-    rule [setLedgerTimestamp]:
-        <instrs> setLedgerTimestamp => .K ... </instrs>
         <hostStack> U64(TIMESTAMP) : S => S </hostStack>
         <ledgerTimestamp> _ => TIMESTAMP </ledgerTimestamp>
 
@@ -82,21 +70,7 @@ fn create_contract(env: &Env, addr: &Bytes, hash: &Bytes) -> Address {
 
 ```k
     rule [kasmer-create-contract]:
-        <instrs> hostCall ( "env" , "kasmer_create_contract" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
-              => loadObject(HostVal(HASH))
-              ~> loadObject(HostVal(ADDR))
-              ~> kasmerCreateContract
-                 ...
-        </instrs>
-        <locals>
-          0 |-> < i64 > ADDR // ScBytes HostVal
-          1 |-> < i64 > HASH // ScBytes HostVal
-        </locals>
-
-    syntax InternalInstr ::= "kasmerCreateContract"   [symbol(kasmerCreateContract)]
- // --------------------------------------------------------------------------------
-    rule [kasmerCreateContract]:
-        <instrs> kasmerCreateContract
+        <instrs> hostCallAux ( "env" , "kasmer_create_contract" )
               => #waitCommands
               ~> allocObject(ScAddress(Contract(ADDR)))
               ~> returnHostVal
@@ -105,7 +79,23 @@ fn create_contract(env: &Env, addr: &Bytes, hash: &Bytes) -> Address {
         <k> (.K => deployContract(CONTRACT, Contract(ADDR), HASH)) ... </k>
         <hostStack> ScBytes(ADDR) : ScBytes(HASH) : S => S </hostStack>
         <callee> CONTRACT </callee>
+```
 
+## kasmer_address_from_bytes
+
+```k
+    rule [kasmer-address-from-bytes]:
+        <instrs> hostCallAux ( "env" , "kasmer_address_from_bytes" )
+              => allocObject(ScAddress(
+                    #if IS_CONTRACT
+                    #then Contract(ADDR)
+                    #else Account(ADDR)
+                    #fi
+                 ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(ADDR) : SCBool(IS_CONTRACT) : S => S </hostStack>
 
 endmodule
 ```
