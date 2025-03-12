@@ -284,6 +284,31 @@ Returns a slice of the `Bytes` object from the given start index (inclusive) to 
        andBool END   <=Int lengthBytes(BYTES)
 ```
 
+## string_new_from_linear_memory
+
+```k
+    rule [hostfun-string-new-from-linear-memory]:
+        <instrs> hostCall ( "b" , "i" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => #memLoad(getMajor(HostVal(LM_POS)), getMajor(HostVal(LEN)))
+              ~> hostCallAux( "b" , "i" )
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > LM_POS      // U32
+          1 |-> < i64 > LEN         // U32
+        </locals>
+      requires fromSmallValid(HostVal(LM_POS))
+       andBool fromSmallValid(HostVal(LEN))
+
+    rule [hostCallAux-string-new-from-linear-memory]:
+        <instrs> hostCallAux( "b" , "i" )
+              => allocObject(ScString(Bytes2String(BS)))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> BS:Bytes : S => S </hostStack>
+```
+
 ```k
 endmodule
 ```

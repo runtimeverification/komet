@@ -10,6 +10,10 @@ RUN    apt-get -y update             \
          python${PYTHON_VERSION}     \
          python${PYTHON_VERSION}-dev \
          wget                        \
+         pkg-config                  \
+         libdbus-1-dev               \
+         libudev-dev                 \
+         libssl-dev                  \
     && apt-get -y clean
 
 ARG USER_ID=9876

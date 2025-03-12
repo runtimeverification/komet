@@ -65,6 +65,7 @@ various contexts:
         | ScAddress(Address)                       [symbol(SCVal:Address)]
         | Symbol(String)                           [symbol(SCVal:Symbol)]
         | ScBytes(Bytes)                           [symbol(SCVal:Bytes)]
+        | ScString(String)                         [symbol(SCVal:String)]
 
     syntax Address ::= AccountId | ContractId
     syntax AccountId  ::= Account(Bytes)          [symbol(AccountId)]
@@ -164,6 +165,7 @@ module HOST-OBJECT
     rule getTag(Symbol(BS))    => 14    requires lengthString(BS) <=Int 9
     rule getTag(Symbol(BS))    => 74    requires lengthString(BS) >Int  9
     rule getTag(ScBytes(_))    => 72
+    rule getTag(ScString(_))   => 73
 
     syntax Int ::= getTagWithFlag(alwaysAllocate: Bool, ScVal)   [function, total]
  // -------------------------------------------------------------------------------
@@ -420,6 +422,7 @@ For scalar types the comparison is straightforward.
     rule compare(ScAddress(A), ScAddress(B)) => compareAddress(A, B)
     rule compare(Symbol(A), Symbol(B))       => compareString(A, B)
     rule compare(ScBytes(A), ScBytes(B))     => compareBytes(A, B)
+    rule compare(ScString(A), ScString(B))   => compareString(A, B)
 ```
 
 For container types, the comparison is recursive as defined in `compareVec` and `compareMap`.
@@ -539,7 +542,7 @@ corresponding values.
     // U256                          => 11
     // I256                          => 12
     rule ScValTypeOrd(ScBytes(_))    => 13
-    // String                        => 14
+    rule ScValTypeOrd(ScString(_))   => 14
     rule ScValTypeOrd(Symbol(_))     => 15
     rule ScValTypeOrd(ScVec(_))      => 16
     rule ScValTypeOrd(ScMap(_))      => 17
