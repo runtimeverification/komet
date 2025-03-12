@@ -34,6 +34,9 @@ module HOST-CONTEXT
 
 ## contract_event
 
+TODO: Revisit this when event handling is needed in tests.
+Currently, contract_event is a no-op since there is no mechanism to check event logs.
+
 ```k
     rule [hostfun-contract-event]:
         <instrs> hostCall ( "x" , "1" , [ i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
