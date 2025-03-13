@@ -154,5 +154,15 @@ module KASMER
         <k> #resetHost => .K ... </k>
         (_:HostCell => <host> <hostStack> .HostStack </hostStack> ... </host>)
 
+
+    syntax SorobanCell
+
+    syntax Step ::= constructFuzzState(Steps, SorobanCell)    [symbol(constructFuzzState)]
+ // ------------------------------------------------------------------------------
+    rule [constructFuzzState]:
+        <program> constructFuzzState(STEPS, SOROBAN_CELL) .Steps => STEPS </program>
+        (_:SorobanCell => SOROBAN_CELL)
+      [priority(10)]
+
 endmodule
 ```
