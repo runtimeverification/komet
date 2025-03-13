@@ -26,11 +26,14 @@ from pykwasm.wasm2kast import wasm2kast
 from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
+from komet.kast.manip import get_soroban_cell
+
 from .kast.syntax import (
     SC_VOID,
     STEPS_TERMINATOR,
     account_id,
     call_tx,
+    construct_fuzz_state,
     contract_id,
     deploy_contract,
     sc_bool,
@@ -142,9 +145,7 @@ class Kasmer:
         return wasm2kast(open(wasm, 'rb'))
 
     @staticmethod
-    def deploy_test(
-        contract: KInner, child_contracts: tuple[KInner, ...], init: bool
-    ) -> tuple[KInner, dict[str, KInner]]:
+    def deploy_test(contract: KInner, child_contracts: tuple[KInner, ...], init: bool) -> KInner:
         """Takes a wasm soroban contract and its dependencies as kast terms and deploys them in a fresh configuration.
 
         Args:
@@ -192,14 +193,11 @@ class Kasmer:
         kore_result = KoreParser(proc_res.stdout).pattern()
         kast_result = kore_to_kast(concrete_definition.kdefinition, kore_result)
 
-        conf, subst = split_config_from(kast_result)
-
-        return conf, subst
+        return kast_result
 
     def run_test(
         self,
-        conf: KInner,
-        subst: dict[str, KInner],
+        init_conf: KInner,
         binding: ContractBinding,
         max_examples: int,
         task: FuzzTask,
@@ -207,9 +205,7 @@ class Kasmer:
         """Given a configuration with a deployed test contract, fuzz over the tests for the supplied binding.
 
         Args:
-            conf: The template configuration.
-            subst: A substitution mapping such that 'Subst(subst).apply(conf)' gives the initial configuration with the
-                   deployed contract.
+            init_conf: The initial configuration with the deployed contract.
             binding: The contract binding that specifies the test name and parameters.
             max_examples: The maximum number of fuzzing test cases to generate and execute.
 
@@ -228,18 +224,30 @@ class Kasmer:
         def make_evar(i: int) -> EVar:
             return EVar(f"VarARG\'Unds\'{i}", SortApp('SortScVal'))
 
-        def make_steps(args: Iterable[KInner]) -> KInner:
-            return steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
+        def make_steps(args: Iterable[KInner], soroban_cell: KInner) -> KInner:
+            steps = steps_of([set_exit_code(1), call_tx(from_acct, to_acct, name, args, result), set_exit_code(0)])
+            return steps_of([construct_fuzz_state(steps, soroban_cell)])
 
         def scval_to_kore(val: SCValue) -> Pattern:
             return kast_to_kore(self.definition.kdefinition, val.to_kast(), KSort('ScVal'))
 
-        vars = [make_kvar(i) for i in range(len(binding.inputs))]
-        subst['PROGRAM_CELL'] = make_steps(vars)
+        def soroban_cell_strategy() -> SearchStrategy[Pattern]:
+            cell = get_soroban_cell(init_conf)
+            cell_kore = kast_to_kore(self.definition.kdefinition, cell, KSort('SorobanCell'))
+            return strategies.just(cell_kore)
+
+        empty_config = self.definition.kdefinition.init_config(KSort('GeneratedTopCell'))
+        conf, subst = split_config_from(empty_config)
+
+        arg_vars = [make_kvar(i) for i in range(len(binding.inputs))]
+        soroban_cell_var = KVariable('INITSTATE', KSort('SorobanCell'))
+        subst['PROGRAM_CELL'] = make_steps(arg_vars, soroban_cell_var)
+
         template_config = Subst(subst).apply(conf)
         template_config_kore = kast_to_kore(self.definition.kdefinition, template_config, KSort('GeneratedTopCell'))
 
         template_subst = {make_evar(i): b.strategy().map(scval_to_kore) for i, b in enumerate(binding.inputs)}
+        template_subst[EVar('VarINITSTATE', SortApp('SortSorobanCell'))] = soroban_cell_strategy()
 
         fuzz(
             self.definition.path,
@@ -314,14 +322,14 @@ class Kasmer:
         contract_kast = self.kast_from_wasm(contract_wasm)
         child_kasts = tuple(self.kast_from_wasm(c) for c in child_wasms)
 
-        conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
+        init_conf = self.deploy_test(contract_kast, child_kasts, has_init)
 
         failed: list[FuzzError] = []
         with FuzzProgress(test_bindings, max_examples) as progress:
             for task in progress.fuzz_tasks:
                 try:
                     task.start()
-                    self.run_test(conf, subst, task.binding, max_examples, task)
+                    self.run_test(init_conf, task.binding, max_examples, task)
                     task.end()
                 except FuzzError as e:
                     failed.append(e)
@@ -365,7 +373,8 @@ class Kasmer:
         contract_kast = self.kast_from_wasm(contract_wasm)
         child_kasts = tuple(self.kast_from_wasm(c) for c in child_wasms)
 
-        conf, subst = self.deploy_test(contract_kast, child_kasts, has_init)
+        init_conf = self.deploy_test(contract_kast, child_kasts, has_init)
+        conf, subst = split_config_from(init_conf)
 
         with FuzzProgress(test_bindings, 1) as progress:
             for task in progress.fuzz_tasks:

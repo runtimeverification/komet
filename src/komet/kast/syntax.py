@@ -108,3 +108,7 @@ def sc_map(m: dict[KInner, KInner] | Iterable[tuple[KInner, KInner]]) -> KInner:
 
 
 SC_VOID: Final = KApply('SCVal:Void', ())
+
+
+def construct_fuzz_state(steps: KInner, soroban_cell: KInner) -> KInner:
+    return KApply('constructFuzzState', [steps, soroban_cell])
