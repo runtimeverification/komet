@@ -528,7 +528,9 @@ class KometFuzzHandler(KFuzzHandler):
             self.task.fail()
 
         sorted_keys = sorted(args.keys(), key=lambda k: k.name)
-        counterexample = tuple(self.definition.krun.kore_to_kast(args[k]) for k in sorted_keys)
+        counterexample = tuple(
+            self.definition.krun.kore_to_kast(args[k]) for k in sorted_keys if k.name != 'VarINITSTATE'
+        )
         raise FuzzError(self.task.binding.name, counterexample)
 
 
