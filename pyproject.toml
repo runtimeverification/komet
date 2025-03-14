@@ -18,7 +18,7 @@ soroban-semantics = "komet.kdist.plugin"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pykwasm = { git = "https://github.com/runtimeverification/wasm-semantics.git", tag = "v0.1.120", subdirectory = "pykwasm" }
+pykwasm = { git = "https://github.com/runtimeverification/wasm-semantics.git", tag = "v0.1.121", subdirectory = "pykwasm" }
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "*"
