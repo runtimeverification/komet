@@ -51,7 +51,9 @@ def main() -> None:
         wasm = Path(args.wasm.name) if args.wasm is not None else None
         if args.max_examples < 1:
             raise ValueError(f'--max-examples must be a positive integer (greater than 0), given {args.max_examples}')
-        _exec_test(dir_path=args.directory, wasm=wasm, max_examples=args.max_examples, id=args.id)
+        _exec_test(
+            dir_path=args.directory, wasm=wasm, max_examples=args.max_examples, id=args.id, bug_report=args.bug_report
+        )
     elif args.command == 'prove':
         if args.prove_command is None or args.prove_command == 'run':
             wasm = Path(args.wasm.name) if args.wasm is not None else None
@@ -141,7 +143,14 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
     _exit_with_output(proc_res)
 
 
-def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, id: str | None) -> None:
+def _exec_test(
+    *,
+    dir_path: Path | None,
+    wasm: Path | None,
+    max_examples: int,
+    id: str | None,
+    bug_report: BugReport | None = None,
+) -> None:
     """Run a soroban test contract given its compiled wasm file.
 
     This will get the bindings for the contract and run all of the test functions.
@@ -150,7 +159,7 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
     Exits successfully when all the tests pass.
     """
     dir_path = Path.cwd() if dir_path is None else dir_path
-    kasmer = Kasmer(concrete_definition)
+    kasmer = Kasmer(concrete_definition, bug_report=bug_report)
 
     child_wasms: tuple[Path, ...] = ()
 
@@ -179,7 +188,7 @@ def _exec_prove_run(
     bug_report: BugReport | None = None,
 ) -> None:
     dir_path = Path.cwd() if dir_path is None else dir_path
-    kasmer = Kasmer(symbolic_definition, extra_module)
+    kasmer = Kasmer(symbolic_definition, extra_module, bug_report=bug_report)
 
     child_wasms: tuple[Path, ...] = ()
 
@@ -187,7 +196,7 @@ def _exec_prove_run(
         child_wasms = _read_config_file(kasmer, dir_path)
         wasm = kasmer.build_soroban_contract(dir_path)
 
-    kasmer.deploy_and_prove(wasm, child_wasms, id, always_allocate, proof_dir, bug_report)
+    kasmer.deploy_and_prove(wasm, child_wasms, id, always_allocate, proof_dir)
 
     sys.exit(0)
 
@@ -317,11 +326,13 @@ def _add_common_test_arguments(parser: ArgumentParser) -> None:
         default=None,
         help='The working directory for the command (defaults to the current working directory).',
     )
+    parser.add_argument(
+        '--bug-report', type=bug_report_arg, default=None, help='Bug report directory for tests and proofs'
+    )
 
 
 def _add_common_prove_arguments(parser: ArgumentParser) -> None:
     parser.add_argument('--proof-dir', type=ensure_dir_path, default=None, help='Output directory for proofs')
-    parser.add_argument('--bug-report', type=bug_report_arg, default=None, help='Bug report directory for proofs')
     parser.add_argument(
         '--extra-module',
         dest='extra_module',

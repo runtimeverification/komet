@@ -65,10 +65,17 @@ class Kasmer:
 
     definition: SorobanDefinition
     extra_module: KFlatModule | None
+    bug_report: BugReport | None = None
 
-    def __init__(self, definition: SorobanDefinition, extra_module: KFlatModule | None = None) -> None:
+    def __init__(
+        self,
+        definition: SorobanDefinition,
+        extra_module: KFlatModule | None = None,
+        bug_report: BugReport | None = None,
+    ) -> None:
         self.definition = definition
         self.extra_module = extra_module
+        self.bug_report = bug_report
 
     def _which(self, cmd: str) -> Path:
         path_str = shutil.which(cmd)
@@ -257,7 +264,6 @@ class Kasmer:
         binding: ContractBinding,
         always_allocate: bool,
         proof_dir: Path | None = None,
-        bug_report: BugReport | None = None,
     ) -> APRProof:
         """Given a configuration with a deployed test contract, prove the test case defined by the supplied binding.
 
@@ -267,7 +273,6 @@ class Kasmer:
                    the deployed contract.
             binding: The contract binding specifying the test name and parameters.
             proof_dir: An optional directory to save the generated proof.
-            bug_report: An optional object to log and collect details about the proof for debugging purposes.
         """
         from_acct = account_id(b'test-account')
         to_acct = contract_id(b'test-contract')
@@ -293,7 +298,7 @@ class Kasmer:
 
         claim, _ = cterm_build_claim(name, lhs, rhs)
 
-        return run_claim(name, claim, self.extra_module, proof_dir, bug_report)
+        return run_claim(name, claim, self.extra_module, proof_dir, self.bug_report)
 
     def deploy_and_run(
         self, contract_wasm: Path, child_wasms: tuple[Path, ...], max_examples: int = 100, id: str | None = None
@@ -346,7 +351,6 @@ class Kasmer:
         id: str | None = None,
         always_allocate: bool = False,
         proof_dir: Path | None = None,
-        bug_report: BugReport | None = None,
     ) -> None:
         """Prove all of the tests in a soroban test contract.
 
@@ -355,7 +359,6 @@ class Kasmer:
             child_wasms: A tuple of paths to the compiled wasm contracts required as dependencies by the test contract.
             id: The specific test function name to run. If None, all tests are executed.
             proof_dir: An optional location to save the proof.
-            bug_report: An optional BugReport object to log and collect details about the proof for debugging.
 
         Raises:
             KSorobanError if a proof fails
@@ -370,7 +373,7 @@ class Kasmer:
         with FuzzProgress(test_bindings, 1) as progress:
             for task in progress.fuzz_tasks:
                 task.start()
-                proof = self.run_prove(conf, subst, task.binding, always_allocate, proof_dir, bug_report)
+                proof = self.run_prove(conf, subst, task.binding, always_allocate, proof_dir, self.bug_report)
                 if proof.status == ProofStatus.PASSED:
                     task.advance()
                     task.end()
@@ -383,7 +386,6 @@ class Kasmer:
         claim_file: Path,
         label: str | None = None,
         proof_dir: Path | None = None,
-        bug_report: BugReport | None = None,
     ) -> None:
 
         modules = self.definition.kprove.parse_modules(claim_file).modules
@@ -399,11 +401,11 @@ class Kasmer:
 
             proof: EqualityProof | APRProof
             if is_functional(claim):
-                proof = run_functional_claim(claim, proof_dir, bug_report)
+                proof = run_functional_claim(claim, proof_dir, self.bug_report)
                 if proof.status == ProofStatus.FAILED:
                     raise KSorobanError(proof)
             else:
-                proof = run_claim(claim.label, claim, self.extra_module, proof_dir, bug_report)
+                proof = run_claim(claim.label, claim, self.extra_module, proof_dir, self.bug_report)
                 if proof.status == ProofStatus.FAILED:
                     raise KSorobanError(proof.summary)
 
