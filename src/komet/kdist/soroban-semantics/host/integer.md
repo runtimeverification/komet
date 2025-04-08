@@ -107,6 +107,141 @@ module HOST-INTEGER
     rule [hostCallAux-obj-to-i128-hi64]:
         <instrs> hostCallAux ( "i" , "8" ) => i64.const (I >>Int 64) ... </instrs>
         <hostStack> I128(I) : S => S </hostStack>
+```
 
+## obj_from_u256_pieces
+
+```k
+    rule [hostfun-obj-from-u256-pieces]:
+        <instrs> hostCall ( "i" , "9" , [ i64 i64 i64  i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => allocObject( U256(
+                       (HI_HI <<Int 192) 
+                  |Int (HI_LO <<Int 128) 
+                  |Int (LO_HI <<Int 64) 
+                  |Int  LO_LO
+                ))
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > HI_HI
+          1 |-> < i64 > HI_LO
+          2 |-> < i64 > LO_HI
+          3 |-> < i64 > LO_LO
+        </locals>
+```
+
+## u256_val_from_be_bytes
+
+Convert a 32-byte `Bytes` object to `U256`.
+
+```k
+    rule [hostCallAux-u256-val-from-be-bytes]:
+        <instrs> hostCallAux ( "i" , "a" )
+              => allocObject( U256( Bytes2Int(BS, BE, Unsigned) ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> ScBytes(BS) : S => S </hostStack>
+      requires lengthBytes(BS) ==Int 32
+```
+
+## u256_val_to_be_bytes
+
+```k
+    rule [hostCallAux-u256-val-to-be-bytes]:
+        <instrs> hostCallAux ( "i" , "b" )
+              => allocObject( ScBytes( Int2Bytes(32, I, BE) ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> U256(I) : S => S </hostStack>
+```
+
+## obj_to_u256_hi_hi
+
+```k
+    rule [hostCallAux-obj-to-u256-hi-hi]:
+        <instrs> hostCallAux ( "i" , "c" ) => i64.const (I >>Int 192) ... </instrs>
+        <hostStack> U256(I) : S => S </hostStack>
+```
+
+## obj_to_u256_hi_lo
+
+```k
+    rule [hostCallAux-obj-to-u256-hi-lo]:
+        <instrs> hostCallAux ( "i" , "d" ) => i64.const (I >>Int 128) ... </instrs>
+        <hostStack> U256(I) : S => S </hostStack>
+```
+
+## obj_to_u256_lo_hi
+
+```k
+    rule [hostCallAux-obj-to-u256-lo-hi]:
+        <instrs> hostCallAux ( "i" , "e" ) => i64.const (I >>Int 64) ... </instrs>
+        <hostStack> U256(I) : S => S </hostStack>
+```
+
+## obj_to_u256_lo_lo
+
+```k
+    rule [hostCallAux-obj-to-u256-lo-lo]:
+        <instrs> hostCallAux ( "i" , "f" ) => i64.const I ... </instrs>
+        <hostStack> U256(I) : S => S </hostStack>
+```
+
+## u256_add
+
+```k
+    rule [hostCallAux-u256-add]:
+        <instrs> hostCallAux ( "i" , "n" )
+              => allocObject( U256( A +Int B ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> U256(A) : U256(B) : S => S </hostStack>
+      requires inRangeInt(i256, Unsigned, A +Int B)
+```
+
+## u256_sub
+
+```k
+    rule [hostCallAux-u256-sub]:
+        <instrs> hostCallAux ( "i" , "o" )
+              => allocObject( U256( A -Int B ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> U256(A) : U256(B) : S => S </hostStack>
+      requires inRangeInt(i256, Unsigned, A -Int B)
+```
+
+## u256_mul
+
+```k
+    rule [hostCallAux-u256-mul]:
+        <instrs> hostCallAux ( "i" , "p" )
+              => allocObject( U256( A *Int B ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> U256(A) : U256(B) : S => S </hostStack>
+      requires inRangeInt(i256, Unsigned, A *Int B)
+```
+
+## u256_div
+
+```k
+    rule [hostCallAux-u256-div]:
+        <instrs> hostCallAux ( "i" , "q" )
+              => allocObject( U256( A /Int B ) )
+              ~> returnHostVal
+                 ...
+        </instrs>
+        <hostStack> U256(A) : U256(B) : S => S </hostStack>
+      requires 0 =/=Int B
+```
+
+```k
 endmodule
 ```
