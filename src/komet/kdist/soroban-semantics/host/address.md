@@ -27,6 +27,19 @@ module HOST-ADDRESS
         <locals>
           0 |-> < i64 > _      // Address
         </locals>
+```
+
+## authorize_as_curr_contract
+
+```k
+    rule [hostfun-authorize-as-curr-contract]:
+        <instrs> hostCall ( "a" , "3" , [ i64  .ValTypes ] -> [ i64  .ValTypes ] )
+              => toSmall(Void)
+                 ...
+        </instrs>
+        <locals>
+          0 |-> < i64 > _
+        </locals>
 
 endmodule
 ```
