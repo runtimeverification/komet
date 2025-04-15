@@ -60,6 +60,7 @@ various contexts:
         | I64(Int)                                 [symbol(SCVal:I64)]
         | U128(Int)                                [symbol(SCVal:U128)]
         | I128(Int)                                [symbol(SCVal:I128)]
+        | U256(Int)                                [symbol(SCVal:U256)]
         | ScVec(List)                              [symbol(SCVal:Vec)]      // List<HostVal> or List<ScVal>
         | ScMap(Map)                               [symbol(SCVal:Map)]      // Map<ScVal, HostVal> or Map<ScVal, ScVal>
         | ScAddress(Address)                       [symbol(SCVal:Address)]
@@ -159,6 +160,8 @@ module HOST-OBJECT
     rule getTag(U128(I))       => 68    requires notBool( I <=Int #maxU64small ) // U64small and U128small have the same width
     rule getTag(I128(I))       => 11    requires          #minI64small <=Int I andBool I <=Int #maxI64small
     rule getTag(I128(I))       => 69    requires notBool( #minI64small <=Int I andBool I <=Int #maxI64small )
+    rule getTag(U256(I))       => 12    requires          I <=Int #maxU64small
+    rule getTag(U256(I))       => 70    requires notBool( I <=Int #maxU64small ) // U64small and U128small have the same width
     rule getTag(ScVec(_))      => 75
     rule getTag(ScMap(_))      => 76
     rule getTag(ScAddress(_))  => 77
@@ -176,14 +179,33 @@ module HOST-OBJECT
     rule getTagWithFlag(true, Symbol(_)) => 74
     rule getTagWithFlag(_,    SCV)       => getTag(SCV)      [owise]
    
-    // 64-bit integers that fit in 56 bits
-    syntax Int ::= "#maxU64small"     [macro]
-                 | "#maxI64small"     [macro]
-                 | "#minI64small"     [macro]
- // -----------------------------------------
-    rule #maxU64small => 72057594037927935
-    rule #maxI64small => 36028797018963967
-    rule #minI64small => -36028797018963968
+    // Define the max/min values of small 64-bit integers that fit in 56 bits.
+    // These are used to check whether an i64 can be embedded directly as a "small" HostVal
+    // based on the small integer definition in [CAP-046-01](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01).md#tag-values)
+    syntax Int ::= "#maxU64small"     [macro]  // Maximum unsigned small int: 2^56 - 1
+                 | "#maxI64small"     [macro]  // Maximum signed small int: 2^55 - 1
+                 | "#minI64small"     [macro]  // Minimum signed small int: -2^55
+ // -----------------------------------------------------------------------------------------
+    rule #maxU64small => maxInt(i56, Unsigned)
+    rule #maxI64small => maxInt(i56, Signed)
+    rule #minI64small => minInt(i56, Signed)
+
+    // Helpers for computing max/min values given a bit width and signedness.
+    syntax Int ::= maxInt(IWidth, Signedness)      [function, total]
+                 | minInt(IWidth, Signedness)      [function, total]
+ // ----------------------------------------------------------------
+    // For unsigned: max = 2^W - 1, min = 0
+    rule maxInt(W, Unsigned) => #pow(W) -Int 1
+    rule minInt(_, Unsigned) => 0
+
+    // For signed: max = 2^(W - 1) - 1, min = -2^(W - 1)
+    rule maxInt(W, Signed)   => #pow1(W) -Int 1
+    rule minInt(W, Signed)   => 0 -Int #pow1(W)
+
+    // refactor small int checks using this
+    syntax Bool ::= inRangeInt(IWidth, Signedness, Int)  [function, total, symbol(inRangeInt)]
+ // ------------------------------------------------------------------------------------------
+    rule inRangeInt(W, SG, I) => minInt(W, SG) <=Int I andBool I <=Int maxInt(W, SG)
 
     syntax ScVal ::= ScValOrDefault(KItem, ScVal)   [function, total, symbol(ScValOrDefault)]
  // ---------------------------------------------------------
@@ -261,6 +283,8 @@ module HOST-OBJECT
       requires getTag(VAL) ==Int 11
        andBool definedSigned(i56, getBody(VAL))
 
+    rule fromSmall(VAL) => U256(getBody(VAL))      requires getTag(VAL) ==Int 12
+
     rule fromSmall(VAL) => Symbol(decode6bit(getBody(VAL)))
                                                    requires getTag(VAL) ==Int 14
 
@@ -290,6 +314,7 @@ module HOST-OBJECT
     rule toSmall(I128(I))       => fromBodyAndTag(#unsigned(i56, I), 11)
       requires #minI64small <=Int I andBool I <=Int #maxI64small
        andBool definedUnsigned(i56, I)
+    rule toSmall(U256(I))       => fromBodyAndTag(I, 12)              requires I <=Int #maxU64small
     rule toSmall(Symbol(S))     => fromBodyAndTag(encode6bit(S), 14)  requires lengthString(S) <=Int 9
     rule toSmall(_)             => HostVal(-1)                        [owise]
 
@@ -363,11 +388,15 @@ module HOST-OBJECT
     rule #pow(i56)  => 72057594037927936
     rule #pow1(i56) => 36028797018963968
 
-    syntax IWidth ::= "i128"
- // ------------------------------------
+    syntax IWidth ::= "i128"     [symbol(i128)]
+                    | "i256"     [symbol(i256)]
+ // -------------------------------------------
     rule #width(i128) => 128
     rule #pow(i128)   => 340282366920938463463374607431768211456
     rule #pow1(i128)  => 170141183460469231731687303715884105728
+    rule #width(i256) => 256
+    rule #pow(i256)   => 115792089237316195423570985008687907853269984665640564039457584007913129639936
+    rule #pow1(i256)  => 57896044618658097711785492504343953926634992332820282019728792003956564819968
 
 ```
 
@@ -419,6 +448,7 @@ For scalar types the comparison is straightforward.
     rule compare(I64(A),  I64(B))  => compareInt(A, B)
     rule compare(U128(A), U128(B)) => compareInt(A, B)
     rule compare(I128(A), I128(B)) => compareInt(A, B)
+    rule compare(U256(A), U256(B)) => compareInt(A, B)
     rule compare(ScAddress(A), ScAddress(B)) => compareAddress(A, B)
     rule compare(Symbol(A), Symbol(B))       => compareString(A, B)
     rule compare(ScBytes(A), ScBytes(B))     => compareBytes(A, B)
@@ -539,8 +569,7 @@ corresponding values.
     // Duration                      => 8
     rule ScValTypeOrd(U128(_))       => 9
     rule ScValTypeOrd(I128(_))       => 10
-    // U256                          => 11
-    // I256                          => 12
+    rule ScValTypeOrd(U256(_))       => 11
     rule ScValTypeOrd(ScBytes(_))    => 13
     rule ScValTypeOrd(ScString(_))   => 14
     rule ScValTypeOrd(Symbol(_))     => 15
