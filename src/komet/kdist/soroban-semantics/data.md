@@ -179,21 +179,27 @@ module HOST-OBJECT
     rule getTagWithFlag(true, Symbol(_)) => 74
     rule getTagWithFlag(_,    SCV)       => getTag(SCV)      [owise]
    
-    // 64-bit integers that fit in 56 bits
-    syntax Int ::= "#maxU64small"     [macro]
-                 | "#maxI64small"     [macro]
-                 | "#minI64small"     [macro]
- // -----------------------------------------
+    // Define the max/min values of small 64-bit integers that fit in 56 bits.
+    // These are used to check whether an i64 can be embedded directly as a "small" HostVal
+    // based on the small integer definition in [CAP-046-01](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01).md#tag-values)
+    syntax Int ::= "#maxU64small"     [macro]  // Maximum unsigned small int: 2^56 - 1
+                 | "#maxI64small"     [macro]  // Maximum signed small int: 2^55 - 1
+                 | "#minI64small"     [macro]  // Minimum signed small int: -2^55
+ // -----------------------------------------------------------------------------------------
     rule #maxU64small => maxInt(i56, Unsigned)
     rule #maxI64small => maxInt(i56, Signed)
     rule #minI64small => minInt(i56, Signed)
 
+    // Helpers for computing max/min values given a bit width and signedness.
     syntax Int ::= maxInt(IWidth, Signedness)      [function, total]
                  | minInt(IWidth, Signedness)      [function, total]
  // ----------------------------------------------------------------
+    // For unsigned: max = 2^W - 1, min = 0
     rule maxInt(W, Unsigned) => #pow(W) -Int 1
-    rule maxInt(W, Signed)   => #pow1(W) -Int 1
     rule minInt(_, Unsigned) => 0
+
+    // For signed: max = 2^(W - 1) - 1, min = -2^(W - 1)
+    rule maxInt(W, Signed)   => #pow1(W) -Int 1
     rule minInt(W, Signed)   => 0 -Int #pow1(W)
 
     // refactor small int checks using this
