@@ -42,7 +42,7 @@ from .kast.syntax import (
 )
 from .proof import is_functional, run_claim, run_functional_claim
 from .scval import SCType
-from .utils import KSorobanError, concrete_definition
+from .utils import KSorobanError, concrete_definition, subst_on_program_cell
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -248,6 +248,7 @@ class Kasmer:
             check_exit_code=True,
             max_examples=max_examples,
             handler=KometFuzzHandler(self.definition, task),
+            subst_func=subst_on_program_cell,
         )
 
     def run_prove(
