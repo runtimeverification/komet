@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "komet"
-version = "0.1.64"
+version = "0.1.65"
 description = "K tooling for the Soroban platform"
 requires-python = "~=3.10"
 dependencies = [
