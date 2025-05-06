@@ -26,14 +26,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: 'Install Poetry'
-        uses: Gr1N/setup-poetry@v9
+      - name: 'Install uv'
+        uses: astral-sh/setup-uv@v5
       - name: 'Update Poetry files'
         run: |
           PYKWASM_VERSION="$(cat deps/kwasm_release)"
-          sed -i 's!pykwasm = { git = "https://github.com/runtimeverification/wasm-semantics.git", tag = "[v0-9\.]*", subdirectory = "pykwasm" }!pykwasm = { git = "https://github.com/runtimeverification/wasm-semantics.git", tag = "v'${PYKWASM_VERSION}'", subdirectory = "pykwasm" }!' pyproject.toml
-          poetry update
-          git add . && git commit -m "Sync Poetry files ${PYKWASM_VERSION}" || true
+          sed -i 's!    "pykwasm@git+https://github.com/runtimeverification/wasm-semantics.git@v[0-9\.]*#subdirectory=pykwasm",!    "pykwasm@git+https://github.com/runtimeverification/wasm-semantics.git@v'${PYKWASM_VERSION}'#subdirectory=pykwasm",!'
+          uv lock --update
+          git add pyproject.toml uv.lock && git commit -m "pyproject.toml, uv.lock: Update pykwasm version ${PYKWASM_VERSION}" || true
       - name: 'Update K release'
         run: |
           K_VERSION=$(poetry run python3 -c 'import pyk; print(pyk.__version__)')
