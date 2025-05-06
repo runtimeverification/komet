@@ -62,8 +62,6 @@ jobs:
         uses: ./.github/actions/with-docker
         with:
           container-name: ${CONTAINER}
-      - name: 'Build komet'
-        run: docker exec --user user ${CONTAINER} poetry install
       - name: 'Build semantics'
         run: docker exec --user user ${CONTAINER} make kdist-build
       - name: 'Run integration tests'
@@ -88,8 +86,6 @@ jobs:
         uses: ./.github/actions/with-docker
         with:
           container-name: ${CONTAINER}
-      - name: 'Build komet'
-        run: docker exec --user user ${CONTAINER} poetry install
       - name: 'Build semantics'
         run: docker exec --user user ${CONTAINER} make kdist-build
       - name: 'Run lemma tests'

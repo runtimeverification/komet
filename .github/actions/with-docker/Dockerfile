@@ -25,7 +25,7 @@ USER user
 WORKDIR /home/user
 
 ENV PATH="/home/user/.local/bin:${PATH}"
-RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 RUN wget -O rustup.sh https://sh.rustup.rs && \
     chmod +x rustup.sh && \
