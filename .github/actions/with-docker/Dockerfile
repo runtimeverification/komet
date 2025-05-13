@@ -29,7 +29,7 @@ ENV PATH="/home/user/.local/bin:/home/user/.cargo/bin:${PATH}"
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
 RUN    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y \
-    && rustup target add -y wasm32-unknown-unknown \
-    && rustup target add -y wasm32v1-none
+    && rustup target add wasm32-unknown-unknown \
+    && rustup target add wasm32v1-none
 
 RUN cargo install --locked stellar-cli --features opt
