@@ -29,7 +29,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 
 RUN wget -O rustup.sh https://sh.rustup.rs && \
     chmod +x rustup.sh && \
-    ./rustup.sh --verbose --target wasm32-unknown-unknown -y
+    ./rustup.sh --verbose --target wasm32-unknown-unknown -y && \
+    rustup target add wasm32v1-none
 
 ENV PATH="/home/user/.cargo/bin:${PATH}"
 
