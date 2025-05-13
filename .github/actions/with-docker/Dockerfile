@@ -24,13 +24,12 @@ RUN    groupadd -g ${GROUP_ID} user \
 USER user
 WORKDIR /home/user
 
-ENV PATH="/home/user/.local/bin:${PATH}"
+ENV PATH="/home/user/.local/bin:/home/user/.cargo/bin:${PATH}"
+
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
-RUN wget -O rustup.sh https://sh.rustup.rs && \
-    chmod +x rustup.sh && \
-    ./rustup.sh --verbose --target wasm32-unknown-unknown -y
-
-ENV PATH="/home/user/.cargo/bin:${PATH}"
+RUN    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y \
+    && rustup target add wasm32-unknown-unknown \
+    && rustup target add wasm32v1-none
 
 RUN cargo install --locked stellar-cli --features opt

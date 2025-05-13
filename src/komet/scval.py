@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 from hypothesis import strategies
 from pyk.kast.inner import KApply, KSort, KVariable
-from pyk.prelude.kint import leInt
-from pyk.prelude.utils import token
+from pyk.kast.prelude.kint import leInt
+from pyk.kast.prelude.utils import token
 
 from .kast.syntax import (
     account_id,

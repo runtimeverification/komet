@@ -13,13 +13,13 @@ from pyk.cterm import CTerm, cterm_build_claim
 from pyk.kast.inner import KSort, KVariable
 from pyk.kast.manip import Subst, split_config_from
 from pyk.kast.outer import KClaim
+from pyk.kast.prelude.ml import mlEqualsTrue
+from pyk.kast.prelude.utils import token
 from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
 from pyk.kore.syntax import EVar, SortApp
 from pyk.ktool.kfuzz import KFuzzHandler, fuzz
 from pyk.ktool.krun import KRunOutput
-from pyk.prelude.ml import mlEqualsTrue
-from pyk.prelude.utils import token
 from pyk.proof import ProofStatus
 from pyk.utils import run_process
 from pykwasm.wasm2kast import wasm2kast
