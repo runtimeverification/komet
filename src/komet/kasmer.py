@@ -79,8 +79,8 @@ class Kasmer:
         return Path(path_str)
 
     @cached_property
-    def _soroban_bin(self) -> Path:
-        return self._which('soroban')
+    def _stellar_bin(self) -> Path:
+        return self._which('stellar')
 
     @cached_property
     def _cargo_bin(self) -> Path:
@@ -89,7 +89,7 @@ class Kasmer:
     def contract_bindings(self, wasm_contract: Path) -> list[ContractBinding]:
         """Reads a soroban wasm contract, and returns a list of the function bindings for it."""
         proc_res = run_process(
-            [str(self._soroban_bin), 'contract', 'bindings', 'json', '--wasm', str(wasm_contract)], check=False
+            [str(self._stellar_bin), 'contract', 'bindings', 'json', '--wasm', str(wasm_contract)], check=False
         )
         bindings_list = json.loads(proc_res.stdout)
         bindings = []
@@ -133,7 +133,7 @@ class Kasmer:
         if out_dir is None:
             out_dir = Path(mkdtemp(f'komet_{str(contract_path.stem)}'))
 
-        run_process([str(self._soroban_bin), 'contract', 'build', '--out-dir', str(out_dir)], cwd=contract_path)
+        run_process([str(self._stellar_bin), 'contract', 'build', '--out-dir', str(out_dir)], cwd=contract_path)
 
         return out_dir / contract_name
 
