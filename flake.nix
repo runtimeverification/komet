@@ -2,11 +2,16 @@
   description = "komet - K tooling for the Soroban platform";
 
   inputs = {
+    rv-nix-tools.url = "github:runtimeverification/rv-nix-tools/854d4f05ea78547d46e807b414faad64cea10ae4";
+    nixpkgs.follows = "rv-nix-tools/nixpkgs";
+  
     wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.128";
+    wasm-semantics.inputs.nixpkgs.follows = "nixpkgs";
+
     k-framework.follows = "wasm-semantics/k-framework";
-    nixpkgs.follows = "k-framework/nixpkgs";
+
     flake-utils.follows = "k-framework/flake-utils";
-    rv-utils.follows = "k-framework/rv-utils";
+
     poetry2nix.follows = "k-framework/poetry2nix";
 
     rust-overlay.url = "github:oxalica/rust-overlay";
@@ -19,7 +24,7 @@
     };
   };
 
-  outputs = { self, k-framework, nixpkgs, flake-utils, rv-utils, wasm-semantics
+  outputs = { self, k-framework, nixpkgs, flake-utils, rv-nix-tools, wasm-semantics
     , rust-overlay, stellar-cli-flake, ... }@inputs: flake-utils.lib.eachSystem [
       "x86_64-linux"
       "x86_64-darwin"
@@ -54,7 +59,7 @@
         komet-pyk = poetry2nix.mkPoetryApplication {
           python = pkgs.python310;
           projectDir = ./.;
-          src = rv-utils.lib.mkSubdirectoryAppSrc {
+          src = rv-nix-tools.lib.mkSubdirectoryAppSrc {
             inherit pkgs;
             src = ./.;
             subdirectories = [ "pykwasm" ];
