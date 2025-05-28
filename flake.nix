@@ -86,7 +86,7 @@
         };
 
         rustWithWasmTarget = pkgs.rust-bin.stable.latest.default.override {
-          targets = [ "wasm32-unknown-unknown" ];
+          targets = [ "wasm32v1-none" ];
         };
 
         rustPlatformWasm = pkgs.makeRustPlatform {
