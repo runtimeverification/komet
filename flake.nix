@@ -14,14 +14,21 @@
   outputs = { self, k-framework, nixpkgs, flake-utils, rv-utils, wasm-semantics
     , rust-overlay, ... }@inputs:
     let
+      mkCleanSource = { pkgs, src }: pkgs.lib.cleanSource (pkgs.nix-gitignore.gitignoreSourcePure [
+          "/.github"
+          "flake.nix"
+          "flake.lock"
+          ./.gitignore
+          # do not include submodule directories that might be initilized empty or non-existent
+          "/deps/soroban-examples"
+        ] src
+      );
       overlay = (final: prev:
         let
-          src = prev.lib.cleanSource (prev.nix-gitignore.gitignoreSourcePure [
-            "/.github"
-            "flake.nix"
-            "flake.lock"
-            ./.gitignore
-          ] ./.);
+          src = mkCleanSource {
+            src = ./.;
+            pkgs = final;
+          };
 
           version = self.rev or "dirty";
           poetry2nix = inputs.poetry2nix.lib.mkPoetry2Nix { pkgs = prev; };
@@ -68,7 +75,12 @@
               pkgs = import nixpkgs { system = prev.system; };
               src = ./.;
               subdirectories = [ "pykwasm" ];
-              cleaner = poetry2nix.cleanPythonSources;
+              cleaner = { src }: poetry2nix.cleanPythonSources {
+                src = (mkCleanSource {
+                  inherit src;
+                  pkgs = final;
+                });
+              };
             };
             overrides = poetry2nix.overrides.withDefaults
               (finalPython: prevPython: {
