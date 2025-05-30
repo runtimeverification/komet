@@ -69,7 +69,7 @@
           checkGroups = [ ];
         };
 
-        mkKomet = {komet-rust ? null, komet-soroban ? null}@args: pkgs.stdenv.mkDerivation {
+        mkKomet = {komet-rust ? null, komet-stellar ? null}@args: pkgs.stdenv.mkDerivation {
           pname = "komet";
           version = self.rev or "dirty";
           src = pkgs.lib.cleanSource (pkgs.nix-gitignore.gitignoreSourcePure [
@@ -110,17 +110,17 @@
                   k-framework.packages.${system}.k
                 ] ++ pkgs.lib.optionals (komet-rust != null) [
                   komet-rust
-                ] ++ pkgs.lib.optionals (komet-soroban != null) [
-                  komet-soroban
+                ] ++ pkgs.lib.optionals (komet-stellar != null) [
+                  komet-stellar
                 ]
               )
             } --set KDIST_DIR $out
           '';
 
-          passthru = if komet-rust == null && komet-soroban == null then {
-            rust-soroban = pkgs.callPackage mkKomet (args // {
+          passthru = if komet-rust == null && komet-stellar == null then {
+            rust-stellar = pkgs.callPackage mkKomet (args // {
               komet-rust = rustWithWasmTarget;
-              komet-soroban = pkgs.stellar-cli;
+              komet-stellar = pkgs.stellar-cli;
             });
           } else { };
         };
