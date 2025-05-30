@@ -133,7 +133,7 @@ jobs:
           set -euxo pipefail
           nix --version
           JQ=$(nix-build '<nixpkgs>' -A jq --no-link)/bin/jq
-          KOMET_BIN=$(nix build .#komet.rust-soroban --print-build-logs --json | $JQ -r '.[].outputs | to_entries[].value')/bin
+          KOMET_BIN=$(nix build .#komet.rust-stellar --print-build-logs --json | $JQ -r '.[].outputs | to_entries[].value')/bin
           echo $KOMET_BIN >> $GITHUB_PATH
       - name: 'Run smoke test'
         run: cd package && ./test-package.sh
