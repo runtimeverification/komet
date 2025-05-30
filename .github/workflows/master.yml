@@ -68,5 +68,6 @@ jobs:
           script: |
             export PATH="$(nix build github:runtimeverification/kup --no-link --json | jq -r '.[].outputs | to_entries[].value')/bin:$PATH"
             kup publish k-framework-binary .#komet --keep-days 180
+            kup publish k-framework-binary .#komet.rust-soroban --keep-days 180
 
 
