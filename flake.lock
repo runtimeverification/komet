@@ -330,6 +330,7 @@
           "k-framework",
           "rv-utils"
         ],
+        "stellar-cli-flake": "stellar-cli-flake",
         "wasm-semantics": "wasm-semantics"
       }
     },
@@ -382,6 +383,32 @@
       "original": {
         "owner": "lf-",
         "repo": "nix-lib",
+        "type": "github"
+      }
+    },
+    "stellar-cli-flake": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "rust-overlay": [
+          "rust-overlay"
+        ]
+      },
+      "locked": {
+        "lastModified": 1748046752,
+        "narHash": "sha256-3Gnc0PMF4Md27D46RGcGazD+KstvCdcvSt2ZcPHq4i4=",
+        "owner": "stellar",
+        "repo": "stellar-cli",
+        "rev": "949f1620c46296c84c2f4de6e5aa70e9dc59590f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stellar",
+        "repo": "stellar-cli",
         "type": "github"
       }
     },
