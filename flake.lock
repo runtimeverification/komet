@@ -372,11 +372,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1753238793,
-        "narHash": "sha256-jmQeEpgX+++MEgrcikcwoSiI7vDZWLP0gci7XiWb9uQ=",
+        "lastModified": 1753757591,
+        "narHash": "sha256-3okLvry8fRWZhJZP75pPC9P6U1dcu84VOCPhPLXYozI=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "0ad7ab4ca8e83febf147197e65c006dff60623ab",
+        "rev": "b372cf71b4125d420d7648cbd898ab8f5c355be2",
         "type": "github"
       },
       "original": {
@@ -489,11 +489,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1753208443,
-        "narHash": "sha256-keJDb/a58kSXo6+rR7AixVlKqLGftV+3W3ooxb9EgoM=",
+        "lastModified": 1753728220,
+        "narHash": "sha256-hLEKejQbv1/OZqh2z3tf4KfIlJ2fqfIm6Veds420ZoM=",
         "owner": "stellar",
         "repo": "stellar-cli",
-        "rev": "1cdfeaaf69eb5a7a5293f570fb90b3d825acf8ce",
+        "rev": "1b295bf12718da2051ee85bcd7102d600d288800",
         "type": "github"
       },
       "original": {
@@ -621,16 +621,16 @@
         "rv-nix-tools": "rv-nix-tools_3"
       },
       "locked": {
-        "lastModified": 1753300910,
-        "narHash": "sha256-x4+UDZ1Efp9K8/lJMsMTOJWiBxAXvv5/a3/TBHyDVog=",
+        "lastModified": 1753785435,
+        "narHash": "sha256-w5OiyEMGiQLvC9AwUU3S1fyKKewUDSGq5juVks3YRHk=",
         "owner": "runtimeverification",
         "repo": "wasm-semantics",
-        "rev": "e49f2bd29cf8f6be6cb23f5c4dcbaaf4348ddcec",
+        "rev": "18f65881c050f63a80fc100357f9e5d5bdda7c5c",
         "type": "github"
       },
       "original": {
         "owner": "runtimeverification",
-        "ref": "v0.1.131",
+        "ref": "v0.1.132",
         "repo": "wasm-semantics",
         "type": "github"
       }
