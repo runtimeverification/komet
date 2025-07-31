@@ -164,7 +164,8 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
     try:
         kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
         sys.exit(0)
-    except KSorobanError:
+    except KSorobanError as err:
+        print(str(err), file=sys.stderr)
         sys.exit(1)
 
 
