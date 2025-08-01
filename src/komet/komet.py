@@ -22,7 +22,7 @@ from pykwasm.scripts.preprocessor import preprocess
 from komet.proof import simplify
 
 from .kasmer import Kasmer
-from .utils import KSorobanError, concrete_definition, symbolic_definition
+from .utils import KSorobanError, KSorobanFailure, concrete_definition, symbolic_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -164,6 +164,9 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
     try:
         kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
         sys.exit(0)
+    except KSorobanFailure:
+        # Assume that the failures have been printed already
+        sys.exit(1)
     except KSorobanError as err:
         print(str(err), file=sys.stderr)
         sys.exit(1)
