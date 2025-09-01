@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from pyk.kast.inner import KApply, build_cons
-from pyk.prelude.collections import list_of, map_of
-from pyk.prelude.utils import token
+from pyk.kast.prelude.collections import list_of, map_of
+from pyk.kast.prelude.utils import token
 from pykwasm.kwasm_ast import wasm_string
 
 if TYPE_CHECKING:
