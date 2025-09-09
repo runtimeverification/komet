@@ -372,11 +372,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1753757591,
-        "narHash": "sha256-3okLvry8fRWZhJZP75pPC9P6U1dcu84VOCPhPLXYozI=",
+        "lastModified": 1757385309,
+        "narHash": "sha256-5n5t+xxZRIqMsOScSE2GuUuKOUzoSasB/ggPztLzehg=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "b372cf71b4125d420d7648cbd898ab8f5c355be2",
+        "rev": "d4b1e1764eb2d63898d8fb2bbba9529adf5b1fb2",
         "type": "github"
       },
       "original": {
@@ -489,11 +489,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1753728220,
-        "narHash": "sha256-hLEKejQbv1/OZqh2z3tf4KfIlJ2fqfIm6Veds420ZoM=",
+        "lastModified": 1757374010,
+        "narHash": "sha256-DpGyr0h7ce3vzCw2u5C1nI2BGZgGM3QGEbCk9j66A58=",
         "owner": "stellar",
         "repo": "stellar-cli",
-        "rev": "1b295bf12718da2051ee85bcd7102d600d288800",
+        "rev": "381b9239d4a88d4f1aaa783b7c93b9ae65f97d52",
         "type": "github"
       },
       "original": {
