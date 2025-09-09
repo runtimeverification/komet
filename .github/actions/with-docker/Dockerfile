@@ -32,4 +32,4 @@ RUN    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
     && rustup target add wasm32-unknown-unknown \
     && rustup target add wasm32v1-none
 
-RUN cargo install --locked stellar-cli --features opt
+RUN cargo install --locked stellar-cli
