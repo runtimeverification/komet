@@ -5,7 +5,7 @@
     rv-nix-tools.url = "github:runtimeverification/rv-nix-tools/854d4f05ea78547d46e807b414faad64cea10ae4";
     nixpkgs.follows = "rv-nix-tools/nixpkgs";
   
-    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.132";
+    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.133";
     wasm-semantics.inputs.nixpkgs.follows = "nixpkgs";
 
     k-framework.follows = "wasm-semantics/k-framework";
