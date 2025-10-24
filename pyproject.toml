@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "komet"
-version = "0.1.72"
+version = "0.1.73"
 description = "K tooling for the Soroban platform"
 authors = [
     "Runtime Verification, Inc. <contact@runtimeverification.com>",
