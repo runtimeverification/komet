@@ -28,6 +28,9 @@ _LOGGER: Final = logging.getLogger(__name__)
 class KSorobanError(RuntimeError): ...
 
 
+class KSorobanFailure(RuntimeError): ...
+
+
 class SorobanDefinition:
     """Anything related to the Soroban K definition goes here."""
 
