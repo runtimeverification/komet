@@ -4,6 +4,8 @@
   inputs = {
     rv-nix-tools.url = "github:runtimeverification/rv-nix-tools/854d4f05ea78547d46e807b414faad64cea10ae4";
     nixpkgs.follows = "rv-nix-tools/nixpkgs";
+
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
   
     wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.128";
     wasm-semantics.inputs.nixpkgs.follows = "nixpkgs";
@@ -24,14 +26,31 @@
     };
   };
 
-  outputs = { self, k-framework, nixpkgs, flake-utils, rv-nix-tools, wasm-semantics
-    , rust-overlay, stellar-cli-flake, ... }@inputs: flake-utils.lib.eachSystem [
+  outputs = {
+      self,
+      k-framework,
+      nixpkgs,
+      nixpkgs-unstable,
+      flake-utils,
+      rv-nix-tools,
+      wasm-semantics,
+      rust-overlay,
+      stellar-cli-flake,
+      ...
+    }@inputs: flake-utils.lib.eachSystem [
       "x86_64-linux"
       "x86_64-darwin"
       "aarch64-linux"
       "aarch64-darwin"
     ] (system:
       let
+        pkgs-unstable = import nixpkgs-unstable {
+          inherit system;
+        };
+        # temporary workaround for our stale revision of nix for runtime issues on new MacOS versions
+        gfortranUnstableOverlay = final: prev: {
+          gfortran = pkgs-unstable.gfortran;
+        };
         # stellar-cli flake does not build on NixOS machines due to openssl issues during `cargo build`
         # putting `pkg-config` in `nativeBuildInputs` will run the `pkg-config` setuphook, which will look for derivations in `buildInputs`
         # with a `pkgconfig` directory such as the `openssl` derivation
@@ -51,6 +70,7 @@
           overlays = [
             stellar-cli-overlay
             (import rust-overlay)
+            gfortranUnstableOverlay
           ];
         };
 
