@@ -50,6 +50,7 @@
         # temporary workaround for our stale revision of nix for runtime issues on new MacOS versions
         gfortranUnstableOverlay = final: prev: {
           gfortran = pkgs-unstable.gfortran;
+          gfortran13 = pkgs-unstable.gfortran;
         };
         # stellar-cli flake does not build on NixOS machines due to openssl issues during `cargo build`
         # putting `pkg-config` in `nativeBuildInputs` will run the `pkg-config` setuphook, which will look for derivations in `buildInputs`
