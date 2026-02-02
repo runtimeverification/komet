@@ -19,6 +19,8 @@
 
 **Komet** is a cutting-edge formal verification and fuzzing framework specifically designed for [Soroban](https://stellar.org/soroban) smart contracts on the Stellar blockchain. Built on Runtime Verification's powerful K Semantics framework, Komet enables developers to write property tests in Rust and verify their contracts' correctness across **all possible inputs**, not just a sample.
 
+![Komet in action](media/komet-fuzzing.gif)
+
 ### Why Komet?
 
 In the high-stakes world of decentralized finance (DeFi), a single bug can cost millions. Traditional testing only covers scenarios you think of. **Komet goes beyond** by:
