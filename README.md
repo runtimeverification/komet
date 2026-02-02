@@ -9,7 +9,7 @@
 [![Discord](https://img.shields.io/badge/discord-join-7289da)](https://discord.gg/CurfmXNtbN)
 [![License](https://img.shields.io/badge/license-BSD--3-orange)](LICENSE)
 
-[Quick Start](#-quick-start) • [Features](#-features) • [Documentation](#-documentation) • [Examples](#-examples) • [Community](#-community)
+[Quick Start](#-quick-start) • [Documentation](#-documentation) • [Community](#-community)
 
 </div>
 
