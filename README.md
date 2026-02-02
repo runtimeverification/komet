@@ -80,7 +80,7 @@ Run your tests:
 
 ```bash
 # Fuzzing mode
-komet fuzz
+komet test
 
 # Formal verification mode
 komet prove run
@@ -100,12 +100,14 @@ komet prove run
 
 ### The Komet Advantage
 
-Traditional fuzzing struggles with complex nested conditions and may miss critical edge cases. **Komet's symbolic execution** systematically explores all feasible code paths using symbolic variables, providing:
+Fuzzing is a powerful upgrade from unit testing—it automatically explores thousands of randomized inputs to uncover edge cases quickly. However, traditional fuzzing struggles with complex nested conditions and may miss critical edge cases. **Komet's symbolic execution** systematically explores all feasible code paths using symbolic variables, providing:
 
 - ✅ Comprehensive path coverage
 - ✅ Automatic postcondition verification
 - ✅ Guaranteed correctness proofs
 - ✅ Detection of subtle logical errors
+
+Fuzzing mode provides fast feedback during active development, helping catch bugs quickly as you write code, while prove mode ensures complete correctness before deployment by verifying all possible execution paths.
 
 ---
 
