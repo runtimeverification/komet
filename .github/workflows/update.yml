@@ -33,7 +33,7 @@ jobs:
         run: |
           PYKWASM_VERSION="$(cat deps/kwasm_release)"
           sed -i 's!    "pykwasm@git+https://github.com/runtimeverification/wasm-semantics.git@v[0-9\.]*#subdirectory=pykwasm",!    "pykwasm@git+https://github.com/runtimeverification/wasm-semantics.git@v'${PYKWASM_VERSION}'#subdirectory=pykwasm",!'
-          uv lock --update
+          uv lock --upgrade
           git add pyproject.toml uv.lock && git commit -m "pyproject.toml, uv.lock: Update pykwasm version ${PYKWASM_VERSION}" || true
       - name: 'Update K release'
         run: |
