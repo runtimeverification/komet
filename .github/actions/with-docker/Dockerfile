@@ -27,10 +27,8 @@ WORKDIR /home/user
 ENV PATH="/home/user/.local/bin:${PATH}"
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-RUN wget -O rustup.sh https://sh.rustup.rs && \
-    chmod +x rustup.sh && \
-    ./rustup.sh --verbose --target wasm32-unknown-unknown -y
+RUN    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y \
+    && rustup target add wasm32-unknown-unknown \
+    && rustup target add wasm32v1-none
 
-ENV PATH="/home/user/.cargo/bin:${PATH}"
-
-RUN cargo install --locked stellar-cli --features opt
+RUN cargo install --locked stellar-cli

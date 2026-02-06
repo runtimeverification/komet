@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "komet"
-version = "0.1.65"
+version = "0.1.72"
 description = "K tooling for the Soroban platform"
 requires-python = "~=3.10"
 dependencies = [
-    "pykwasm@git+https://github.com/runtimeverification/wasm-semantics.git@v0.1.126#subdirectory=pykwasm",
+    "pykwasm@git+https://github.com/runtimeverification/wasm-semantics.git@v0.1.128#subdirectory=pykwasm",
 ]
 
 [[project.authors]]
