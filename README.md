@@ -48,33 +48,33 @@ kup install komet
 komet --help
 ```
 
-### Your First Property Test
+### Your First Komet Test
 
 ```rust
+#![no_std]
 use soroban_sdk::{contract, contractimpl, Env};
 
 #[contract]
-pub struct Adder;
+pub struct AdderContract;
 
 #[contractimpl]
-impl Adder {
-    pub fn add(env: Env, a: i32, b: i32) -> i32 {
-        a + b
+impl AdderContract {
+    pub fn add(env: Env, first: u32, second: u32) -> u64 {
+        first as u64 + second as u64
+    }
+  
+    pub fn test_add_i64_comm(env: Env, first: i64, second: i64) -> bool {
+        let a = Self::add_i64(env.clone(), first, second);
+        let b = Self::add_i64(env, second, first);
+        a == b
     }
 }
-
-// Property: Addition should be commutative
-#[komet::property]
-fn test_addition_commutative(a: i32, b: i32) {
-    let env = Env::default();
-    let contract = AdderClient::new(&env, &env.register_contract(None, Adder));
-    
-    assert_eq!(
-        contract.add(&a, &b),
-        contract.add(&b, &a)
-    );
-}
 ```
+
+This example demonstrates a property test for commutativity.
+Property tests in Komet are written directly within your contract implementation as methods with the `test_` prefix.
+The `test_add_i64_comm` function takes two input values (`first` and `second`), executes the contract logic, and returns a boolean indicating whether the property holds.
+Komet will explore different input combinations during fuzzing and prove the property holds for all inputs during formal verification.
 
 Run your tests:
 
