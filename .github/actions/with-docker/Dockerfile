@@ -27,6 +27,8 @@ WORKDIR /home/user
 ENV PATH="/home/user/.local/bin:${PATH}"
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
+
+ENV PATH="/home/user/.local/bin:/home/user/.cargo/bin:${PATH}"
 RUN    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y \
     && rustup target add wasm32-unknown-unknown \
     && rustup target add wasm32v1-none
