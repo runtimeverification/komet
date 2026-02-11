@@ -33,7 +33,7 @@
     stellar-cli-flake.url = "github:stellar/stellar-cli";
     stellar-cli-flake.inputs = {
       flake-utils.follows = "flake-utils";
-      nixpkgs.follows = "nixpkgs";
+      nixpkgs.follows = "nixpkgs-unstable";
       rust-overlay.follows = "rust-overlay";
     };
   };
