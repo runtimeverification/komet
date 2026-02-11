@@ -5,14 +5,28 @@
     rv-nix-tools.url = "github:runtimeverification/rv-nix-tools/854d4f05ea78547d46e807b414faad64cea10ae4";
     nixpkgs.follows = "rv-nix-tools/nixpkgs";
   
+    flake-utils.url = "github:numtide/flake-utils";
+
     wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.128";
     wasm-semantics.inputs.nixpkgs.follows = "nixpkgs";
-
     k-framework.follows = "wasm-semantics/k-framework";
 
-    flake-utils.follows = "k-framework/flake-utils";
-
-    poetry2nix.follows = "k-framework/poetry2nix";
+    uv2nix.url = "github:pyproject-nix/uv2nix/be511633027f67beee87ab499f7b16d0a2f7eceb";
+    # uv2nix requires a newer version of nixpkgs
+    # therefore, we pin uv2nix specifically to a newer version of nixpkgs
+    # until we replaced our stale version of nixpkgs with an upstream one as well
+    # but also uv2nix requires us to call it with `callPackage`, so we add stuff
+    # from the newer nixpkgs to our stale nixpkgs via an overlay
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+    uv2nix.inputs.nixpkgs.follows = "nixpkgs-unstable";
+    # uv2nix.inputs.nixpkgs.follows = "nixpkgs";
+    pyproject-build-systems.url = "github:pyproject-nix/build-system-pkgs/795a980d25301e5133eca37adae37283ec3c8e66";
+    pyproject-build-systems = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.uv2nix.follows = "uv2nix";
+      inputs.pyproject-nix.follows = "uv2nix/pyproject-nix";
+    };
+    pyproject-nix.follows = "uv2nix/pyproject-nix";
 
     rust-overlay.url = "github:oxalica/rust-overlay";
 
@@ -24,135 +38,98 @@
     };
   };
 
-  outputs = { self, k-framework, nixpkgs, flake-utils, rv-nix-tools, wasm-semantics
-    , rust-overlay, stellar-cli-flake, ... }@inputs: flake-utils.lib.eachSystem [
-      "x86_64-linux"
-      "x86_64-darwin"
-      "aarch64-linux"
-      "aarch64-darwin"
-    ] (system:
+  outputs = { self, rv-nix-tools, nixpkgs, flake-utils, pyproject-nix, pyproject-build-systems, uv2nix
+            , k-framework, wasm-semantics, rust-overlay, stellar-cli-flake, nixpkgs-unstable }: 
+  let
+    pythonVer = "310";
+  in flake-utils.lib.eachSystem [
+    "x86_64-linux"
+    "x86_64-darwin"
+    "aarch64-linux"
+    "aarch64-darwin"
+  ] (system:
+    let
+      pkgs-unstable = import nixpkgs-unstable {
+        inherit system;
+      };
+      # for uv2nix, remove this once we updated to a newer version of nixpkgs
+      staleNixpkgsOverlay = final: prev: {
+        inherit (pkgs-unstable) replaceVars;
+      };
+      # due to the nixpkgs that we use in this flake being outdated, uv is also heavily outdated
+      # we can instead use the binary release of uv provided by uv2nix for now
+      uvOverlay = final: prev: {
+        uv = uv2nix.packages.${final.system}.uv-bin;
+      };
+      # create custom overlay for k, because the overlay in k-framework currently also includes a lot of other stuff instead of only k
+      kOverlay = final: prev: {
+        k = k-framework.packages.${final.system}.k;
+      };
+      
+      kometOverlay = final: prev:
       let
-        # stellar-cli flake does not build on NixOS machines due to openssl issues during `cargo build`
-        # putting `pkg-config` in `nativeBuildInputs` will run the `pkg-config` setuphook, which will look for derivations in `buildInputs`
-        # with a `pkgconfig` directory such as the `openssl` derivation
-        # this will then setup the `PKG_CONFIG_PATH` env variable properly
-        stellar-cli-overlay = final: prev: {
-          stellar-cli = stellar-cli-flake.packages.${system}.default.overrideAttrs (finalAttrs: previousAttrs: {
-            nativeBuildInputs = (previousAttrs.nativeBuildInputs or [ ]) ++ (with final; [
-              pkg-config
-            ]);
-            buildInputs = (previousAttrs.buildInputs or [ ]) ++ (with final; [
-              openssl
-            ]);
-          });
+        komet-pyk = final.callPackage ./nix/komet-pyk {
+          inherit pyproject-nix pyproject-build-systems uv2nix;
+          python = final."python${pythonVer}";
         };
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [
-            stellar-cli-overlay
-            (import rust-overlay)
-          ];
-        };
-
-        poetry2nix = inputs.poetry2nix.lib.mkPoetry2Nix { inherit pkgs; };
-
-        komet-pyk = poetry2nix.mkPoetryApplication {
-          python = pkgs.python310;
-          projectDir = ./.;
-          src = rv-nix-tools.lib.mkSubdirectoryAppSrc {
-            inherit pkgs;
-            src = ./.;
-            subdirectories = [ "pykwasm" ];
-            cleaner = poetry2nix.cleanPythonSources;
-          };
-          overrides = poetry2nix.overrides.withDefaults
-            (finalPython: prevPython: {
-              kframework = k-framework.packages.${system}.pyk-python310;
-              pykwasm = wasm-semantics.packages.${system}.kwasm-pyk;
-            });
-          groups = [ ];
-          checkGroups = [ ];
-        };
-
-        mkKomet = {komet-rust ? null, komet-stellar ? null}@args: pkgs.stdenv.mkDerivation {
-          pname = "komet";
-          version = self.rev or "dirty";
-          src = pkgs.lib.cleanSource (pkgs.nix-gitignore.gitignoreSourcePure [
-            "/.github"
-            "flake.nix"
-            "flake.lock"
-            ./.gitignore
-          ] ./.);
-
-          buildInputs = with pkgs; [
-            k-framework.packages.${system}.pyk-python310
-            k-framework.packages.${system}.k
-            komet-pyk
-          ];
-
-          dontUseCmakeConfigure = true;
-
-          nativeBuildInputs = [ pkgs.makeWrapper ];
-
-          enableParallelBuilding = true;
-
-          buildPhase = ''
-            export XDG_CACHE_HOME=$(pwd)
-            ${
-              pkgs.lib.optionalString
-              (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin)
-              "APPLE_SILICON=true"
-            } K_OPTS="-Xmx8G -Xss512m" kdist -v build soroban-semantics.* -j$NIX_BUILD_CORES
-          '';
-
-          installPhase = ''
-            mkdir -p $out
-            cp -r ./kdist-*/* $out/
-
-            makeWrapper ${komet-pyk}/bin/komet $out/bin/komet --prefix PATH : ${
-              pkgs.lib.makeBinPath (
-                [
-                  k-framework.packages.${system}.k
-                ] ++ pkgs.lib.optionals (komet-rust != null) [
-                  komet-rust
-                ] ++ pkgs.lib.optionals (komet-stellar != null) [
-                  komet-stellar
-                ]
-              )
-            } --set KDIST_DIR $out
-          '';
-
-          passthru = if komet-rust == null && komet-stellar == null then {
-            rust-stellar = pkgs.callPackage mkKomet (args // {
-              komet-rust = rustWithWasmTarget;
-              komet-stellar = pkgs.stellar-cli;
-            });
-          } else { };
-        };
-        komet = pkgs.callPackage mkKomet { };
-
-        rustWithWasmTarget = pkgs.rust-bin.stable.latest.default.override {
-          targets = [ "wasm32v1-none" ];
+        komet = final.callPackage ./nix/komet {
+          inherit komet-pyk;
+          rev = self.rev or null;
         };
       in {
-        packages = rec {
-          inherit komet komet-pyk;
-          default = komet;
-        };
-
-        devShell = pkgs.mkShell {
-          buildInputs = [ pkgs.stellar-cli komet rustWithWasmTarget ];
-
-          shellHook = ''
-            ${pkgs.lib.strings.optionalString
-            (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin)
-            "export APPLE_SILICON=true"}
-          '';
-        };
-
-      }) // {
-        overlays.default = final: prev: {
-          inherit (self.packages.${final.system}) komet komet-pyk;
-        };
+        inherit komet;
       };
+
+      # stellar-cli flake does not build on NixOS machines due to openssl issues during `cargo build`
+      # putting `pkg-config` in `nativeBuildInputs` will run the `pkg-config` setuphook, which will look for derivations in `buildInputs`
+      # with a `pkgconfig` directory such as the `openssl` derivation
+      # this will then setup the `PKG_CONFIG_PATH` env variable properly
+      stellar-cli-overlay = final: prev: {
+        stellar-cli = stellar-cli-flake.packages.${system}.default.overrideAttrs (finalAttrs: previousAttrs: {
+          nativeBuildInputs = (previousAttrs.nativeBuildInputs or [ ]) ++ (with final; [
+            pkg-config
+          ]);
+          buildInputs = (previousAttrs.buildInputs or [ ]) ++ (with final; [
+            openssl
+          ]);
+        });
+      };
+
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          staleNixpkgsOverlay
+          uvOverlay
+          kOverlay
+          kometOverlay
+          stellar-cli-overlay
+          (import rust-overlay)
+        ];
+      };
+
+      python = pkgs."python${pythonVer}";
+
+      rustWithWasmTarget = pkgs.rust-bin.stable.latest.default.override {
+        targets = [ "wasm32v1-none" ];
+      };
+
+    in {
+      packages = rec {
+        inherit (pkgs) komet;
+        default = komet;
+      };
+      devShell = pkgs.mkShell {
+        buildInputs = [ pkgs.stellar-cli pkgs.komet rustWithWasmTarget ];
+
+        shellHook = ''
+          ${pkgs.lib.strings.optionalString
+          (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin)
+          "export APPLE_SILICON=true"}
+        '';
+      };
+    }) // {
+      overlays.default = final: prev: {
+        inherit (self.packages.${final.system}) komet;
+      };
+    };
 }
