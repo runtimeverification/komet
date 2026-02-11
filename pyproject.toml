@@ -8,7 +8,7 @@ version = "0.1.73"
 description = "K tooling for the Soroban platform"
 requires-python = "~=3.10"
 dependencies = [
-    "pykwasm@git+https://github.com/runtimeverification/wasm-semantics.git@v0.1.128#subdirectory=pykwasm",
+    "pykwasm@git+https://github.com/runtimeverification/wasm-semantics.git@v0.1.146#subdirectory=pykwasm",
 ]
 
 [[project.authors]]
