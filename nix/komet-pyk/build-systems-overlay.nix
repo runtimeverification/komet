@@ -10,8 +10,10 @@ let
   # `setuptools-scm[toml]` in pyproject.toml would be written as
   # `foo.setuptools-scm = [ "toml" ]` in Nix
   buildSystemOverrides = {
-    # add dependencies here, e.g.:
-    # pyperclip.setuptools = [ ];
+    # pykwasm.hatchling = [];
+    py-wasm.setuptools = [];
+
+    typing.setuptools = [];
   };
 in
 mapAttrs (
