@@ -17,6 +17,7 @@ email = "contact@runtimeverification.com"
 
 [project.scripts]
 komet = "komet.komet:main"
+komet-kdist = "pyk.kdist.__main__:main"
 
 [project.entry-points.kdist]
 soroban-semantics = "komet.kdist.plugin"

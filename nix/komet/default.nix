@@ -15,14 +15,16 @@
   secp256k1,
   which,
   rust-bin,
+  stellar-cli,
 
   komet-rust ? null,
+  komet-stellar ? null,
   komet-pyk,
   rev ? null
 } @ args:
 let
   rustWithWasmTarget = rust-bin.stable.latest.default.override {
-    targets = [ "wasm32-unknown-unknown" ];
+    targets = [ "wasm32v1-none" ];
   };
 in
 stdenv.mkDerivation {
@@ -74,15 +76,22 @@ stdenv.mkDerivation {
     cp -r ./kdist-*/* $out/kdist/
 
     makeWrapper ${komet-pyk}/bin/komet $bin/bin/komet --prefix PATH : ${
-      lib.makeBinPath
-      ([ which k ] ++ lib.optionals (komet-rust != null) [
-        komet-rust
-      ])
+      lib.makeBinPath (
+        [ which k ]
+        ++ lib.optionals (komet-rust != null) [
+          komet-rust
+        ]
+        ++ lib.optionals (komet-stellar != null) [
+          komet-stellar
+        ]
+      )
     } --set KDIST_DIR $out/kdist
   '';
 
-  passthru = if komet-rust == null then {
-    # list all supported solc versions here
-    rust = callPackage ./default.nix (args // { komet-rust = rustWithWasmTarget; });
+  passthru = if komet-stellar == null then {
+    rust-stellar = callPackage ./default.nix (args // {
+      komet-rust = rustWithWasmTarget;
+      komet-stellar = stellar-cli;
+    });
   } else { };
 }
