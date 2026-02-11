@@ -1,8 +1,12 @@
 UV     := uv
-UV_RUN := $(UV) run
+UV_RUN := $(UV) run --
 
 
 default: check test-unit
+
+.PHONY: build
+build:
+	$(UV) build
 
 all: check cov
 
@@ -14,10 +18,10 @@ clean:
 # Semantics
 
 kdist-build:
-	$(UV) run kdist -v build -j2 soroban-semantics.*
+	$(UV_RUN) kdist -v build -j2 soroban-semantics.*
 
 kdist-clean:
-	$(UV) run kdist clean
+	$(UV_RUN) kdist clean
 
 # Tests
 
@@ -37,6 +41,7 @@ test-unit:
 test-integration:
 	$(UV_RUN) pytest src/tests/integration --maxfail=1 --verbose --durations=0 --numprocesses=4 --dist=worksteal $(TEST_ARGS)
 
+.PHONY: test-lemmas
 test-lemmas:
 	$(UV_RUN) pytest src/tests/lemmas --maxfail=1 --verbose --durations=0 --numprocesses=4 --dist=worksteal $(TEST_ARGS)
 
@@ -82,7 +87,6 @@ check-autoflake:
 .PHONY: isort
 isort:
 	$(UV_RUN) isort src
-
 
 .PHONY: check-isort
 check-isort:
