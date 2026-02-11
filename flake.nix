@@ -118,13 +118,22 @@
         inherit (pkgs) komet;
         default = komet;
       };
-      devShell = pkgs.mkShell {
-        buildInputs = [ pkgs.stellar-cli pkgs.komet rustWithWasmTarget ];
-
+      devShells.default = pkgs.mkShell {
+        packages = with pkgs; [
+          k
+          python
+          uv
+          which
+        ];
+        env = {
+          # prevent uv from managing Python downloads and force use of specific 
+          UV_PYTHON_DOWNLOADS = "never";
+          UV_PYTHON = python.interpreter;
+        };
         shellHook = ''
-          ${pkgs.lib.strings.optionalString
-          (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin)
-          "export APPLE_SILICON=true"}
+          unset PYTHONPATH
+        '' + pkgs.lib.strings.optionalString (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin) ''
+          export APPLE_SILICON=true
         '';
       };
     }) // {
