@@ -98,7 +98,9 @@
           nativeBuildInputs = builtins.filter (pkg: !final.lib.strings.hasPrefix "auditable-" pkg.name) nativeBuildInputs';
           buildInputs = (previousAttrs.buildInputs or [ ]) ++ (with final; [
             openssl
-          ]);
+          ]) ++ final.lib.optionals final.stdenv.isDarwin [
+            pkgs.darwin.apple_sdk.frameworks.AppKit
+          ];
         });
       };
 
