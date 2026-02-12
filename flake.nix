@@ -33,7 +33,7 @@
     stellar-cli-flake.url = "github:stellar/stellar-cli";
     stellar-cli-flake.inputs = {
       flake-utils.follows = "flake-utils";
-      nixpkgs.follows = "nixpkgs-unstable";
+      nixpkgs.follows = "nixpkgs";
       rust-overlay.follows = "rust-overlay";
     };
   };
@@ -85,10 +85,17 @@
       # with a `pkgconfig` directory such as the `openssl` derivation
       # this will then setup the `PKG_CONFIG_PATH` env variable properly
       stellar-cli-overlay = final: prev: {
-        stellar-cli = stellar-cli-flake.packages.${system}.default.overrideAttrs (finalAttrs: previousAttrs: {
-          nativeBuildInputs = (previousAttrs.nativeBuildInputs or [ ]) ++ (with final; [
+        stellar-cli = stellar-cli-flake.packages.${system}.default.overrideAttrs (finalAttrs: previousAttrs:
+        let
+          nativeBuildInputs' = (previousAttrs.nativeBuildInputs or [ ]) ++ (with final; [
             pkg-config
           ]);
+        in {
+          # remove `auditable since it expects rust 2024, but cannot find it
+          # this is usually disable by passing `auditable = false;` to `buildRustPackage`
+          #  however, nixpkgs does not let us properly override this post-morted, so we have to remove the auditable package
+          #  that inevitably got add in `stellar-cli` flake
+          nativeBuildInputs = builtins.filter (pkg: !final.lib.strings.hasPrefix "auditable-" pkg.name) nativeBuildInputs';
           buildInputs = (previousAttrs.buildInputs or [ ]) ++ (with final; [
             openssl
           ]);
