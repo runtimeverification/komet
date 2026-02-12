@@ -91,9 +91,9 @@
             pkg-config
           ]);
         in {
-          # remove `auditable since it expects rust 2024, but cannot find it
-          # this is usually disable by passing `auditable = false;` to `buildRustPackage`
-          #  however, nixpkgs does not let us properly override this post-morted, so we have to remove the auditable package
+          # remove `auditable` since it expects rust 2024, but cannot find it
+          # this is usually disabled by passing `auditable = false;` to `buildRustPackage`
+          # however, nixpkgs does not let us properly override this post-mortem, so we have to remove the auditable package
           #  that inevitably got add in `stellar-cli` flake
           nativeBuildInputs = builtins.filter (pkg: !final.lib.strings.hasPrefix "auditable-" pkg.name) nativeBuildInputs';
           buildInputs = (previousAttrs.buildInputs or [ ]) ++ (with final; [
