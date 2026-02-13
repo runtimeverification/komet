@@ -8,18 +8,23 @@ from typing import TYPE_CHECKING
 from pyk.kast.outer import KRule, read_kast_definition
 from pyk.kdist import kdist
 from pyk.konvert import kast_to_kore
+from pyk.kore.manip import substitute_vars
+from pyk.kore.prelude import generated_top
+from pyk.kore.syntax import App
 from pyk.ktool.kompile import DefinitionInfo
 from pyk.ktool.kprove import KProve
 from pyk.ktool.krun import KRun
 from pyk.utils import single
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
     from subprocess import CompletedProcess
     from typing import Any, Final
 
     from pyk.kast.inner import KInner, KSort
     from pyk.kast.outer import KDefinition, KFlatModule
+    from pyk.kore.syntax import EVar, Pattern
     from pyk.ktool.kompile import KompileBackend
 
 _LOGGER: Final = logging.getLogger(__name__)
@@ -92,3 +97,29 @@ class SorobanDefinition:
 concrete_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm'))
 library_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm-library'))
 symbolic_definition = SorobanDefinition(kdist.get('soroban-semantics.haskell'))
+
+
+def subst_on_program_cell(template: Pattern, subst_case: Mapping[EVar, Pattern]) -> Pattern:
+    """A substitution function that only applies substitutions within the K cell.
+    Optimizing the fuzzer by restricting changes to relevant parts of the configuration.
+
+    Args:
+        template: The template configuration containing variables in the K cell.
+        subst_case: A mapping from variables to their replacement patterns.
+    """
+
+    def kasmer_cell(program_cell: Pattern, soroban_cell: Pattern, exit_code_cell: Pattern) -> Pattern:
+        return App("Lbl'-LT-'kasmer'-GT-'", args=(program_cell, soroban_cell, exit_code_cell))
+
+    match template:
+        case App(
+            "Lbl'-LT-'generatedTop'-GT-'",
+            args=(
+                App("Lbl'-LT-'kasmer'-GT-'", args=(program_cell, soroban_cell, exit_code_cell)),
+                generated_counter_cell,
+            ),
+        ):
+            program_cell_ = substitute_vars(program_cell, subst_case)
+            return generated_top((kasmer_cell(program_cell_, soroban_cell, exit_code_cell), generated_counter_cell))
+
+    raise ValueError(template)
