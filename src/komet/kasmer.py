@@ -529,5 +529,7 @@ class FuzzError(Exception):
     counterexample: tuple[KInner, ...]
 
     def __init__(self, test_name: str, counterexample: tuple[KInner, ...]):
+        super().__init__(test_name, counterexample)
+
         self.test_name = test_name
         self.counterexample = counterexample
