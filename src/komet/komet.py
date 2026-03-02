@@ -22,6 +22,7 @@ from pykwasm.scripts.preprocessor import preprocess
 from komet.proof import simplify
 
 from .kasmer import Kasmer
+from .telemetry import emit_event
 from .utils import KSorobanError, concrete_definition, symbolic_definition
 
 if TYPE_CHECKING:
@@ -93,10 +94,16 @@ def main() -> None:
 
 def _exec_run(*, program: Path, backend: Backend) -> None:
     definition_dir = kdist.get(f'soroban-semantics.{backend.value}')
+    emit_event(
+        'komet_run_start',
+    )
 
     with _preprocessed(program) as input_file:
         proc_res = _krun(definition_dir=definition_dir, input_file=input_file, check=False)
 
+    emit_event(
+        'komet_run_complete',
+    )
     _exit_with_output(proc_res)
 
 
@@ -108,10 +115,12 @@ def _exec_prove_raw(
     proof_dir: Path | None,
     bug_report: BugReport | None = None,
 ) -> None:
+    emit_event('komet_prove_raw_start')
     kasmer = Kasmer(symbolic_definition, extra_module)
     try:
         kasmer.prove_raw(claim_file, label, proof_dir, bug_report)
         exit(0)
+        emit_event('komet_prove_raw_complete')
     except KSorobanError as e:
         if isinstance(e.args[0], EqualityProof):
             proof: EqualityProof = e.args[0]
@@ -128,7 +137,7 @@ def _exec_prove_raw(
             print('Constraints:', file=sys.stderr)
             for c in constraints:
                 print('    ', kasmer.definition.krun.pretty_print(c), file=sys.stderr)
-
+        emit_event('komet_prove_raw_complete')
         exit(1)
 
 
@@ -151,7 +160,7 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
     """
     dir_path = Path.cwd() if dir_path is None else dir_path
     kasmer = Kasmer(concrete_definition)
-
+    emit_event('komet_test_start')
     child_wasms: tuple[Path, ...] = ()
 
     if wasm is None:
@@ -163,8 +172,10 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
 
     try:
         kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
+        emit_event('komet_test_complete')
         sys.exit(0)
     except KSorobanError:
+        emit_event('komet_test_complete')
         sys.exit(1)
 
 
@@ -182,6 +193,7 @@ def _exec_prove_run(
     kasmer = Kasmer(symbolic_definition, extra_module)
 
     child_wasms: tuple[Path, ...] = ()
+    emit_event('komet_prove_run_start')
 
     if wasm is None:
         child_wasms = _read_config_file(kasmer, dir_path)
@@ -189,6 +201,7 @@ def _exec_prove_run(
 
     kasmer.deploy_and_prove(wasm, child_wasms, id, always_allocate, proof_dir, bug_report)
 
+    emit_event('komet_prove_run_complete')
     sys.exit(0)
 
 
