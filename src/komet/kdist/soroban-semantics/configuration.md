@@ -12,6 +12,7 @@ module CONFIG
     configuration
       <soroban>
         <k> .K </k>
+        <trace> .List </trace>
         <host>
           <callState>
             <callee> Contract(.Bytes) </callee>

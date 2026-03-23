@@ -512,7 +512,7 @@ class KometFuzzHandler(KFuzzHandler):
         # To avoid misleading progress updates, the progress bar is not advanced
         # when a test fails and Hypothesis reruns the same example.
         if not self.failed:
-            self.task.advance()
+            self.task.advance() 
 
     def handle_failure(self, args: Mapping[EVar, Pattern]) -> None:
         if not self.failed:

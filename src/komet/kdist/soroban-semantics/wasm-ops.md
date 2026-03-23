@@ -72,6 +72,14 @@ module WASM-OPERATIONS
   This positions the first argument at the top of the stack at the end.
 
 ```k
+    syntax Instr ::= "#beforeHook" [symbol("beforeHook")]
+ // -----------------------------------------------------
+    rule <instrs> #beforeHook => .K ... </instrs> [priority(200)]
+
+    rule [beforeHook-trace]:
+      <instrs> #beforeHook ~> hostCallAux(MOD, FUNC) => hostCallAux(MOD, FUNC) ... </instrs>
+      <trace> ... (.List => ListItem("hostCall(" +String MOD +String "," +String FUNC +String ")")) </trace>
+
     syntax InternalInstr ::= hostCallAux(String, String)        [symbol(hostCallAux)]
                            | loadArgs(Int)                      [symbol(loadArgs)] 
 
@@ -79,6 +87,7 @@ module WASM-OPERATIONS
     rule [hostCall-default]:
         <instrs> hostCall(MOD, FUNC, [ _ARGS ] -> [ _RET ])
               => loadArgs(size(LOCALS))
+              ~> #beforeHook
               ~> hostCallAux(MOD, FUNC)
                  ...
         </instrs>
