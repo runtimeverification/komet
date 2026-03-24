@@ -1,8 +1,10 @@
 
 ```k
 requires "configuration.md"
+requires "fs.md"
 module WASM-OPERATIONS
     imports CONFIG-OPERATIONS
+    imports FILE-SYSTEM
 ```
 
 ## Memory Operations
@@ -76,9 +78,16 @@ module WASM-OPERATIONS
  // -----------------------------------------------------
     rule <instrs> #beforeHook => .K ... </instrs> [priority(200)]
 
+    // syntax KResult ::= Int | IOString | Bool
+
     rule [beforeHook-trace]:
-      <instrs> #beforeHook ~> hostCallAux(MOD, FUNC) => hostCallAux(MOD, FUNC) ... </instrs>
-      <trace> ... (.List => ListItem("hostCall(" +String MOD +String "," +String FUNC +String ")")) </trace>
+      <instrs> #beforeHook ~> hostCallAux(MOD, FUNC)
+            => #appendFile(PATH, "hostCall(" +String MOD +String "," +String FUNC +String ")\n")
+            ~> hostCallAux(MOD, FUNC)
+               ...
+      </instrs>
+      <ioDir> PATH </ioDir>
+      requires PATH =/=String ""
 
     syntax InternalInstr ::= hostCallAux(String, String)        [symbol(hostCallAux)]
                            | loadArgs(Int)                      [symbol(loadArgs)] 

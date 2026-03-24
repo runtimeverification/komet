@@ -12,7 +12,10 @@ module CONFIG
     configuration
       <soroban>
         <k> .K </k>
-        <trace> .List </trace>
+        <trace>
+        //TODO: initialize this
+         <ioDir> "":String </ioDir>
+        </trace>
         <host>
           <callState>
             <callee> Contract(.Bytes) </callee>
