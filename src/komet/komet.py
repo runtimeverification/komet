@@ -7,11 +7,12 @@ from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Mapping
 
 from pyk.cli.args import bug_report_arg
 from pyk.cli.utils import file_path
 from pyk.kdist import kdist
+from pyk.kore.prelude import str_dv
 from pyk.ktool.kprint import KAstOutput, _kast
 from pyk.ktool.krun import _krun
 from pyk.proof import APRProof, EqualityProof
@@ -45,7 +46,9 @@ def main() -> None:
     args, rest = parser.parse_known_args()
 
     if args.command == 'run':
-        _exec_run(program=args.program, backend=args.backend)
+        if args.trace_file is not None and args.backend != Backend.LLVM:
+            raise ValueError('Tracing is only available with the LLVM backend')
+        _exec_run(program=args.program, backend=args.backend, trace_file=args.trace_file)
     elif args.command == 'kast':
         _exec_kast(program=args.program, backend=args.backend, output=args.output)
     elif args.command == 'test':
@@ -92,14 +95,20 @@ def main() -> None:
     raise AssertionError()
 
 
-def _exec_run(*, program: Path, backend: Backend) -> None:
-    definition_dir = kdist.get(f'soroban-semantics.{backend.value}')
+def _exec_run(*, program: Path, backend: Backend, trace_file: Path | None) -> None:
+    definition_name = backend.value + ('-tracing' if trace_file else '')
+    definition_dir = kdist.get(f'soroban-semantics.{definition_name}')
     emit_event(
         'komet_run_start',
     )
 
     with _preprocessed(program) as input_file:
-        proc_res = _krun(definition_dir=definition_dir, input_file=input_file, check=False)
+        cmap: Mapping[str, str] | None = None
+        pmap: Mapping[str, str] | None = None
+        if trace_file:
+            cmap = {'TRACE': str_dv(str(trace_file)).text}
+            pmap = {'TRACE': 'cat'}
+        proc_res = _krun(definition_dir=definition_dir, input_file=input_file, cmap=cmap, pmap=pmap, check=False)
 
     emit_event(
         'komet_run_complete',
@@ -277,6 +286,7 @@ def _argument_parser() -> ArgumentParser:
 
     run_parser = command_parser.add_parser('run', help='run a concrete test')
     _add_common_arguments(run_parser)
+    run_parser.add_argument('--trace-file', type=Path, help='Path to trace output')
 
     kast_parser = command_parser.add_parser('kast', help='parse a concrete test and output it in a supported format')
     _add_common_arguments(kast_parser)

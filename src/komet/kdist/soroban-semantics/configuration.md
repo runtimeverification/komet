@@ -12,10 +12,14 @@ module CONFIG
     configuration
       <soroban>
         <k> .K </k>
+```
+```k-tracing
         <trace>
         //TODO: initialize this
-         <ioDir> "":String </ioDir>
+         <ioDir> $TRACE:String </ioDir>
         </trace>
+```
+```k
         <host>
           <callState>
             <callee> Contract(.Bytes) </callee>

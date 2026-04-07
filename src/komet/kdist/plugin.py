@@ -56,6 +56,16 @@ __TARGETS__: Final = {
             'warnings_to_errors': True,
         },
     ),
+    'llvm-tracing': KompileTarget(
+        lambda src_dir: {
+            'backend': 'llvm',
+            'main_file': src_dir / 'soroban-semantics/kasmer.md',
+            'syntax_module': 'KASMER-SYNTAX',
+            'include_dirs': [src_dir],
+            'md_selector': 'k | k-tracing',
+            'warnings_to_errors': True,
+        },
+    ),
     'llvm-library': KompileTarget(
         lambda src_dir: {
             'backend': 'llvm',

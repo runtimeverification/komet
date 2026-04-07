@@ -74,21 +74,6 @@ module WASM-OPERATIONS
   This positions the first argument at the top of the stack at the end.
 
 ```k
-    syntax Instr ::= "#beforeHook" [symbol("beforeHook")]
- // -----------------------------------------------------
-    rule <instrs> #beforeHook => .K ... </instrs> [priority(200)]
-
-    // syntax KResult ::= Int | IOString | Bool
-
-    rule [beforeHook-trace]:
-      <instrs> #beforeHook ~> hostCallAux(MOD, FUNC)
-            => #appendFile(PATH, "hostCall(" +String MOD +String "," +String FUNC +String ")\n")
-            ~> hostCallAux(MOD, FUNC)
-               ...
-      </instrs>
-      <ioDir> PATH </ioDir>
-      requires PATH =/=String ""
-
     syntax InternalInstr ::= hostCallAux(String, String)        [symbol(hostCallAux)]
                            | loadArgs(Int)                      [symbol(loadArgs)] 
 
@@ -96,7 +81,6 @@ module WASM-OPERATIONS
     rule [hostCall-default]:
         <instrs> hostCall(MOD, FUNC, [ _ARGS ] -> [ _RET ])
               => loadArgs(size(LOCALS))
-              ~> #beforeHook
               ~> hostCallAux(MOD, FUNC)
                  ...
         </instrs>
