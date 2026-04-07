@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 import sys
 from argparse import ArgumentParser, FileType
+from collections.abc import Mapping
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Mapping
+from typing import TYPE_CHECKING
 
 from pyk.cli.args import bug_report_arg
 from pyk.cli.utils import file_path
