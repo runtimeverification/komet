@@ -17,6 +17,7 @@ module CONFIG
         <trace>
         //TODO: initialize this
          <ioDir> $TRACE:String </ioDir>
+         <lastTraced> .LastTraced </lastTraced>
         </trace>
 ```
 ```k
@@ -120,6 +121,13 @@ module CONFIG
 
     syntax StorageVal ::= #sval( ScVal , Int )                       [symbol(StorageVal)]
 
+```
+
+```k-tracing
+    syntax LastTraced ::= ".LastTraced"
+```
+
+```k
 endmodule
 ```
 
