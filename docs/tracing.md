@@ -35,7 +35,7 @@ For the formal specification of how each value and type is serialized, see [`jso
 | Field    | Type             | Description |
 |----------|------------------|-------------|
 | `pos`    | integer or null  | Zero-indexed byte offset of the instruction in the binary. `null` for text format programs (which carry no byte offset information), or for instructions inserted by the semantics during execution rather than decoded from the binary (e.g. during global initialization, or synthetic control flow). |
-| `instr`  | array            | The instruction and its operands. |
+| `instr`  | array            | The instruction and its operands encoded as a JSON array. The first element is the instruction name, followed by its operands, e.g. `i64.const 255` is encoded as `["const", "i64", 255]`. |
 | `stack`  | array            | The value stack at the time of execution. Each entry is a `[type, value]` pair, e.g. `["i64", 4]`. |
 | `locals` | object           | The local variable bindings at the time of execution, keyed by index. Each value is a `[type, value]` pair. |
 
