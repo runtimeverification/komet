@@ -12,6 +12,15 @@ module CONFIG
     configuration
       <soroban>
         <k> .K </k>
+```
+```k-tracing
+        <trace>
+        //TODO: initialize this
+         <ioDir> $TRACE:String </ioDir>
+         <lastTraced> .LastTraced </lastTraced>
+        </trace>
+```
+```k
         <host>
           <callState>
             <callee> Contract(.Bytes) </callee>
@@ -112,6 +121,13 @@ module CONFIG
 
     syntax StorageVal ::= #sval( ScVal , Int )                       [symbol(StorageVal)]
 
+```
+
+```k-tracing
+    syntax LastTraced ::= ".LastTraced"
+```
+
+```k
 endmodule
 ```
 
