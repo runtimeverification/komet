@@ -19,12 +19,12 @@ DEFINITION_DIR = kdist.get('soroban-semantics.llvm')
 
 @pytest.fixture
 def concrete_kasmer() -> Kasmer:
-    return Kasmer(concrete_definition)
+    return Kasmer(concrete_definition())
 
 
 @pytest.fixture
 def symbolic_kasmer() -> Kasmer:
-    return Kasmer(symbolic_definition)
+    return Kasmer(symbolic_definition())
 
 
 @pytest.mark.parametrize('program', TEST_FILES, ids=str)
