@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from functools import cached_property
+from functools import cache, cached_property
 from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 
@@ -11,7 +11,7 @@ from pyk.konvert import kast_to_kore
 from pyk.kore.manip import substitute_vars
 from pyk.kore.prelude import generated_top
 from pyk.kore.syntax import App
-from pyk.ktool.kompile import DefinitionInfo
+from pyk.ktool.kompile import DefinitionInfo, KompileBackend
 from pyk.ktool.kprove import KProve
 from pyk.ktool.krun import KRun
 from pyk.utils import single
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from pyk.kast.inner import KInner, KSort
     from pyk.kast.outer import KDefinition, KFlatModule
     from pyk.kore.syntax import EVar, Pattern
-    from pyk.ktool.kompile import KompileBackend
 
 _LOGGER: Final = logging.getLogger(__name__)
 
@@ -48,6 +47,10 @@ class SorobanDefinition:
     @cached_property
     def backend(self) -> KompileBackend:
         return self.definition_info.backend
+
+    @cached_property
+    def is_concrete(self) -> bool:
+        return self.backend == KompileBackend.LLVM
 
     @cached_property
     def kdefinition(self) -> KDefinition:
@@ -94,9 +97,19 @@ class SorobanDefinition:
         return module
 
 
-concrete_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm'))
-library_definition = SorobanDefinition(kdist.get('soroban-semantics.llvm-library'))
-symbolic_definition = SorobanDefinition(kdist.get('soroban-semantics.haskell'))
+@cache
+def concrete_definition() -> SorobanDefinition:
+    return SorobanDefinition(kdist.get('soroban-semantics.llvm'))
+
+
+@cache
+def library_definition() -> SorobanDefinition:
+    return SorobanDefinition(kdist.get('soroban-semantics.llvm-library'))
+
+
+@cache
+def symbolic_definition() -> SorobanDefinition:
+    return SorobanDefinition(kdist.get('soroban-semantics.haskell'))
 
 
 def subst_on_program_cell(template: Pattern, subst_case: Mapping[EVar, Pattern]) -> Pattern:

@@ -186,18 +186,21 @@ _NAME_TO_CLASSNAME: Final = {
 @dataclass
 class SCType(ABC):
     @staticmethod
-    def from_dict(d: dict[str, Any]) -> SCType:
-        type_name = d['type']
+    def from_xdr_json(x: str | dict[str, Any]) -> SCType:
+        """
+        Construct an SCType instance from XDR-JSON input.
+        """
+        type_name = x if isinstance(x, str) else list(x.keys())[0]
         try:
             cls_name = _NAME_TO_CLASSNAME[type_name]
         except KeyError:
             raise KSorobanError(f'Unsupported SC value type: {type_name!r}') from None
         cls = globals()[cls_name]
-        return cls._from_dict(d)
+        return cls._from_xdr_json(x)
 
     @classmethod
     @abstractmethod
-    def _from_dict(cls: type[SCT], d: dict[str, Any]) -> SCT: ...
+    def _from_xdr_json(cls: type[SCT], d: dict[str, Any]) -> SCT: ...
 
     @abstractmethod
     def strategy(self) -> SearchStrategy: ...
@@ -210,7 +213,7 @@ class SCType(ABC):
 @dataclass
 class SCMonomorphicType(SCType):
     @classmethod
-    def _from_dict(cls: type[SCT], d: dict[str, Any]) -> SCT:
+    def _from_xdr_json(cls: type[SCT], x: str | dict[str, Any]) -> SCT:
         return cls()
 
 
@@ -381,8 +384,10 @@ class SCVecType(SCType):
         self.element = element
 
     @classmethod
-    def _from_dict(cls: type[SCVecType], d: dict[str, Any]) -> SCVecType:
-        return SCVecType(SCType.from_dict(d['element']))
+    def _from_xdr_json(cls: type[SCVecType], x: str | dict[str, Any]) -> SCVecType:
+        assert isinstance(x, dict)
+        d: dict[str, Any] = x['vec']
+        return SCVecType(SCType.from_xdr_json(d['element_type']))
 
     def strategy(self) -> SearchStrategy:
         return strategies.lists(elements=self.element.strategy()).map(tuple).map(SCVec)
@@ -402,9 +407,11 @@ class SCMapType(SCType):
         self.value = value
 
     @classmethod
-    def _from_dict(cls: type[SCMapType], d: dict[str, Any]) -> SCMapType:
-        key = SCType.from_dict(d['key'])
-        value = SCType.from_dict(d['value'])
+    def _from_xdr_json(cls: type[SCMapType], x: str | dict[str, Any]) -> SCMapType:
+        assert isinstance(x, dict)
+        d: dict[str, Any] = x['map']
+        key = SCType.from_xdr_json(d['key_type'])
+        value = SCType.from_xdr_json(d['value_type'])
         return SCMapType(key, value)
 
     def strategy(self) -> SearchStrategy:
