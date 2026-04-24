@@ -23,7 +23,7 @@ from komet.proof import simplify
 
 from .kasmer import Kasmer
 from .telemetry import emit_event
-from .utils import KSorobanError, concrete_definition, symbolic_definition
+from .utils import KSorobanError, KSorobanFailure, concrete_definition, symbolic_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -174,8 +174,16 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
         kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
         emit_event('komet_test_complete')
         sys.exit(0)
+<<<<<<< print-ksoroban-error
+    except KSorobanFailure:
+        # Assume that the failures have been printed already
+        sys.exit(1)
+    except KSorobanError as err:
+        print(str(err), file=sys.stderr)
+=======
     except KSorobanError:
         emit_event('komet_test_complete')
+>>>>>>> master
         sys.exit(1)
 
 

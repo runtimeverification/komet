@@ -42,7 +42,11 @@ from .kast.syntax import (
 )
 from .proof import is_functional, run_claim, run_functional_claim
 from .scval import SCType
+<<<<<<< print-ksoroban-error
+from .utils import KSorobanError, KSorobanFailure, concrete_definition
+=======
 from .utils import KSorobanError, concrete_definition, subst_on_program_cell
+>>>>>>> master
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -338,7 +342,7 @@ class Kasmer:
             pretty_args = ', '.join(self.definition.krun.pretty_print(a) for a in err.counterexample)
             console.print(f'  {err.test_name} ({pretty_args})')
 
-        raise KSorobanError(failed)
+        raise KSorobanFailure(failed)
 
     def deploy_and_prove(
         self,
