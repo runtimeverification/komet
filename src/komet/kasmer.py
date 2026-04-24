@@ -42,7 +42,11 @@ from .kast.syntax import (
 )
 from .proof import is_functional, run_claim, run_functional_claim
 from .scval import SCType
+<<<<<<< print-ksoroban-error
 from .utils import KSorobanError, KSorobanFailure, concrete_definition
+=======
+from .utils import KSorobanError, concrete_definition, subst_on_program_cell
+>>>>>>> master
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -248,6 +252,7 @@ class Kasmer:
             check_exit_code=True,
             max_examples=max_examples,
             handler=KometFuzzHandler(self.definition, task),
+            subst_func=subst_on_program_cell,
         )
 
     def run_prove(
@@ -528,5 +533,7 @@ class FuzzError(Exception):
     counterexample: tuple[KInner, ...]
 
     def __init__(self, test_name: str, counterexample: tuple[KInner, ...]):
+        super().__init__(test_name, counterexample)
+
         self.test_name = test_name
         self.counterexample = counterexample
