@@ -6,7 +6,7 @@ module FILE-SYSTEM
     imports K-IO
 
     
-    // When this number is too big the llvm-backend get's stuck
+    // When this number is too big the llvm-backend gets stuck
     // Not sure what's the biggest number accepted by the backend
     // but for the purpose of the kontrol-node 100mb should be
     // sufficient.

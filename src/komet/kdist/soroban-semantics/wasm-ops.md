@@ -1,10 +1,8 @@
 
 ```k
 requires "configuration.md"
-requires "fs.md"
 module WASM-OPERATIONS
     imports CONFIG-OPERATIONS
-    imports FILE-SYSTEM
 ```
 
 ## Memory Operations

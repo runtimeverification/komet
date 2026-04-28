@@ -179,8 +179,8 @@ The default is `true` (trace everything), with explicit exclusions:
  // -----------------------------------------------------------------
     rule shouldTraceInstr(#br(_))         => false
     rule shouldTraceInstr(_:HelperInstr)  => false
-    rule shouldTraceInstr((invoke _))     => false // TODO invoke is an administrative (helper) instruction. fix it's sort in wasm-semantics
-    rule shouldTraceInstr(trap)           => false // TODO fix it's sort in wasm-semantics
+    rule shouldTraceInstr((invoke _))     => false // TODO invoke is an administrative (helper) instruction. fix its sort in wasm-semantics
+    rule shouldTraceInstr(trap)           => false // TODO fix its sort in wasm-semantics
     rule shouldTraceInstr(_)              => true  [owise]
 ```
 

@@ -15,7 +15,6 @@ module CONFIG
 ```
 ```k-tracing
         <trace>
-        //TODO: initialize this
          <ioDir> $TRACE:String </ioDir>
          <lastTraced> .LastTraced </lastTraced>
         </trace>
