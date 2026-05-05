@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -101,6 +102,30 @@ def test_prove_adder_with_always_allocate(tmp_path: Path, symbolic_kasmer: Kasme
 
     # Then
     symbolic_kasmer.deploy_and_prove(contract_wasm, (), 'test_add_i64_comm', True, tmp_path)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason='Known limitation: consecutive identical no-intermediate instructions are not both logged in text format. '
+    'See tracing.md for details on the <lastTraced> deduplication mechanism.',
+)
+def test_tracing_consecutive_nop(tmp_path: Path) -> None:
+    """Exposes the <lastTraced> deduplication bug for text format programs.
+
+    The contract has two consecutive nop instructions. Because nop leaves no
+    intermediate value in <instrs>, resetLastTraced never fires between them,
+    so the second nop is silently skipped by insert-traceInstr.
+    This test asserts that both are logged, which currently fails.
+    """
+    program = TEST_DATA / 'consecutive_nop.wast'
+    trace_file = tmp_path / 'trace.txt'
+    cmap = {'TRACE': str_dv(str(trace_file)).text}
+    pmap = {'TRACE': 'cat'}
+    _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
+
+    records = [json.loads(line) for line in trace_file.read_text().splitlines()]
+    nop_count = sum(1 for r in records if r['instr'] == ['nop'])
+    assert nop_count == 2, f'Expected 2 nop entries in trace, got {nop_count}'
 
 
 def test_bindings(tmp_path: Path, concrete_kasmer: Kasmer) -> None:
