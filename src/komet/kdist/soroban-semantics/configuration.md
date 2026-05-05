@@ -16,7 +16,7 @@ module CONFIG
 ```k-tracing
         <trace>
          <ioDir> $TRACE:String </ioDir>
-         <lastTraced> .LastTraced </lastTraced>
+         <alreadyTraced> false </alreadyTraced>
         </trace>
 ```
 ```k

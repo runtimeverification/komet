@@ -104,18 +104,12 @@ def test_prove_adder_with_always_allocate(tmp_path: Path, symbolic_kasmer: Kasme
     symbolic_kasmer.deploy_and_prove(contract_wasm, (), 'test_add_i64_comm', True, tmp_path)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason='Known limitation: consecutive identical no-intermediate instructions are not both logged in text format. '
-    'See tracing.md for details on the <lastTraced> deduplication mechanism.',
-)
 def test_tracing_consecutive_nop(tmp_path: Path) -> None:
-    """Exposes the <lastTraced> deduplication bug for text format programs.
+    """Regression test for the <alreadyTraced> deduplication mechanism.
 
-    The contract has two consecutive nop instructions. Because nop leaves no
-    intermediate value in <instrs>, resetLastTraced never fires between them,
-    so the second nop is silently skipped by insert-traceInstr.
-    This test asserts that both are logged, which currently fails.
+    The contract has two consecutive nop instructions. Both must appear in the trace.
+    This guards against regressions of the bug fixed by replacing <lastTraced> with
+    <alreadyTraced> + explicit #resetAlreadyTraced continuation.
     """
     program = TEST_DATA / 'consecutive_nop.wast'
     trace_file = tmp_path / 'trace.txt'
