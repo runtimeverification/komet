@@ -39,9 +39,9 @@ The three `IValType2JSON`, `FValType2JSON`, and `RefValType2JSON` functions hand
                   | FValType2JSON(FValType)      [function, total]
                   | RefValType2JSON(RefValType)  [function, total]
  // -----------------------------------------------------------
-    rule ValType2JSON(T) => IValType2JSON(T)
-    rule ValType2JSON(T) => FValType2JSON(T)
-    rule ValType2JSON(T) => RefValType2JSON(T)
+    rule ValType2JSON(T:IValType)   => IValType2JSON(T)
+    rule ValType2JSON(T:FValType)   => FValType2JSON(T)
+    rule ValType2JSON(T:RefValType) => RefValType2JSON(T)
     rule IValType2JSON(i32) => "i32"
     rule IValType2JSON(i64) => "i64"
     rule FValType2JSON(f32) => "f32"
@@ -179,7 +179,7 @@ The first element is always the instruction name as a string.
 Additional elements carry the instruction's operands — types, operator names (delegated to the numeric and memory operation functions above), indices, and offsets as needed.
 
 ```k
-    syntax JSON ::= Instr2JSON(Instr)     [function]
+    syntax JSON ::= Instr2JSON(Instr)     [function, total]
  // ------------------------------------------------
     rule Instr2JSON(hostCall(MOD, FUNC, _)) => ["hostCall", MOD, FUNC]
     rule Instr2JSON(#call(IDX))             => ["call", IDX]
@@ -228,6 +228,7 @@ Additional elements carry the instruction's operands — types, operator names (
     rule Instr2JSON(#table.init(I, J)) => ["table.init", I, J]
     rule Instr2JSON(#elem.drop(I))     => ["elem.drop",  I]
 
+    rule Instr2JSON(_) => [ "unknown" ] [owise]
 ```
 
 `Ints2JSONs` converts a list of integers into a sequence of JSON values, used by `Instr2JSON` to serialize the branch target list of `br_table`.

@@ -8,7 +8,7 @@ module FILE-SYSTEM
     
     // When this number is too big the llvm-backend gets stuck
     // Not sure what's the biggest number accepted by the backend
-    // but for the purpose of the kontrol-node 100mb should be
+    // but for the purpose of the komet-node 100mb should be
     // sufficient.
     syntax Int ::= "MAX_READ" [alias]
     // ------------------------------
