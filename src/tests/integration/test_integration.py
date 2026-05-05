@@ -1,20 +1,23 @@
+import json
 from pathlib import Path
 
 import pytest
 from pyk.kdist import kdist
+from pyk.kore.prelude import str_dv
 from pyk.ktool.krun import _krun
 
 from komet.kasmer import Kasmer
 from komet.komet import _read_config_file
-from komet.utils import KSorobanError, concrete_definition, symbolic_definition
+from komet.utils import KSorobanError, concrete_definition, concrete_tracing_definition, symbolic_definition
 
 TEST_DATA = (Path(__file__).parent / 'data').resolve(strict=True)
-TEST_FILES = TEST_DATA.glob('*.wast')
+TEST_FILES = tuple(TEST_DATA.glob('*.wast'))
 
 SOROBAN_CONTRACTS_DIR = TEST_DATA / 'soroban' / 'contracts'
-SOROBAN_TEST_CONTRACTS = SOROBAN_CONTRACTS_DIR.glob('test_*')
+SOROBAN_TEST_CONTRACTS = tuple(SOROBAN_CONTRACTS_DIR.glob('test_*'))
 
 DEFINITION_DIR = kdist.get('soroban-semantics.llvm')
+TRACING_DEFINITION_DIR = kdist.get('soroban-semantics.llvm-tracing')
 
 
 @pytest.fixture
@@ -27,9 +30,30 @@ def symbolic_kasmer() -> Kasmer:
     return Kasmer(symbolic_definition)
 
 
+@pytest.fixture
+def tracing_kasmer() -> Kasmer:
+    return Kasmer(concrete_tracing_definition)
+
+
 @pytest.mark.parametrize('program', TEST_FILES, ids=str)
 def test_run(program: Path, tmp_path: Path) -> None:
+    # Runs wast files with the LLVM backend.
     _krun(input_file=program, definition_dir=DEFINITION_DIR, check=True)
+
+
+@pytest.mark.parametrize('program', TEST_FILES, ids=str)
+def test_run_tracing_smoke(program: Path, tmp_path: Path) -> None:
+    """
+    Runs .wast files with tracing enabled semantics using the LLVM backend.
+
+    Smoke test: only checks that execution succeeds.
+    Does not validate the generated trace.
+    """
+    trace_file = tmp_path / 'trace.txt'
+    cmap = {'TRACE': str_dv(str(trace_file)).text}
+    pmap = {'TRACE': 'cat'}
+    _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
+    assert trace_file.is_file(), 'Could not generate trace file'
 
 
 @pytest.mark.parametrize('contract_path', SOROBAN_TEST_CONTRACTS, ids=lambda p: str(p.stem))
@@ -46,6 +70,24 @@ def test_komet(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> 
         concrete_kasmer.deploy_and_run(contract_wasm, child_wasms)
 
 
+@pytest.mark.parametrize('contract_path', SOROBAN_TEST_CONTRACTS, ids=lambda p: str(p.stem))
+def test_komet_tracing(contract_path: Path, tmp_path: Path) -> None:
+    # Given
+    trace_file = tmp_path / 'trace.txt'
+    kasmer = Kasmer(definition=concrete_tracing_definition, trace_file=trace_file)
+    child_wasms = _read_config_file(kasmer, contract_path)
+    contract_wasm = kasmer.build_soroban_contract(contract_path, tmp_path)
+
+    # Then
+    if contract_path.stem.endswith('_fail'):
+        with pytest.raises(KSorobanError):
+            kasmer.deploy_and_run(contract_wasm, child_wasms)
+    else:
+        kasmer.deploy_and_run(contract_wasm, child_wasms)
+
+    assert trace_file.is_file(), 'Could not generate trace file'
+
+
 def test_prove_adder(tmp_path: Path, symbolic_kasmer: Kasmer) -> None:
     # Given
     contract_wasm = symbolic_kasmer.build_soroban_contract(SOROBAN_CONTRACTS_DIR / 'test_adder', tmp_path)
@@ -60,6 +102,52 @@ def test_prove_adder_with_always_allocate(tmp_path: Path, symbolic_kasmer: Kasme
 
     # Then
     symbolic_kasmer.deploy_and_prove(contract_wasm, (), 'test_add_i64_comm', True, tmp_path)
+
+
+def test_tracing_consecutive_nop(tmp_path: Path) -> None:
+    """Regression test for the <alreadyTraced> deduplication mechanism.
+
+    The contract has two consecutive nop instructions. Both must appear in the trace.
+    This guards against regressions of the bug fixed by replacing <lastTraced> with
+    <alreadyTraced> + explicit #resetAlreadyTraced continuation.
+    """
+    program = TEST_DATA / 'consecutive_nop.wast'
+    trace_file = tmp_path / 'trace.txt'
+    cmap = {'TRACE': str_dv(str(trace_file)).text}
+    pmap = {'TRACE': 'cat'}
+    _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
+
+    records = [json.loads(line) for line in trace_file.read_text().splitlines()]
+    nop_count = sum(1 for r in records if r['instr'] == ['nop'])
+    assert nop_count == 2, f'Expected 2 nop entries in trace, got {nop_count}'
+
+
+def test_tracing_double_u256(tmp_path: Path) -> None:
+    """Regression test for the <alreadyTraced> mechanism covering two scenarios at once.
+
+    The contract (double_u256.wast) contains:
+    - Two consecutive identical instructions: local.get 0 ; local.get 0
+      (consecutive no-intermediate instructions that the old <lastTraced> mechanism would deduplicate)
+    - A block whose body instructions must all be traced
+      (guarding the block-expansion fix: #resetAlreadyTraced at the start of the body)
+
+    Asserts that both local.get 0 entries appear and that instructions inside the
+    block (local.set 1) and after it (local.get 1) are also present.
+    """
+    program = TEST_DATA / 'double_u256.wast'
+    trace_file = tmp_path / 'trace.txt'
+    cmap = {'TRACE': str_dv(str(trace_file)).text}
+    pmap = {'TRACE': 'cat'}
+    _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
+
+    records = [json.loads(line) for line in trace_file.read_text().splitlines()]
+    instrs = [r['instr'] for r in records]
+
+    local_get_0_count = sum(1 for i in instrs if i == ['local.get', 0])
+    assert local_get_0_count == 2, f'Expected 2 local.get 0 entries in trace, got {local_get_0_count}'
+
+    assert ['local.set', 1] in instrs, 'local.set 1 (inside block) missing from trace'
+    assert ['local.get', 1] in instrs, 'local.get 1 (after block) missing from trace'
 
 
 def test_bindings(tmp_path: Path, concrete_kasmer: Kasmer) -> None:
