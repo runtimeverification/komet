@@ -122,6 +122,34 @@ def test_tracing_consecutive_nop(tmp_path: Path) -> None:
     assert nop_count == 2, f'Expected 2 nop entries in trace, got {nop_count}'
 
 
+def test_tracing_double_u256(tmp_path: Path) -> None:
+    """Regression test for the <alreadyTraced> mechanism covering two scenarios at once.
+
+    The contract (double_u256.wast) contains:
+    - Two consecutive identical instructions: local.get 0 ; local.get 0
+      (consecutive no-intermediate instructions that the old <lastTraced> mechanism would deduplicate)
+    - A block whose body instructions must all be traced
+      (guarding the block-expansion fix: #resetAlreadyTraced at the start of the body)
+
+    Asserts that both local.get 0 entries appear and that instructions inside the
+    block (local.set 1) and after it (local.get 1) are also present.
+    """
+    program = TEST_DATA / 'double_u256.wast'
+    trace_file = tmp_path / 'trace.txt'
+    cmap = {'TRACE': str_dv(str(trace_file)).text}
+    pmap = {'TRACE': 'cat'}
+    _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
+
+    records = [json.loads(line) for line in trace_file.read_text().splitlines()]
+    instrs = [r['instr'] for r in records]
+
+    local_get_0_count = sum(1 for i in instrs if i == ['local.get', 0])
+    assert local_get_0_count == 2, f'Expected 2 local.get 0 entries in trace, got {local_get_0_count}'
+
+    assert ['local.set', 1] in instrs, 'local.set 1 (inside block) missing from trace'
+    assert ['local.get', 1] in instrs, 'local.get 1 (after block) missing from trace'
+
+
 def test_bindings(tmp_path: Path, concrete_kasmer: Kasmer) -> None:
     # Given
     contract_path = SOROBAN_CONTRACTS_DIR / 'valtypes'
