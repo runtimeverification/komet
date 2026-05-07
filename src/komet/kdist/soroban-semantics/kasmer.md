@@ -3,7 +3,13 @@
 requires "soroban.md"
 requires "cheatcodes.md"
 requires "komet-lemmas.md"
+```
 
+```k-tracing
+requires "tracing.md"
+```
+
+```k
 module KASMER-SYNTAX
   imports WASM-TEXT-SYNTAX
   imports WASM-TEXT-COMMON-SYNTAX
@@ -35,6 +41,13 @@ module KASMER
     imports CHEATCODES
     imports KASMER-SYNTAX-COMMON
     imports KSOROBAN-LEMMAS
+```
+
+```k-tracing
+    imports TRACING
+```
+
+```k
 
     configuration
       <kasmer>

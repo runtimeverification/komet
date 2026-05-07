@@ -23,7 +23,7 @@ from komet.proof import simplify
 
 from .kasmer import Kasmer
 from .telemetry import emit_event
-from .utils import KSorobanError, concrete_definition, symbolic_definition
+from .utils import KSorobanError, concrete_definition, concrete_tracing_definition, symbolic_definition
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -45,14 +45,18 @@ def main() -> None:
     args, rest = parser.parse_known_args()
 
     if args.command == 'run':
-        _exec_run(program=args.program, backend=args.backend)
+        if args.trace_file is not None and args.backend != Backend.LLVM:
+            raise ValueError('Tracing is only available with the LLVM backend')
+        _exec_run(program=args.program, backend=args.backend, trace_file=args.trace_file)
     elif args.command == 'kast':
         _exec_kast(program=args.program, backend=args.backend, output=args.output)
     elif args.command == 'test':
         wasm = Path(args.wasm.name) if args.wasm is not None else None
         if args.max_examples < 1:
             raise ValueError(f'--max-examples must be a positive integer (greater than 0), given {args.max_examples}')
-        _exec_test(dir_path=args.directory, wasm=wasm, max_examples=args.max_examples, id=args.id)
+        _exec_test(
+            dir_path=args.directory, wasm=wasm, max_examples=args.max_examples, id=args.id, trace_file=args.trace_file
+        )
     elif args.command == 'prove':
         if args.prove_command is None or args.prove_command == 'run':
             wasm = Path(args.wasm.name) if args.wasm is not None else None
@@ -92,14 +96,21 @@ def main() -> None:
     raise AssertionError()
 
 
-def _exec_run(*, program: Path, backend: Backend) -> None:
-    definition_dir = kdist.get(f'soroban-semantics.{backend.value}')
+def _exec_run(*, program: Path, backend: Backend, trace_file: Path | None) -> None:
+    if backend == Backend.HASKELL:
+        definition = symbolic_definition
+    elif trace_file:
+        definition = concrete_tracing_definition
+    else:
+        definition = concrete_definition
+
     emit_event(
         'komet_run_start',
     )
 
     with _preprocessed(program) as input_file:
-        proc_res = _krun(definition_dir=definition_dir, input_file=input_file, check=False)
+        cmap, pmap = Kasmer(definition=definition, trace_file=trace_file).config_vars()
+        proc_res = _krun(definition_dir=definition.path, input_file=input_file, cmap=cmap, pmap=pmap, check=False)
 
     emit_event(
         'komet_run_complete',
@@ -150,7 +161,9 @@ def _exec_kast(*, program: Path, backend: Backend, output: KAstOutput | None) ->
     _exit_with_output(proc_res)
 
 
-def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, id: str | None) -> None:
+def _exec_test(
+    *, dir_path: Path | None, wasm: Path | None, max_examples: int, id: str | None, trace_file: Path | None
+) -> None:
     """Run a soroban test contract given its compiled wasm file.
 
     This will get the bindings for the contract and run all of the test functions.
@@ -159,7 +172,10 @@ def _exec_test(*, dir_path: Path | None, wasm: Path | None, max_examples: int, i
     Exits successfully when all the tests pass.
     """
     dir_path = Path.cwd() if dir_path is None else dir_path
-    kasmer = Kasmer(concrete_definition)
+    kasmer = Kasmer(
+        definition=concrete_tracing_definition if trace_file else concrete_definition,
+        trace_file=trace_file,
+    )
     emit_event('komet_test_start')
     child_wasms: tuple[Path, ...] = ()
 
@@ -277,6 +293,7 @@ def _argument_parser() -> ArgumentParser:
 
     run_parser = command_parser.add_parser('run', help='run a concrete test')
     _add_common_arguments(run_parser)
+    run_parser.add_argument('--trace-file', type=Path, help='Path to trace output')
 
     kast_parser = command_parser.add_parser('kast', help='parse a concrete test and output it in a supported format')
     _add_common_arguments(kast_parser)
@@ -286,6 +303,7 @@ def _argument_parser() -> ArgumentParser:
     test_parser.add_argument(
         '--max-examples', type=int, default=100, help='Maximum number of inputs for fuzzing (default: 100)'
     )
+    test_parser.add_argument('--trace-file', type=Path, help='Path to trace output')
     _add_common_test_arguments(test_parser)
 
     prove_parser = command_parser.add_parser(

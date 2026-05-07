@@ -17,6 +17,7 @@ from pyk.kast.prelude.ml import mlEqualsTrue
 from pyk.kast.prelude.utils import token
 from pyk.konvert import kast_to_kore, kore_to_kast
 from pyk.kore.parser import KoreParser
+from pyk.kore.prelude import str_dv
 from pyk.kore.syntax import EVar, SortApp
 from pyk.ktool.kfuzz import KFuzzHandler, fuzz
 from pyk.ktool.krun import KRunOutput
@@ -42,7 +43,7 @@ from .kast.syntax import (
 )
 from .proof import is_functional, run_claim, run_functional_claim
 from .scval import SCType
-from .utils import KSorobanError, concrete_definition, subst_on_program_cell
+from .utils import KSorobanError, subst_on_program_cell
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -65,10 +66,14 @@ class Kasmer:
 
     definition: SorobanDefinition
     extra_module: KFlatModule | None
+    trace_file: Path | None
 
-    def __init__(self, definition: SorobanDefinition, extra_module: KFlatModule | None = None) -> None:
+    def __init__(
+        self, definition: SorobanDefinition, extra_module: KFlatModule | None = None, trace_file: Path | None = None
+    ) -> None:
         self.definition = definition
         self.extra_module = extra_module
+        self.trace_file = trace_file
 
     def _which(self, cmd: str) -> Path:
         path_str = shutil.which(cmd)
@@ -85,6 +90,13 @@ class Kasmer:
     @cached_property
     def _cargo_bin(self) -> Path:
         return self._which('cargo')
+
+    def config_vars(self) -> tuple[Mapping[str, str] | None, Mapping[str, str] | None]:
+        if self.trace_file:
+            cmap = {'TRACE': str_dv(str(self.trace_file)).text}
+            pmap = {'TRACE': 'cat'}
+            return cmap, pmap
+        return None, None
 
     def contract_bindings(self, wasm_contract: Path) -> list[ContractBinding]:
         """Reads a soroban wasm contract, and returns a list of the function bindings for it."""
@@ -141,9 +153,8 @@ class Kasmer:
         """Get a kast term from a wasm program."""
         return wasm2kast(open(wasm, 'rb'))
 
-    @staticmethod
     def deploy_test(
-        contract: KInner, child_contracts: tuple[KInner, ...], init: bool
+        self, contract: KInner, child_contracts: tuple[KInner, ...], init: bool
     ) -> tuple[KInner, dict[str, KInner]]:
         """Takes a wasm soroban contract and its dependencies as kast terms and deploys them in a fresh configuration.
 
@@ -185,12 +196,15 @@ class Kasmer:
             ]
         )
 
+        cmap, pmap = self.config_vars()
         # Run the steps and grab the resulting config as a starting place to call transactions
-        proc_res = concrete_definition.krun_with_kast(steps, sort=KSort('Steps'), output=KRunOutput.KORE)
-        assert proc_res.returncode == 0
+        proc_res = self.definition.krun_with_kast(
+            steps, sort=KSort('Steps'), output=KRunOutput.KORE, cmap=cmap, pmap=pmap
+        )
+        assert proc_res.returncode == 0, proc_res.stderr
 
         kore_result = KoreParser(proc_res.stdout).pattern()
-        kast_result = kore_to_kast(concrete_definition.kdefinition, kore_result)
+        kast_result = kore_to_kast(self.definition.kdefinition, kore_result)
 
         conf, subst = split_config_from(kast_result)
 
