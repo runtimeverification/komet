@@ -143,16 +143,16 @@
         "uv2nix": "uv2nix_2"
       },
       "locked": {
-        "lastModified": 1778261905,
-        "narHash": "sha256-J6Pci+TA9h1CQZVfFMn63QRlepPtqQnDJgktgl/C00Q=",
+        "lastModified": 1778594571,
+        "narHash": "sha256-Y8Ape8of1FBkDAwIxk3vC0s0Yrkn/7Fa/u4MaKI8+Jo=",
         "owner": "runtimeverification",
         "repo": "k",
-        "rev": "c41cb6d305c6eb116f061d588e06c17e2842d848",
+        "rev": "6ee29000016c6addb83b39ac865860f9542b3ebf",
         "type": "github"
       },
       "original": {
         "owner": "runtimeverification",
-        "ref": "v7.1.322",
+        "ref": "v7.1.323",
         "repo": "k",
         "type": "github"
       }
@@ -205,11 +205,11 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1777954456,
-        "narHash": "sha256-hGdgeU2Nk87RAuZyYjyDjFL6LK7dAZN5RE9+hrDTkDU=",
+        "lastModified": 1778443072,
+        "narHash": "sha256-zi7/fsqM/kFdNuED//4WOCUtezGtKKqRNORjMvfwjnA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "549bd84d6279f9852cae6225e372cc67fb91a4c1",
+        "rev": "da5ad661ba4e5ef59ba743f0d112cbc30e474f32",
         "type": "github"
       },
       "original": {
@@ -537,11 +537,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1778383025,
-        "narHash": "sha256-UK7s2LJS1YwIMFL7PSaNJvLXT9pyRgm7X+HNPgMXiEE=",
+        "lastModified": 1778555852,
+        "narHash": "sha256-55EmwooVAS4UpA0oWd5wilKPRqCiHD5BAej9QiNwheY=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "4568a557ca325ff81fb354382d4a9968daa1001a",
+        "rev": "f29b0f7a9f367e0056b716f8aa137cb41e784444",
         "type": "github"
       },
       "original": {
@@ -822,16 +822,16 @@
         "uv2nix": "uv2nix_3"
       },
       "locked": {
-        "lastModified": 1778457583,
-        "narHash": "sha256-IHPmaOutjFZ/QCqdkFUNX7yhbvQYdVO8CrKMTWFA4Zc=",
+        "lastModified": 1778611612,
+        "narHash": "sha256-8dZSWsWkpsYxYnu8wUZ1+/yuyW1vXxmkmSyaGJbJMlc=",
         "owner": "runtimeverification",
         "repo": "wasm-semantics",
-        "rev": "6fecaa4bc3cdba078f1235515a2a318c809db1df",
+        "rev": "8701ee23595115c858a8ba6324cea9aee5569f3e",
         "type": "github"
       },
       "original": {
         "owner": "runtimeverification",
-        "ref": "v0.1.153",
+        "ref": "v0.1.154",
         "repo": "wasm-semantics",
         "type": "github"
       }
