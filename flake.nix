@@ -7,7 +7,7 @@
   
     flake-utils.url = "github:numtide/flake-utils";
 
-    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.153";
+    wasm-semantics.url = "github:runtimeverification/wasm-semantics/v0.1.155";
     wasm-semantics.inputs.nixpkgs.follows = "nixpkgs";
     k-framework.follows = "wasm-semantics/k-framework";
 
