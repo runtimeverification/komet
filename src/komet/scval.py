@@ -385,7 +385,8 @@ class SCVecType(SCType):
 
     @classmethod
     def _from_xdr_json(cls: type[SCVecType], x: str | dict[str, Any]) -> SCVecType:
-        assert isinstance(x, dict)
+        if not isinstance(x, dict):
+            raise ValueError(f'Expected dict, got str: {x!r}')
         d: dict[str, Any] = x['vec']
         return SCVecType(SCType.from_xdr_json(d['element_type']))
 
@@ -408,7 +409,8 @@ class SCMapType(SCType):
 
     @classmethod
     def _from_xdr_json(cls: type[SCMapType], x: str | dict[str, Any]) -> SCMapType:
-        assert isinstance(x, dict)
+        if not isinstance(x, dict):
+            raise ValueError(f'Expected dict, got str: {x!r}')
         d: dict[str, Any] = x['map']
         key = SCType.from_xdr_json(d['key_type'])
         value = SCType.from_xdr_json(d['value_type'])
