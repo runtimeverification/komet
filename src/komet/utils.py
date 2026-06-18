@@ -103,6 +103,11 @@ def concrete_definition() -> SorobanDefinition:
 
 
 @cache
+def concrete_tracing_definition() -> SorobanDefinition:
+    return SorobanDefinition(kdist.get('soroban-semantics.llvm-tracing'))
+
+
+@cache
 def library_definition() -> SorobanDefinition:
     return SorobanDefinition(kdist.get('soroban-semantics.llvm-library'))
 
