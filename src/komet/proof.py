@@ -25,9 +25,9 @@ if TYPE_CHECKING:
 @contextmanager
 def _explore_context(id: str, bug_report: BugReport | None) -> Iterator[KCFGExplore]:
     with cterm_symbolic(
-        definition=symbolic_definition.kdefinition,
-        definition_dir=symbolic_definition.path,
-        llvm_definition_dir=library_definition.path,
+        definition=symbolic_definition().kdefinition,
+        definition_dir=symbolic_definition().path,
+        llvm_definition_dir=library_definition().path,
         id=id if bug_report else None,
         bug_report=bug_report,
     ) as cts:
@@ -47,7 +47,7 @@ def run_claim(
     if proof_dir is not None and APRProof.proof_data_exists(id, proof_dir):
         proof = APRProof.read_proof_data(proof_dir, id)
     else:
-        proof = APRProof.from_claim(symbolic_definition.kdefinition, claim=claim, logs={}, proof_dir=proof_dir)
+        proof = APRProof.from_claim(symbolic_definition().kdefinition, claim=claim, logs={}, proof_dir=proof_dir)
 
     with _explore_context(id, bug_report) as kcfg_explore:
         prover = APRProver(kcfg_explore, extra_module=extra_module)
@@ -70,7 +70,7 @@ def run_functional_claim(
     if proof_dir is not None and EqualityProof.proof_exists(claim.label, proof_dir):
         proof = EqualityProof.read_proof_data(proof_dir, claim.label)
     else:
-        proof = EqualityProof.from_claim(claim, symbolic_definition.kdefinition, proof_dir=proof_dir)
+        proof = EqualityProof.from_claim(claim, symbolic_definition().kdefinition, proof_dir=proof_dir)
 
     with _explore_context(claim.label, bug_report) as kcfg_explore:
         prover = ImpliesProver(proof, kcfg_explore=kcfg_explore)
@@ -81,7 +81,7 @@ def run_functional_claim(
 
 
 def simplify(kast: KInner, bug_report: BugReport | None = None) -> KInner:
-    pat = kast_to_kore(symbolic_definition.kdefinition, kast)
+    pat = kast_to_kore(symbolic_definition().kdefinition, kast)
     with _explore_context('', bug_report=bug_report) as kcfg_explore:
         simplified, _ = kcfg_explore.cterm_symbolic._kore_client.simplify(pat)
-        return kore_to_kast(symbolic_definition.kdefinition, simplified)
+        return kore_to_kast(symbolic_definition().kdefinition, simplified)

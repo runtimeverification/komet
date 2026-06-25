@@ -1,6 +1,7 @@
 #![no_std]
 use soroban_sdk::{contract, contractimpl, symbol_short, Address, Bytes, Env, FromVal, Symbol, Val};
 
+#[link(wasm_import_module = "env")]
 extern "C" {
     fn kasmer_create_contract(addr_val: u64, hash_val: u64) -> u64;
 }

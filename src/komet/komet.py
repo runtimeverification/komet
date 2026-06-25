@@ -98,11 +98,11 @@ def main() -> None:
 
 def _exec_run(*, program: Path, backend: Backend, trace_file: Path | None) -> None:
     if backend == Backend.HASKELL:
-        definition = symbolic_definition
+        definition = symbolic_definition()
     elif trace_file:
-        definition = concrete_tracing_definition
+        definition = concrete_tracing_definition()
     else:
-        definition = concrete_definition
+        definition = concrete_definition()
 
     emit_event(
         'komet_run_start',
@@ -127,7 +127,7 @@ def _exec_prove_raw(
     bug_report: BugReport | None = None,
 ) -> None:
     emit_event('komet_prove_raw_start')
-    kasmer = Kasmer(symbolic_definition, extra_module)
+    kasmer = Kasmer(symbolic_definition(), extra_module)
     try:
         kasmer.prove_raw(claim_file, label, proof_dir, bug_report)
         exit(0)
@@ -172,10 +172,11 @@ def _exec_test(
     Exits successfully when all the tests pass.
     """
     dir_path = Path.cwd() if dir_path is None else dir_path
-    kasmer = Kasmer(
-        definition=concrete_tracing_definition if trace_file else concrete_definition,
-        trace_file=trace_file,
-    )
+    if trace_file:
+        definition = concrete_tracing_definition()
+    else:
+        definition = concrete_definition()
+    kasmer = Kasmer(definition=definition, trace_file=trace_file)
     emit_event('komet_test_start')
     child_wasms: tuple[Path, ...] = ()
 
@@ -206,7 +207,7 @@ def _exec_prove_run(
     bug_report: BugReport | None = None,
 ) -> None:
     dir_path = Path.cwd() if dir_path is None else dir_path
-    kasmer = Kasmer(symbolic_definition, extra_module)
+    kasmer = Kasmer(symbolic_definition(), extra_module)
 
     child_wasms: tuple[Path, ...] = ()
     emit_event('komet_prove_run_start')
@@ -243,7 +244,7 @@ def _read_config_file(kasmer: Kasmer, dir_path: Path | None = None) -> tuple[Pat
 
 def _exec_prove_view(*, proof_dir: Path, id: str) -> None:
     proof = APRProof.read_proof_data(proof_dir, id)
-    viewer = APRProofViewer(proof, symbolic_definition.krun)
+    viewer = APRProofViewer(proof, symbolic_definition().krun)
     viewer.run()
     sys.exit(0)
 
@@ -251,7 +252,7 @@ def _exec_prove_view(*, proof_dir: Path, id: str) -> None:
 def _exec_prove_view_node(*, proof_dir: Path, id: str, node: int) -> None:
     proof = APRProof.read_proof_data(proof_dir, id)
     config = proof.kcfg.node(node).cterm.config
-    print(symbolic_definition.krun.pretty_print(config))
+    print(symbolic_definition().krun.pretty_print(config))
     sys.exit(0)
 
 
@@ -284,7 +285,7 @@ def extra_module_arg(extra_module: str) -> KFlatModule:
     extra_module_path = Path(extra_module_file)
     if not extra_module_path.is_file():
         raise ValueError(f'Supplied --extra-module path is not a file: {extra_module_path}')
-    return symbolic_definition.parse_lemmas_module(extra_module_path, extra_module_name)
+    return symbolic_definition().parse_lemmas_module(extra_module_path, extra_module_name)
 
 
 def _argument_parser() -> ArgumentParser:

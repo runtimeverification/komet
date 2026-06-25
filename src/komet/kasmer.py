@@ -43,7 +43,7 @@ from .kast.syntax import (
 )
 from .proof import is_functional, run_claim, run_functional_claim
 from .scval import SCType
-from .utils import KSorobanError, subst_on_program_cell
+from .utils import KSorobanError, concrete_definition, subst_on_program_cell
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -84,6 +84,12 @@ class Kasmer:
         return Path(path_str)
 
     @cached_property
+    def concrete_definition(self) -> SorobanDefinition:
+        if self.definition.is_concrete:
+            return self.definition
+        return concrete_definition()
+
+    @cached_property
     def _stellar_bin(self) -> Path:
         return self._which('stellar')
 
@@ -101,20 +107,22 @@ class Kasmer:
     def contract_bindings(self, wasm_contract: Path) -> list[ContractBinding]:
         """Reads a soroban wasm contract, and returns a list of the function bindings for it."""
         proc_res = run_process(
-            [str(self._stellar_bin), 'contract', 'bindings', 'json', '--wasm', str(wasm_contract)], check=False
+            [str(self._stellar_bin), 'contract', 'info', 'interface', '--output', 'json', '--wasm', str(wasm_contract)],
+            check=True,
         )
-        bindings_list = json.loads(proc_res.stdout)
+        spec_entries = json.loads(proc_res.stdout)
         bindings = []
-        for binding_dict in bindings_list:
-            if binding_dict['type'] != 'function':
+        for spec_entry in spec_entries:
+            if 'function_v0' not in spec_entry:
                 continue
-            name = binding_dict['name']
+            function_spec = spec_entry['function_v0']
+            name = function_spec['name']
             inputs = []
-            for input_dict in binding_dict['inputs']:
-                inputs.append(SCType.from_dict(input_dict['value']))
+            for input_spec in function_spec['inputs']:
+                inputs.append(SCType.from_xdr_json(input_spec['type_']))
             outputs = []
-            for output_dict in binding_dict['outputs']:
-                outputs.append(SCType.from_dict(output_dict))
+            for output_spec in function_spec['outputs']:
+                outputs.append(SCType.from_xdr_json(output_spec))
             bindings.append(ContractBinding(name, tuple(inputs), tuple(outputs)))
         return bindings
 
@@ -198,13 +206,13 @@ class Kasmer:
 
         cmap, pmap = self.config_vars()
         # Run the steps and grab the resulting config as a starting place to call transactions
-        proc_res = self.definition.krun_with_kast(
+        proc_res = self.concrete_definition.krun_with_kast(
             steps, sort=KSort('Steps'), output=KRunOutput.KORE, cmap=cmap, pmap=pmap
         )
-        assert proc_res.returncode == 0, proc_res.stderr
+        assert proc_res.returncode == 0
 
         kore_result = KoreParser(proc_res.stdout).pattern()
-        kast_result = kore_to_kast(self.definition.kdefinition, kore_result)
+        kast_result = kore_to_kast(self.concrete_definition.kdefinition, kore_result)
 
         conf, subst = split_config_from(kast_result)
 

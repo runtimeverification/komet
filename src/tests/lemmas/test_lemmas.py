@@ -22,7 +22,7 @@ SPEC_FILES = SPEC_DATA.glob('*.k')
 
 @pytest.fixture
 def symbolic_kasmer() -> Kasmer:
-    return Kasmer(symbolic_definition)
+    return Kasmer(symbolic_definition())
 
 
 @pytest.mark.parametrize('claim_file', SPEC_FILES, ids=str)

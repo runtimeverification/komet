@@ -22,17 +22,17 @@ TRACING_DEFINITION_DIR = kdist.get('soroban-semantics.llvm-tracing')
 
 @pytest.fixture
 def concrete_kasmer() -> Kasmer:
-    return Kasmer(concrete_definition)
+    return Kasmer(concrete_definition())
 
 
 @pytest.fixture
 def symbolic_kasmer() -> Kasmer:
-    return Kasmer(symbolic_definition)
+    return Kasmer(symbolic_definition())
 
 
 @pytest.fixture
 def tracing_kasmer() -> Kasmer:
-    return Kasmer(concrete_tracing_definition)
+    return Kasmer(concrete_tracing_definition())
 
 
 @pytest.mark.parametrize('program', TEST_FILES, ids=str)
@@ -74,7 +74,7 @@ def test_komet(contract_path: Path, tmp_path: Path, concrete_kasmer: Kasmer) -> 
 def test_komet_tracing(contract_path: Path, tmp_path: Path) -> None:
     # Given
     trace_file = tmp_path / 'trace.txt'
-    kasmer = Kasmer(definition=concrete_tracing_definition, trace_file=trace_file)
+    kasmer = Kasmer(definition=concrete_tracing_definition(), trace_file=trace_file)
     child_wasms = _read_config_file(kasmer, contract_path)
     contract_wasm = kasmer.build_soroban_contract(contract_path, tmp_path)
 
