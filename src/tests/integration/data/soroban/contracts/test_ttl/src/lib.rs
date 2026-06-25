@@ -4,6 +4,7 @@ use soroban_sdk::{contract, contractimpl, Env, FromVal, Val};
 #[contract]
 pub struct TtlContract;
 
+#[link(wasm_import_module = "env")]
 extern "C" {
 
     fn kasmer_set_ledger_sequence(x : u64);

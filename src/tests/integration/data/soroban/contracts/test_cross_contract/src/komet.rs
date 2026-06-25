@@ -4,6 +4,7 @@ use soroban_sdk::{Address, Bytes, Env};
 use soroban_sdk::{FromVal, Val};
 
 #[cfg(not(test))]
+#[link(wasm_import_module = "env")]
 extern "C" {
     fn kasmer_create_contract(addr_val: u64, hash_val: u64) -> u64;
 }
