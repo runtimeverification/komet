@@ -8,7 +8,7 @@ jobs:
 
   release:
     name: 'Publish Release'
-    runs-on: [self-hosted, linux, flyweight]
+    runs-on: ubuntu-latest
     steps:
       - name: 'Check out code'
         uses: actions/checkout@v4
