@@ -10,11 +10,13 @@ Tracing is enabled by setting `<ioDir>` to a non-empty file path. When `<ioDir>`
 requires "configuration.md"
 requires "fs.md"
 requires "json-utils.md"
+requires "host/hostfuns.md"
 
 module TRACING
     imports CONFIG-OPERATIONS
     imports FILE-SYSTEM
     imports JSON-UTILS
+    imports HOSTFUNS
 ```
 
 ## Sort Declarations
@@ -50,8 +52,7 @@ The `traceInstr` rule performs the actual logging. It:
 ```k
     rule [traceInstr]:
         <instrs> #traceInstr(I, POS)
-              => #let TRACE_LINE = generateInstrTrace(I, POS, STACK, LOCALS) #in
-                 #appendFile(PATH, TRACE_LINE +String "\n")
+              => #appendFileLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS))
                  ...
         </instrs>
         <ioDir> PATH </ioDir>
@@ -177,6 +178,42 @@ The default is `true` (trace everything), with explicit exclusions:
     rule shouldTraceInstr(_)              => true  [owise]
 ```
 
+## Soroban VM Tracing
+
+### Storage
+
+```k
+    rule [trace-putContractData]:
+        <instrs> putContractData(STORAGE_TYPE)
+              => #appendFileLn(PATH, generateContractDataTrace(CONTRACT, STORAGE_TYPE, "put", ListItem(KEY) ListItem(VAL)))
+              ~> putContractData(STORAGE_TYPE)
+              ~> #resetAlreadyTraced
+                 ...
+        </instrs>
+        <ioDir> PATH </ioDir>
+        <hostStack> KEY:ScVal : VAL:ScVal : _S </hostStack>
+        <callee> CONTRACT </callee>
+        <alreadyTraced> false => true </alreadyTraced>
+      requires PATH =/=String ""
+      [priority(10)]
+
+    rule [trace-delContractData]:
+        <instrs> delContractData(STORAGE_TYPE)
+              => #appendFileLn(PATH, generateContractDataTrace(CONTRACT, STORAGE_TYPE, "del", ListItem(KEY)))
+              ~> delContractData(STORAGE_TYPE)
+              ~> #resetAlreadyTraced
+                 ...
+        </instrs>
+        <ioDir> PATH </ioDir>
+        <hostStack> KEY:ScVal : _S </hostStack>
+        <callee> CONTRACT </callee>
+        <alreadyTraced> false => true </alreadyTraced>
+      requires PATH =/=String ""
+      [priority(10)]
+
+```
+
+
 ## Trace Format
 
 Each trace record is a JSON object with four fields:
@@ -197,6 +234,16 @@ Records are written one per line to the trace file.
           "instr"  : Instr2JSON(I) ,
           "stack"  : ValStack2JSON(VS) ,
           "locals" : Locals2JSON(LOCALS)
+      })
+
+    syntax String ::= generateContractDataTrace(ContractId, StorageType, String, List)   [function]
+ // --------------------------------------------------------------------------------------------------
+    rule generateContractDataTrace(CONTRACT, S_TYPE, OP, ARGS)
+      => JSON2String({
+          "pos"      : null ,
+          "instr"    : ["contractData", OP, StorageType2JSON(S_TYPE)] ,
+          "contract" : Address2JSON(CONTRACT) ,
+          "args"     : [ ScVec2JSONs(ARGS) ]
       })
 
 endmodule

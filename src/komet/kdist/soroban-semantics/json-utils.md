@@ -264,4 +264,79 @@ These functions serialize the runtime state captured at each trace point.
     rule ValStack2JSONs(.ValStack) => .JSONs
     rule ValStack2JSONs(V : Vs)    => Val2JSON(V) , ValStack2JSONs(Vs)
 
+```
+
+## Soroban Types
+
+`StorageType2JSON` serializes a `StorageType` (storage durability class) as a JSON string.
+
+```k
+    syntax JSON ::= StorageType2JSON(StorageType)   [function, total]
+ // -----------------------------------------------------------------
+    rule StorageType2JSON(#temporary)  => "temporary"
+    rule StorageType2JSON(#persistent) => "persistent"
+    rule StorageType2JSON(#instance)   => "instance"
+```
+
+`ErrorType2JSON` serializes the error category tag as a JSON string.
+
+```k
+    syntax JSON ::= ErrorType2JSON(ErrorType)   [function, total]
+ // -------------------------------------------------------------
+    rule ErrorType2JSON(ErrContract) => "contract"
+    rule ErrorType2JSON(ErrWasmVm)   => "wasm_vm"
+    rule ErrorType2JSON(ErrContext)  => "context"
+    rule ErrorType2JSON(ErrStorage)  => "storage"
+    rule ErrorType2JSON(ErrObject)   => "object"
+    rule ErrorType2JSON(ErrCrypto)   => "crypto"
+    rule ErrorType2JSON(ErrEvents)   => "events"
+    rule ErrorType2JSON(ErrBudget)   => "budget"
+    rule ErrorType2JSON(ErrValue)    => "value"
+    rule ErrorType2JSON(ErrAuth)     => "auth"
+```
+
+`Address2JSON` mirrors the `#decodeArg` address format from komet-node: `{"type": "address", "addrType": "account"/"contract", "value": hexStr}`.
+Bytes are encoded with the builtin `Bytes2Hex` hook, which is the inverse of `HexBytes` from komet-node.
+
+```k
+    syntax JSON ::= Address2JSON(Address)   [function, total]
+ // ---------------------------------------------------------
+    rule Address2JSON(Account(B))  => {"type" : "address", "addrType" : "account",  "value" : Bytes2Hex(B)}
+    rule Address2JSON(Contract(B)) => {"type" : "address", "addrType" : "contract", "value" : Bytes2Hex(B)}
+```
+
+`ScVal2JSON` serializes a `ScVal` as a JSON object `{"type": "...", "value": ...}`.
+`ScVec2JSONs` converts a list of `ScVal` elements into a `JSONs` sequence, skipping any non-`ScVal` items (which should not occur after `loadObjectFull`).
+`ScMap2JSONs` iterates over the map in sorted key order, emitting each entry as a two-element JSON array `[key, value]`.
+
+```k
+    syntax JSON  ::= ScVal2JSON(ScVal)           [function, total]
+    syntax JSONs ::= ScVec2JSONs(List)           [function, total]
+    syntax JSONs ::= ScMap2JSONs(Map, List)      [function, total]
+ // ---------------------------------------------------------------
+    rule ScVal2JSON(SCBool(B))          => {"type" : "bool",    "value" : B}
+    rule ScVal2JSON(Void)               => {"type" : "void"}
+    rule ScVal2JSON(Error(T, I))        => {"type" : "error",   "errType" : ErrorType2JSON(T), "code" : I}
+    rule ScVal2JSON(U32(I))             => {"type" : "u32",     "value" : I}
+    rule ScVal2JSON(I32(I))             => {"type" : "i32",     "value" : I}
+    rule ScVal2JSON(U64(I))             => {"type" : "u64",     "value" : I}
+    rule ScVal2JSON(I64(I))             => {"type" : "i64",     "value" : I}
+    rule ScVal2JSON(U128(I))            => {"type" : "u128",    "value" : I}
+    rule ScVal2JSON(I128(I))            => {"type" : "i128",    "value" : I}
+    rule ScVal2JSON(U256(I))            => {"type" : "u256",    "value" : I}
+    rule ScVal2JSON(Symbol(S))          => {"type" : "symbol",  "value" : S}
+    rule ScVal2JSON(ScString(S))        => {"type" : "string",  "value" : S}
+    rule ScVal2JSON(ScBytes(B))         => {"type" : "bytes",   "value" : Bytes2Hex(B)}
+    rule ScVal2JSON(ScAddress(A))       => Address2JSON(A)
+    rule ScVal2JSON(ScVec(L))           => {"type" : "vec",     "value" : [ScVec2JSONs(L)]}
+    rule ScVal2JSON(ScMap(M))           => {"type" : "map",     "value" : [ScMap2JSONs(M, sortedKeys(M))]}
+
+    rule ScVec2JSONs(.List)                  => .JSONs
+    rule ScVec2JSONs(ListItem(V:ScVal) REST) => ScVal2JSON(V) , ScVec2JSONs(REST)
+    rule ScVec2JSONs(ListItem(_)       REST) => ScVec2JSONs(REST)                  [owise]
+
+    rule ScMap2JSONs(_M, .List)                  => .JSONs
+    rule ScMap2JSONs( M, ListItem(K:ScVal) REST) => [ScVal2JSON(K), ScVal2JSON(M {{ K }} orDefault Void)] , ScMap2JSONs(M, REST)
+    rule ScMap2JSONs( M, ListItem(_)       REST) => ScMap2JSONs(M, REST)                                                        [owise]
+
 endmodule
