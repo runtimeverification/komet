@@ -48,7 +48,7 @@ It is treated purely as a key set -- the actual stored values are not used or st
       requires autoAllocModules(MD, MR) =/=K .Stmts
       [priority(10)]
 
-    syntax Instr ::= hostCall(String, String, FuncType)
+    syntax HelperInstr ::= hostCall(String, String, FuncType)
  // ---------------------------------------------------
     rule <instrs> (.K => allocfunc(HOSTMOD, NEXTADDR, TYPE, [ .ValTypes ], hostCall(wasmString2StringStripped(MOD), wasmString2StringStripped(NAME), TYPE) .Instrs, #meta(... id: String2Identifier("$auto-alloc:" +String #parseWasmString(MOD) +String ":" +String #parseWasmString(NAME) ), localIds: .Map )))
                ~> #import(MOD, NAME, #funcDesc(... type: TIDX))
