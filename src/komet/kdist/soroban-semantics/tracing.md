@@ -50,7 +50,7 @@ The `traceInstr` rule performs the actual logging. It:
 ```k
     rule [traceInstr]:
         <instrs> #traceInstr(I, POS)
-              => #let TRACE_LINE = generateTrace(I, POS, STACK, LOCALS) #in
+              => #let TRACE_LINE = generateInstrTrace(I, POS, STACK, LOCALS) #in
                  #appendFile(PATH, TRACE_LINE +String "\n")
                  ...
         </instrs>
@@ -189,9 +189,9 @@ Each trace record is a JSON object with four fields:
 Records are written one per line to the trace file.
 
 ```k
-    syntax String ::= generateTrace(Instr, OptionalInt, ValStack, Map)   [function]
+    syntax String ::= generateInstrTrace(Instr, OptionalInt, ValStack, Map)   [function]
  // ---------------------------------------------------------
-    rule generateTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map)
+    rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map)
       => JSON2String({
           "pos"    : #if OFFSET ==K .Int #then null #else {OFFSET}:>Int #fi ,
           "instr"  : Instr2JSON(I) ,
