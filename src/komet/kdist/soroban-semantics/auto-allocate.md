@@ -49,8 +49,19 @@ It is treated purely as a key set -- the actual stored values are not used or st
       [priority(10)]
 
     syntax HelperInstr ::= hostCall(String, String, FuncType)
+                         | traceHostCall(String, String)
  // ---------------------------------------------------
-    rule <instrs> (.K => allocfunc(HOSTMOD, NEXTADDR, TYPE, [ .ValTypes ], hostCall(wasmString2StringStripped(MOD), wasmString2StringStripped(NAME), TYPE) .Instrs, #meta(... id: String2Identifier("$auto-alloc:" +String #parseWasmString(MOD) +String ":" +String #parseWasmString(NAME) ), localIds: .Map )))
+    rule <instrs> (.K => #let SMOD = wasmString2StringStripped(MOD) #in
+                         #let SNAME = wasmString2StringStripped(NAME) #in
+                          allocfunc(
+                            HOSTMOD,
+                            NEXTADDR,
+                            TYPE,
+                            [ .ValTypes ],
+                            traceHostCall(SMOD, SNAME) hostCall(SMOD, SNAME, TYPE) .Instrs,
+                            #meta(... id: String2Identifier("$auto-alloc:" +String SMOD +String ":" +String SNAME), localIds: .Map )
+                          )
+                  )
                ~> #import(MOD, NAME, #funcDesc(... type: TIDX))
               ...
          </instrs>
@@ -72,6 +83,10 @@ It is treated purely as a key set -- the actual stored values are not used or st
           ...
         </moduleInst>
       requires notBool NAME in_keys(EXPORTS)
+
+      rule [traceHostCall-skip]:
+          <instrs> traceHostCall(_, _) => .K ... </instrs>
+        [owise]
 
     syntax String ::= wasmString2StringStripped ( WasmString ) [function]
                     | #stripQuotes ( String ) [function]

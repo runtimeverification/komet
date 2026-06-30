@@ -213,6 +213,24 @@ The default is `true` (trace everything), with explicit exclusions:
 
 ```
 
+### Host Calls
+
+Host functions prepend `traceHostCall(MOD, FUNC)` to `<instrs>` before each `hostCall` as a logging hook.
+When tracing is enabled, this rule fires and appends a host call record to the trace file.
+When tracing is disabled, the paired `traceHostCall-skip` rule in `auto-allocate.md` discards it as a no-op.
+Because `traceHostCall` is a `HelperInstr`, it is never intercepted by `insert-traceInstr` and does not interact with the `<alreadyTraced>` mechanism.
+
+```k
+    rule [traceHostCall]:
+        <instrs> traceHostCall(MOD, FUNC)
+              => #appendFileLn(PATH, generateHostCallTrace(MOD, FUNC, LOCALS))
+                 ...
+        </instrs>
+        <ioDir> PATH </ioDir>
+        <locals> LOCALS </locals>
+      requires PATH =/=String ""
+
+```
 
 ## Trace Format
 
@@ -233,6 +251,15 @@ Records are written one per line to the trace file.
           "pos"    : #if OFFSET ==K .Int #then null #else {OFFSET}:>Int #fi ,
           "instr"  : Instr2JSON(I) ,
           "stack"  : ValStack2JSON(VS) ,
+          "locals" : Locals2JSON(LOCALS)
+      })
+
+    syntax String ::= generateHostCallTrace(String, String, Map)   [function]
+ // -------------------------------------------------------------------------
+    rule generateHostCallTrace(MOD, FUNC, LOCALS)
+      => JSON2String({
+          "pos"    : null ,
+          "instr"  : [ "hostCall" , MOD , FUNC ] ,
           "locals" : Locals2JSON(LOCALS)
       })
 

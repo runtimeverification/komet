@@ -181,7 +181,6 @@ Additional elements carry the instruction's operands — types, operator names (
 ```k
     syntax JSON ::= Instr2JSON(Instr)     [function, total]
  // ------------------------------------------------
-    rule Instr2JSON(hostCall(MOD, FUNC, _)) => ["hostCall", MOD, FUNC]
     rule Instr2JSON(#call(IDX))             => ["call", IDX]
     rule Instr2JSON(#br(I))                 => ["br", I]
     rule Instr2JSON( T:IValType . const I )       => ["const", IValType2JSON(T), I]
