@@ -81,6 +81,10 @@ which may fire when the flag is already `false` after the block body finishes.
     rule [resetAlreadyTraced]:
         <instrs> #resetAlreadyTraced => .K ... </instrs>
         <alreadyTraced> _ => false </alreadyTraced>
+
+    rule [resetAlreadyTraced-k]:
+        <k> #resetAlreadyTraced => .K ... </k>
+        <alreadyTraced> _ => false </alreadyTraced>
 ```
 
 ### Intercepting Instructions
@@ -232,6 +236,27 @@ Because `traceHostCall` is a `HelperInstr`, it is never intercepted by `insert-t
 
 ```
 
+### Host Objects
+
+Traces `addObject` before it executes, using the pre-insert state to form the log entry.
+`size(OBJS)` gives the index that will be assigned to the new object, and `HostVal2ScValRec` recursively resolves any `HostVal` handles nested in `SCV` to their concrete `ScVal` values — both are only correct against the object table before the insert.
+
+```k
+    rule [trace-addObject]:
+        <k> addObject(SCV)
+         => #appendFileLn(PATH, generateAddObjectTrace(HostVal2ScValRec(SCV, OBJS, RELS), size(OBJS)))
+         ~> addObject(SCV)
+         ~> #resetAlreadyTraced
+            ...
+        </k>
+        <relativeObjects> RELS </relativeObjects>
+        <hostObjects>     OBJS </hostObjects>
+        <ioDir> PATH </ioDir>
+        <alreadyTraced> false => true </alreadyTraced>
+      requires PATH =/=String ""
+      [priority(10)]
+```
+
 ## Trace Format
 
 Each trace record is a JSON object with four fields:
@@ -272,6 +297,17 @@ Records are written one per line to the trace file.
           "contract" : Address2JSON(CONTRACT) ,
           "args"     : [ ScVec2JSONs(ARGS) ]
       })
+
+    syntax String ::= generateAddObjectTrace(ScVal, Int)   [function]
+ // -----------------------------------------------------------------
+    rule generateAddObjectTrace(SCV, INDEX)
+      => JSON2String({
+          "pos"   : null ,
+          "instr" : ["addObject"] ,
+          "value" : ScVal2JSON(SCV) ,
+          "index" : INDEX
+      })
+
 
 endmodule
 ```
