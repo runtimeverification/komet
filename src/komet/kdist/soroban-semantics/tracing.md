@@ -282,7 +282,7 @@ Its priority (30) runs it ahead of the base rule's default priority (50).
         <k> callContract(FROM, TO, FUNCNAME:WasmStringToken, ARGS)
          => #appendFileJSONLn(
                 PATH,
-                generateCallContractTrace(FROM, TO, #parseWasmString(FUNCNAME), HostVal2ScValMany(ARGS, OBJS, RELS), size(CALLSTACK) +Int 1)
+                generateCallContractTrace(FROM, TO, wasmString2StringStripped(FUNCNAME), HostVal2ScValMany(ARGS, OBJS, RELS), size(CALLSTACK) +Int 1)
             )
          ~> pushWorldState
          ~> pushCallState
