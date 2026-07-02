@@ -56,7 +56,6 @@ semantics.
          ~> #endWasm
             ...
         </k>
-        <logging> ... (.List => ListItem("callContract " +String #parseWasmString(FUNCNAME))) </logging>
 
     // Looks up the callee's code and instantiates a fresh Wasm module for it, then delegates to `mkCall`
     // to actually invoke the requested function once that instance exists.

@@ -90,7 +90,6 @@ module CONFIG
 ```k
         <ledgerSequenceNumber> 0 </ledgerSequenceNumber>
         <ledgerTimestamp> 0 </ledgerTimestamp>
-        <logging> .List </logging>
 ```
 
 - `alwaysAllocate`: This cell controls the behavior of `allocObject` during property tests.

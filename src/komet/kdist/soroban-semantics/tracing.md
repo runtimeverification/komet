@@ -291,7 +291,6 @@ Its priority (30) runs it ahead of the base rule's default priority (50).
          ~> #endWasm
             ...
         </k>
-        <logging> ... (.List => ListItem("callContract " +String #parseWasmString(FUNCNAME))) </logging>
         <relativeObjects> RELS </relativeObjects>
         <hostObjects>     OBJS </hostObjects>
         <callStack> CALLSTACK </callStack>
