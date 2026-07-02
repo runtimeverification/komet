@@ -22,6 +22,16 @@ module SOROBAN
 
 ## Contract Call
 
+Invoking a contract is split across three commands that hand off to one another:
+
+- `callContract` orchestrates the call: saves the caller's state and arranges for it to be restored (or discarded)
+  once the callee is done.
+- `callContractAux` resolves the callee's code and instantiates a fresh Wasm module for it.
+- `mkCall` performs the actual invocation against that instance.
+
+Once the callee's Wasm finishes executing, `#endWasm` (see `switch.md`) switches control back to `<k>` and restores
+the caller.
+
 **WARNING**: `trace-callContract` in `tracing.md` duplicates the transition of `callContract` below to log a call's
 start. If you change this rule, you must update that too, or tracing will silently drift out of sync with the real
 semantics.
@@ -34,6 +44,9 @@ semantics.
     rule callContract(FROM, TO, FUNCNAME:String, ARGS)
       => callContract(FROM, TO, #quoteUnparseWasmString(FUNCNAME), ARGS)
 
+    // Orchestrates a contract call: saves the caller's world/call state so it can be restored afterwards,
+    // resets the active call state for the callee, delegates to `callContractAux` to set up and invoke the
+    // callee, and queues `#endWasm` to switch back to `<k>` and restore the caller once the callee finishes.
     rule [callContract]:
         <k> callContract(FROM, TO, FUNCNAME:WasmStringToken, ARGS)
          => pushWorldState
@@ -45,6 +58,8 @@ semantics.
         </k>
         <logging> ... (.List => ListItem("callContract " +String #parseWasmString(FUNCNAME))) </logging>
 
+    // Looks up the callee's code and instantiates a fresh Wasm module for it, then delegates to `mkCall`
+    // to actually invoke the requested function once that instance exists.
     rule [callContractAux]:
         <k> callContractAux(FROM, TO, FUNCNAME, ARGS)
          => newWasmInstance(TO, CODE)
@@ -113,6 +128,9 @@ semantics.
 
     syntax InternalCmd ::= mkCall( Address, ContractId, WasmString, List )  [symbol(mkCall)]
  // ------------------------------------------------------------------------
+    // Performs the actual invocation once the callee's Wasm instance exists: populates the (already-reset)
+    // call state with caller/callee/function/args, resolves FUNCNAME to a function index in the instance's
+    // exports, and sets `<instrs>` to push the (HostVal) args and invoke that function.
     rule [mkCall]:
         <k> mkCall(FROM, TO, FUNCNAME:WasmStringToken, ARGS) => .K ... </k>
         <callState>
