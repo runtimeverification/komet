@@ -11,12 +11,14 @@ requires "configuration.md"
 requires "fs.md"
 requires "json-utils.md"
 requires "host/hostfuns.md"
+requires "soroban.md"
 
 module TRACING
     imports CONFIG-OPERATIONS
     imports FILE-SYSTEM
     imports JSON-UTILS
     imports HOSTFUNS
+    imports SOROBAN
 ```
 
 ## Sort Declarations
@@ -266,6 +268,85 @@ Traces `addObject` before it executes, using the pre-insert state to form the lo
       [priority(10)]
 ```
 
+### Trace `callContract`
+
+Traces the start of every contract call, outermost and nested alike: the caller, the callee, the function name, the arguments, and the call depth.
+`ARGS` is a `List` of `HostVal` handles (the same type `pushArgs` expects), so `HostVal2ScValMany` resolves it to concrete `ScVal`s before logging.
+The depth logged is `size(<callStack>) +Int 1`, i.e. what the call's own `#endWasm` trace will later report, since `pushCallState` hasn't run yet at this point.
+
+This duplicates the transition of `callContract` in `soroban.md` (see the warning there) instead of appending `#resetAlreadyTraced` and requeuing, for the same reason as `#endWasm`'s tracing rules.
+Its priority (30) runs it ahead of the base rule's default priority (50).
+
+```k
+    rule [trace-callContract]:
+        <k> callContract(FROM, TO, FUNCNAME:WasmStringToken, ARGS)
+         => #appendFileJSONLn(
+                PATH,
+                generateCallContractTrace(FROM, TO, #parseWasmString(FUNCNAME), HostVal2ScValMany(ARGS, OBJS, RELS), size(CALLSTACK) +Int 1)
+            )
+         ~> pushWorldState
+         ~> pushCallState
+         ~> resetCallstate
+         ~> callContractAux(FROM, TO, FUNCNAME, ARGS)
+         ~> #endWasm
+            ...
+        </k>
+        <logging> ... (.List => ListItem("callContract " +String #parseWasmString(FUNCNAME))) </logging>
+        <relativeObjects> RELS </relativeObjects>
+        <hostObjects>     OBJS </hostObjects>
+        <callStack> CALLSTACK </callStack>
+        <ioDir> PATH </ioDir>
+      requires PATH =/=String ""
+      [priority(30)]
+```
+
+### Trace `#endWasm`
+
+Traces the end of every contract call, outermost and nested alike: whether it succeeded or failed, the call depth, and the result.
+
+`trace-endWasm-error` handles the failure case (top of `<hostStack>` is an `Error`), `trace-endWasm` the success case.
+Both duplicate the state transition of `endWasm-error`/`endWasm` instead of requeuing `#endWasm` behind `#resetAlreadyTraced`, since a prior `trap` can discard a queued `#resetAlreadyTraced` and wedge `<alreadyTraced>` at `true`.
+Their priorities (35, 45) run them ahead of `endWasm-error` (40) and `endWasm` (50).
+
+```k
+    rule [trace-endWasm-error]:
+        <k> #endWasm
+         => #appendFileJSONLn(
+                PATH,
+                generateEndWasmTrace(false, size(CALLSTACK), ScVal2JSON(ERR))
+            )
+         ~> popCallState
+         ~> popWorldState
+            ...
+        </k>
+        <instrs> .K </instrs>
+        <hostStack> (Error(_,_) #as ERR) : _ => ERR : .HostStack </hostStack>
+        <callStack> CALLSTACK </callStack>
+        <ioDir> PATH </ioDir>
+      requires PATH =/=String ""
+      [priority(35)]
+
+    rule [trace-endWasm]:
+        <k> #endWasm
+         => #appendFileJSONLn(
+                PATH,
+                generateEndWasmTrace(true, size(CALLSTACK), ValStack2ResultJSON(STACK, OBJS, RELS))
+            )
+         ~> popCallState
+         ~> dropWorldState
+         ~> #callResult(STACK, RELS)
+            ...
+        </k>
+        <instrs> .K </instrs>
+        <relativeObjects> RELS </relativeObjects>
+        <hostObjects>     OBJS </hostObjects>
+        <valstack> STACK </valstack>
+        <callStack> CALLSTACK </callStack>
+        <ioDir> PATH </ioDir>
+      requires PATH =/=String ""
+      [priority(45)]
+```
+
 ## Trace Format
 
 Each trace record is a JSON object with four fields:
@@ -315,6 +396,40 @@ Records are written one per line to the trace file.
           "instr" : ["addObject"] ,
           "value" : ScVal2JSON(SCV) ,
           "index" : INDEX
+      }
+
+    syntax JSON ::= generateCallContractTrace(Address, ContractId, String, List, Int)   [function]
+ // ---------------------------------------------------------------------------------------------
+    rule generateCallContractTrace(FROM, TO, FUNCNAME, ARGS, DEPTH)
+      => {
+          "pos"      : null ,
+          "instr"    : ["callContract"] ,
+          "from"     : Address2JSON(FROM) ,
+          "to"       : Address2JSON(TO) ,
+          "function" : FUNCNAME ,
+          "args"     : [ ScVec2JSONs(ARGS) ] ,
+          "depth"    : DEPTH
+      }
+```
+
+`ValStack2ResultJSON` resolves a contract call's return value to JSON: `null` for a void return (empty stack), or the `ScVal` the top `i64` handle resolves to.
+
+```k
+    syntax JSON ::= ValStack2ResultJSON(ValStack, objs: List, rels: List)   [function]
+ // -------------------------------------------------------------------------------------
+    rule ValStack2ResultJSON(.ValStack, _, _) => null
+    rule ValStack2ResultJSON(<i64> I : _, OBJS, RELS)
+      => ScVal2JSON(HostVal2ScVal(HostVal(I), OBJS, RELS))
+
+    syntax JSON ::= generateEndWasmTrace(Bool, Int, JSON)   [function]
+ // -------------------------------------------------------------------
+    rule generateEndWasmTrace(SUCCESS, DEPTH, RESULT)
+      => {
+          "pos"     : null ,
+          "instr"   : ["endWasm"] ,
+          "success" : SUCCESS ,
+          "depth"   : DEPTH ,
+          "result"  : RESULT
       }
 
 

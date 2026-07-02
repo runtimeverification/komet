@@ -22,6 +22,10 @@ module SOROBAN
 
 ## Contract Call
 
+**WARNING**: `trace-callContract` in `tracing.md` duplicates the transition of `callContract` below to log a call's
+start. If you change this rule, you must update that too, or tracing will silently drift out of sync with the real
+semantics.
+
 ```k
 
     syntax InternalCmd ::= callContract    ( Address, ContractId, WasmString, List ) [symbol(callContractWasmString)]

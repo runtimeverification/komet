@@ -25,7 +25,7 @@ module CONFIG
             <callee> Contract(.Bytes) </callee>
             <caller> Account(.Bytes):Address </caller>
             <function> .WasmString </function>
-            <args> .List </args>
+            <args> .List </args> // List of HostVals
             <wasm/>
             <relativeObjects> .List </relativeObjects> // List of HostVals with absolute handles to host objects
             <contractModIdx> .Int </contractModIdx>
