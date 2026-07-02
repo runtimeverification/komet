@@ -52,7 +52,7 @@ The `traceInstr` rule performs the actual logging. It:
 ```k
     rule [traceInstr]:
         <instrs> #traceInstr(I, POS)
-              => #appendFileLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS))
+              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS))
                  ...
         </instrs>
         <ioDir> PATH </ioDir>
@@ -189,7 +189,10 @@ The default is `true` (trace everything), with explicit exclusions:
 ```k
     rule [trace-putContractData]:
         <instrs> putContractData(STORAGE_TYPE)
-              => #appendFileLn(PATH, generateContractDataTrace(CONTRACT, STORAGE_TYPE, "put", ListItem(KEY) ListItem(VAL)))
+              => #appendFileJSONLn(
+                    PATH,
+                    generateContractDataTrace(CONTRACT, STORAGE_TYPE, "put", ListItem(KEY) ListItem(VAL))
+                 )
               ~> putContractData(STORAGE_TYPE)
               ~> #resetAlreadyTraced
                  ...
@@ -203,7 +206,10 @@ The default is `true` (trace everything), with explicit exclusions:
 
     rule [trace-delContractData]:
         <instrs> delContractData(STORAGE_TYPE)
-              => #appendFileLn(PATH, generateContractDataTrace(CONTRACT, STORAGE_TYPE, "del", ListItem(KEY)))
+              => #appendFileJSONLn(
+                    PATH,
+                    generateContractDataTrace(CONTRACT, STORAGE_TYPE, "del", ListItem(KEY))
+                 )
               ~> delContractData(STORAGE_TYPE)
               ~> #resetAlreadyTraced
                  ...
@@ -227,7 +233,7 @@ Because `traceHostCall` is a `HelperInstr`, it is never intercepted by `insert-t
 ```k
     rule [traceHostCall]:
         <instrs> traceHostCall(MOD, FUNC)
-              => #appendFileLn(PATH, generateHostCallTrace(MOD, FUNC, LOCALS))
+              => #appendFileJSONLn(PATH, generateHostCallTrace(MOD, FUNC, LOCALS))
                  ...
         </instrs>
         <ioDir> PATH </ioDir>
@@ -244,7 +250,10 @@ Traces `addObject` before it executes, using the pre-insert state to form the lo
 ```k
     rule [trace-addObject]:
         <k> addObject(SCV)
-         => #appendFileLn(PATH, generateAddObjectTrace(HostVal2ScValRec(SCV, OBJS, RELS), size(OBJS)))
+         => #appendFileJSONLn(
+                PATH,
+                generateAddObjectTrace(HostVal2ScValRec(SCV, OBJS, RELS), size(OBJS))
+            )
          ~> addObject(SCV)
          ~> #resetAlreadyTraced
             ...
@@ -269,44 +278,44 @@ Each trace record is a JSON object with four fields:
 Records are written one per line to the trace file.
 
 ```k
-    syntax String ::= generateInstrTrace(Instr, OptionalInt, ValStack, Map)   [function]
+    syntax JSON ::= generateInstrTrace(Instr, OptionalInt, ValStack, Map)   [function]
  // ---------------------------------------------------------
     rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map)
-      => JSON2String({
+      => {
           "pos"    : #if OFFSET ==K .Int #then null #else {OFFSET}:>Int #fi ,
           "instr"  : Instr2JSON(I) ,
           "stack"  : ValStack2JSON(VS) ,
           "locals" : Locals2JSON(LOCALS)
-      })
+      }
 
-    syntax String ::= generateHostCallTrace(String, String, Map)   [function]
+    syntax JSON ::= generateHostCallTrace(String, String, Map)   [function]
  // -------------------------------------------------------------------------
     rule generateHostCallTrace(MOD, FUNC, LOCALS)
-      => JSON2String({
+      => {
           "pos"    : null ,
           "instr"  : [ "hostCall" , MOD , FUNC ] ,
           "locals" : Locals2JSON(LOCALS)
-      })
+      }
 
-    syntax String ::= generateContractDataTrace(ContractId, StorageType, String, List)   [function]
+    syntax JSON ::= generateContractDataTrace(ContractId, StorageType, String, List)   [function]
  // --------------------------------------------------------------------------------------------------
     rule generateContractDataTrace(CONTRACT, S_TYPE, OP, ARGS)
-      => JSON2String({
+      => {
           "pos"      : null ,
           "instr"    : ["contractData", OP, StorageType2JSON(S_TYPE)] ,
           "contract" : Address2JSON(CONTRACT) ,
           "args"     : [ ScVec2JSONs(ARGS) ]
-      })
+      }
 
-    syntax String ::= generateAddObjectTrace(ScVal, Int)   [function]
- // -----------------------------------------------------------------
+    syntax JSON ::= generateAddObjectTrace(ScVal, Int)   [function]
+ // ---------------------------------------------------------------
     rule generateAddObjectTrace(SCV, INDEX)
-      => JSON2String({
+      => {
           "pos"   : null ,
           "instr" : ["addObject"] ,
           "value" : ScVal2JSON(SCV) ,
           "index" : INDEX
-      })
+      }
 
 
 endmodule

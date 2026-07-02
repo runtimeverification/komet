@@ -3,6 +3,7 @@
 module FILE-SYSTEM
     imports STRING
     imports INT
+    imports JSON
     imports K-IO
 
     
@@ -21,6 +22,7 @@ module FILE-SYSTEM
     syntax K ::= #writeFile( String, String ) [function, impure, symbol(writeFile)]
                | #appendFile( String, String)   [function, impure, symbol(appendFile)]
                | #appendFileLn( String, String) [function, impure, symbol(appendFileLn)]
+               | #appendFileJSONLn( String, JSON) [function, impure, symbol(appendFileJSONLn)]
                | #appendFileToFile( String, String ) [function, impure, symbol(appendFileToFile)]
     // --------------------------------------------------------------------------------------------------
 
@@ -43,6 +45,8 @@ module FILE-SYSTEM
              RESULT
 
     rule #appendFileLn( FILE, CONTENTS ) => #appendFile( FILE, CONTENTS +String "\n" )
+
+    rule #appendFileJSONLn( FILE, CONTENTS ) => #appendFileLn( FILE, JSON2String(CONTENTS) )
 
     rule #appendFileToFile( DEST, SOURCE )
           => #system( "dd if=" +String SOURCE +String " of=" +String DEST +String " bs=1M oflag=append conv=notrunc" )
