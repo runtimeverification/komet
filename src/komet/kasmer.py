@@ -310,7 +310,6 @@ class Kasmer:
         rhs_subst = subst.copy()
         rhs_subst['PROGRAM_CELL'] = STEPS_TERMINATOR
         rhs_subst['EXITCODE_CELL'] = token(0)
-        del rhs_subst['LOGGING_CELL']
         del rhs_subst['ALWAYSALLOCATE_CELL']
         rhs = CTerm(Subst(rhs_subst).apply(conf))
 
