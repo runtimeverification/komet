@@ -10,7 +10,7 @@ jobs:
 
   version-bump:
     name: 'Version Bump'
-    runs-on: [self-hosted, linux, flyweight]
+    runs-on: ubuntu-latest
     steps:
       - name: 'Check out code'
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
   code-quality-checks:
     needs: version-bump
     name: 'Code Quality Checks'
-    runs-on: [self-hosted, linux, flyweight]
+    runs-on: ubuntu-latest
     steps:
       - name: 'Check out code'
         uses: actions/checkout@v3
