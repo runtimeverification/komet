@@ -270,9 +270,10 @@ Traces `addObject` before it executes, using the pre-insert state to form the lo
 
 ### Trace `callContract`
 
-Traces the start of every contract call, outermost and nested alike: the caller, the callee, the function name, the arguments, and the call depth.
+Traces the start of every contract call, outermost and nested alike: the caller, the callee, the function name, the arguments, the call depth, and the callee's storage as it stands before the call runs.
 `ARGS` is a `List` of `HostVal` handles (the same type `pushArgs` expects), so `HostVal2ScValMany` resolves it to concrete `ScVal`s before logging.
 The depth logged is `size(<callStack>) +Int 1`, i.e. what the call's own `#endWasm` trace will later report, since `pushCallState` hasn't run yet at this point.
+Storage is logged as a single flat list, each entry tagged with its durability (`"instance"`, `"persistent"`, or `"temporary"`): `<instanceStorage>` entries share the contract's own `<contractLiveUntil>`, while `<contractData>` (shared across every contract) is filtered down to the callee's own entries by `ContractDataJSONs`.
 
 This duplicates the transition of `callContract` in `soroban.md` (see the warning there) instead of appending `#resetAlreadyTraced` and requeuing, for the same reason as `#endWasm`'s tracing rules.
 Its priority (30) runs it ahead of the base rule's default priority (50).
@@ -282,7 +283,14 @@ Its priority (30) runs it ahead of the base rule's default priority (50).
         <k> callContract(FROM, TO, FUNCNAME:WasmStringToken, ARGS)
          => #appendFileJSONLn(
                 PATH,
-                generateCallContractTrace(FROM, TO, wasmString2StringStripped(FUNCNAME), HostVal2ScValMany(ARGS, OBJS, RELS), size(CALLSTACK) +Int 1)
+                generateCallContractTrace(
+                    FROM, TO, wasmString2StringStripped(FUNCNAME),
+                    HostVal2ScValMany(ARGS, OBJS, RELS),
+                    size(CALLSTACK) +Int 1,
+                    INSTANCE,
+                    INSTANCE_LIVE_UNTIL,
+                    CTRDATA
+                )
             )
          ~> pushWorldState
          ~> pushCallState
@@ -295,6 +303,13 @@ Its priority (30) runs it ahead of the base rule's default priority (50).
         <hostObjects>     OBJS </hostObjects>
         <callStack> CALLSTACK </callStack>
         <ioDir> PATH </ioDir>
+        <contract>
+          <contractId> TO </contractId>
+          <instanceStorage> INSTANCE </instanceStorage>
+          <contractLiveUntil> INSTANCE_LIVE_UNTIL </contractLiveUntil>
+          ...
+        </contract>
+        <contractData> CTRDATA </contractData>
       requires PATH =/=String ""
       [priority(30)]
 ```
@@ -397,9 +412,9 @@ Records are written one per line to the trace file.
           "index" : INDEX
       }
 
-    syntax JSON ::= generateCallContractTrace(Address, ContractId, String, List, Int)   [function]
- // ---------------------------------------------------------------------------------------------
-    rule generateCallContractTrace(FROM, TO, FUNCNAME, ARGS, DEPTH)
+    syntax JSON ::= generateCallContractTrace(Address, ContractId, String, List, Int, instance: Map, instanceLiveUntil: Int, contractData: Map)   [function]
+ // ---------------------------------------------------------------------------------------------------------------------------------------------------------
+    rule generateCallContractTrace(FROM, TO, FUNCNAME, ARGS, DEPTH, INSTANCE, INSTANCE_LIVE_UNTIL, CTRDATA)
       => {
           "pos"      : null ,
           "instr"    : ["callContract"] ,
@@ -407,8 +422,48 @@ Records are written one per line to the trace file.
           "to"       : Address2JSON(TO) ,
           "function" : FUNCNAME ,
           "args"     : [ ScVec2JSONs(ARGS) ] ,
-          "depth"    : DEPTH
+          "depth"    : DEPTH ,
+          "storage"  : [ appendJSONs(InstanceStorageJSONs(INSTANCE, INSTANCE_LIVE_UNTIL), ContractDataJSONs(CTRDATA, TO)) ]
       }
+```
+
+`InstanceStorageJSONs` serializes `<instanceStorage>` entries with durability `"instance"`, all sharing the contract's own `<contractLiveUntil>` since instance storage has no per-key TTL.
+`ContractDataJSONs` filters `<contractData>` (shared across every contract) down to the entries whose key belongs to `CONTRACT`, serializing each as its durability, key, value, and TTL.
+`appendJSONs` joins the two independently-produced `JSONs` sequences into one flat list — plain `,` only conses a single `JSON` onto a `JSONs`, it doesn't join two `JSONs` together.
+
+```k
+    syntax JSONs ::= appendJSONs(JSONs, JSONs)   [function, total]
+ // ------------------------------------------------------------------
+    rule appendJSONs(.JSONs, JS2) => JS2
+    rule appendJSONs((J:JSON, JS1), JS2) => J, appendJSONs(JS1, JS2)
+
+    syntax JSONs ::= InstanceStorageJSONs(Map, liveUntil: Int)   [function]
+ // -------------------------------------------------------------------------
+    rule InstanceStorageJSONs(K:ScVal |-> V:ScVal REST, LIVE_UNTIL)
+      => {
+            "durability" : "instance" ,
+            "key"        : ScVal2JSON(K) ,
+            "value"      : ScVal2JSON(V) ,
+            "liveUntil"  : LIVE_UNTIL
+         } , InstanceStorageJSONs(REST, LIVE_UNTIL)
+
+    rule InstanceStorageJSONs(.Map, _LIVE_UNTIL) => .JSONs
+
+    syntax JSONs ::= ContractDataJSONs(Map, ContractId)   [function]
+ // ------------------------------------------------------------------
+    rule ContractDataJSONs(#skey(CONTRACT, DUR, KEY) |-> #sval(VAL, LIVE_UNTIL) REST, CONTRACT)
+      => {
+            "durability" : StorageType2JSON(DUR) ,
+            "key"        : ScVal2JSON(KEY) ,
+            "value"      : ScVal2JSON(VAL) ,
+            "liveUntil"  : LIVE_UNTIL
+         } , ContractDataJSONs(REST, CONTRACT)
+
+    rule ContractDataJSONs(_ |-> _ REST, CONTRACT)
+      => ContractDataJSONs(REST, CONTRACT)
+      [owise]
+
+    rule ContractDataJSONs(.Map, _) => .JSONs
 ```
 
 `ValStack2ResultJSON` resolves a contract call's return value to JSON: `null` for a void return (empty stack), or the `ScVal` the top `i64` handle resolves to.
