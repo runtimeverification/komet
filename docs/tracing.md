@@ -66,9 +66,3 @@ The implementation is split across three modules:
 - [`tracing.md`](../src/komet/kdist/soroban-semantics/tracing.md) — core tracing rules; intercepts instructions and coordinates log emission. See this file for a detailed explanation of the tracing mechanism.
 - `fs.md` — file operation functions used to append records to the output file
 - [`json-utils.md`](../src/komet/kdist/soroban-semantics/json-utils.md) — JSON serialization for WebAssembly values, types, instructions, and runtime structures. See this file for the full serialization format of each field in the trace records.
-
-## Limitations
-
-Consecutive identical instructions may not be logged correctly for **text format** programs. This is a known limitation of the `<lastTraced>` deduplication mechanism: when two identical instructions appear back-to-back and the first does not leave or rewrite to an intermediate value in `<instrs>`, the second will not be logged.
-
-This limitation does not affect **binary format** programs, where each instruction is wrapped with its byte position and traced unconditionally.
