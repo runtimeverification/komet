@@ -33,6 +33,10 @@ module SWITCH
   It initiates the context switch from the current call to its parent call, and captures the Wasm
   stack after the function execution.
 
+  **WARNING**: `trace-endWasm-error`/`trace-endWasm` in `tracing.md` duplicate the transitions of `endWasm-error`/`endWasm`
+  below to log a call's outcome. If you change these rules, you must update those too, or tracing will silently drift
+  out of sync with the real semantics.
+
 ```k
     rule [endWasm-error]:
         <k> #endWasm 
