@@ -100,7 +100,7 @@ def test_memory_snapshots_emitted_on_change(tmp_path: Path) -> None:
                 seen_nonempty_run = True
             ranges.append((run['addr'], run['addr'] + len(data)))
         ranges.sort()
-        for (_, end), (nxt, _) in zip(ranges, ranges[1:]):
+        for (_, end), (nxt, _) in zip(ranges, ranges[1:], strict=False):
             assert end <= nxt, f'overlapping/mis-ordered runs in snapshot: {r["mem"]}'
     assert seen_nonempty_run, 'expected at least one non-empty memory run'
 
