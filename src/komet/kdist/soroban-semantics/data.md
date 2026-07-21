@@ -104,6 +104,10 @@ module HOST-OBJECT
     imports HOST-OBJECT-SYNTAX
     imports WASM
 
+    syntax Int ::= unwrap(HostVal)    [function, total, symbol(HostVal:unwrap)]
+ // ---------------------------------------------------
+    rule unwrap(HostVal(I)) => I
+
     syntax Int ::= getMajor(HostVal)        [function, total, symbol(getMajor)]
                  | getMinor(HostVal)        [function, total, symbol(getMinor)]
                  | getTag(HostVal)          [function, total, symbol(getTag)]
@@ -143,8 +147,8 @@ module HOST-OBJECT
                              | #quoteUnparseWasmString ( String )   [function, total]
     rule #quoteUnparseWasmString(S) => #unparseWasmString("\"" +String S +String "\"")
 
-  // https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#tag-values
-    syntax Int ::= getTag(ScVal)   [function, total]
+//   https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-01.md#tag-values
+    syntax Int ::= getTag(ScVal)   [function, total, symbol(getTagScVal)]
  // -----------------------------------------------------
     rule getTag(SCBool(false)) => 0
     rule getTag(SCBool(true))  => 1
@@ -152,21 +156,21 @@ module HOST-OBJECT
     rule getTag(Error(_,_))    => 3
     rule getTag(U32(_))        => 4
     rule getTag(I32(_))        => 5
-    rule getTag(U64(I))        => 6     requires          I <=Int #maxU64small
-    rule getTag(U64(I))        => 64    requires notBool( I <=Int #maxU64small )
-    rule getTag(I64(I))        => 7     requires          #minI64small <=Int I andBool I <=Int #maxI64small
-    rule getTag(I64(I))        => 65    requires notBool( #minI64small <=Int I andBool I <=Int #maxI64small )
-    rule getTag(U128(I))       => 10    requires          I <=Int #maxU64small
-    rule getTag(U128(I))       => 68    requires notBool( I <=Int #maxU64small ) // U64small and U128small have the same width
-    rule getTag(I128(I))       => 11    requires          #minI64small <=Int I andBool I <=Int #maxI64small
-    rule getTag(I128(I))       => 69    requires notBool( #minI64small <=Int I andBool I <=Int #maxI64small )
-    rule getTag(U256(I))       => 12    requires          I <=Int #maxU64small
-    rule getTag(U256(I))       => 70    requires notBool( I <=Int #maxU64small ) // U64small and U128small have the same width
+    rule getTag(U64(_)  #as I) => 6  requires         isSmall(I)
+    rule getTag(U64(_)  #as I) => 64 requires notBool(isSmall(I))
+    rule getTag(I64(_)  #as I) => 7  requires         isSmall(I)
+    rule getTag(I64(_)  #as I) => 65 requires notBool(isSmall(I))
+    rule getTag(U128(_) #as I) => 10 requires         isSmall(I)
+    rule getTag(U128(_) #as I) => 68 requires notBool(isSmall(I))
+    rule getTag(I128(_) #as I) => 11 requires         isSmall(I)
+    rule getTag(I128(_) #as I) => 69 requires notBool(isSmall(I))
+    rule getTag(U256(_) #as I) => 12 requires         isSmall(I)
+    rule getTag(U256(_) #as I) => 70 requires notBool(isSmall(I))
     rule getTag(ScVec(_))      => 75
     rule getTag(ScMap(_))      => 76
     rule getTag(ScAddress(_))  => 77
-    rule getTag(Symbol(BS))    => 14    requires lengthString(BS) <=Int 9
-    rule getTag(Symbol(BS))    => 74    requires lengthString(BS) >Int  9
+    rule getTag(Symbol(_) #as S) => 14 requires         isSmall(S)
+    rule getTag(Symbol(_) #as S) => 74 requires notBool(isSmall(S))
     rule getTag(ScBytes(_))    => 72
     rule getTag(ScString(_))   => 73
 
@@ -299,29 +303,39 @@ module HOST-OBJECT
 
     syntax HostVal ::= toSmall(ScVal)      [function, total, symbol(toSmall)]
  // ---------------------------------------------------------------------------------
-    rule toSmall(SCBool(false)) => fromMajorMinorAndTag(0, 0, 0)
-    rule toSmall(SCBool(true))  => fromMajorMinorAndTag(0, 0, 1)
-    rule toSmall(Void)          => fromMajorMinorAndTag(0, 0, 2)
-    rule toSmall(Error(TYP, I)) => fromMajorMinorAndTag(I, ErrorType2Int(TYP), 3)
-    rule toSmall(U32(I))        => fromMajorMinorAndTag(I, 0, 4)
-    rule toSmall(I32(I))        => fromMajorMinorAndTag(#unsigned(i32, I), 0, 5)
+    rule toSmall(SCBool(false))   => fromMajorMinorAndTag(0, 0, 0)
+    rule toSmall(SCBool(true))    => fromMajorMinorAndTag(0, 0, 1)
+    rule toSmall(Void)            => fromMajorMinorAndTag(0, 0, 2)
+    rule toSmall(Error(TYP, I))   => fromMajorMinorAndTag(I, ErrorType2Int(TYP), 3)
+    rule toSmall(U32(I))          => fromMajorMinorAndTag(I, 0, 4)
+    rule toSmall(I32(I))          => fromMajorMinorAndTag(#unsigned(i32, I), 0, 5)
       requires definedUnsigned(i32, I)
-    rule toSmall(U64(I))        => fromBodyAndTag(I, 6)               requires I <=Int #maxU64small
-    rule toSmall(I64(I))        => fromBodyAndTag(#unsigned(i56, I), 7)
-      requires #minI64small <=Int I andBool I <=Int #maxI64small
-       andBool definedUnsigned(i56, I)
-    rule toSmall(U128(I))       => fromBodyAndTag(I, 10)              requires I <=Int #maxU64small
-    rule toSmall(I128(I))       => fromBodyAndTag(#unsigned(i56, I), 11)
-      requires #minI64small <=Int I andBool I <=Int #maxI64small
-       andBool definedUnsigned(i56, I)
-    rule toSmall(U256(I))       => fromBodyAndTag(I, 12)              requires I <=Int #maxU64small
-    rule toSmall(Symbol(S))     => fromBodyAndTag(encode6bit(S), 14)  requires lengthString(S) <=Int 9
-    rule toSmall(_)             => HostVal(-1)                        [owise]
+    rule toSmall(U64(I)  #as X)   => fromBodyAndTag(I, 6)                  requires isSmall(X)
+    rule toSmall(I64(I)  #as X)   => fromBodyAndTag(#unsigned(i56, I), 7)  requires isSmall(X)
+    rule toSmall(U128(I) #as X)   => fromBodyAndTag(I, 10)                 requires isSmall(X)
+    rule toSmall(I128(I) #as X)   => fromBodyAndTag(#unsigned(i56, I), 11) requires isSmall(X)
+    rule toSmall(U256(I) #as X)   => fromBodyAndTag(I, 12)                 requires isSmall(X)
+    rule toSmall(Symbol(S) #as X) => fromBodyAndTag(encode6bit(S), 14)     requires isSmall(X)
+    rule toSmall(_)               => HostVal(-1)                           [owise]
 
-    syntax Bool ::= toSmallValid(ScVal)
-        [function, total, symbol(toSmallValid)]
- // ---------------------------------------------------------------------------------
-    rule toSmallValid(VAL) => toSmall(VAL) =/=K HostVal(-1)
+    syntax Bool ::= isSmall(ScVal)       [function, total, symbol(isSmall)]
+ // -----------------------------------------------------------------------
+    rule isSmall(SCBool(_))   => true
+    rule isSmall(Void)        => true
+    rule isSmall(Error(_, _)) => true
+    rule isSmall(U32(_))      => true
+    rule isSmall(I32(_))      => true
+    rule isSmall(U64(I))      => isSmallInt(Unsigned, I)
+    rule isSmall(I64(I))      => isSmallInt(Signed, I)
+    rule isSmall(U128(I))     => isSmallInt(Unsigned, I)
+    rule isSmall(I128(I))     => isSmallInt(Signed, I)
+    rule isSmall(Symbol(S))   => lengthString(S) <=Int 9
+    rule isSmall(_)           => false                        [owise]
+
+    syntax Bool ::= isSmallInt(Signedness, Int)    [function, total, symbol(isSmallInt)]
+ // ------------------------------------------------------------------------
+    rule isSmallInt(Unsigned, I) => 0 <=Int I andBool I <Int #pow(i56)
+    rule isSmallInt(Signed,   I) => 0 -Int #pow1(i56) <=Int I andBool I <Int #pow1(i56)
 
     syntax Bool ::= alwaysSmall(ScVal)
         [function, total, symbol(alwaysSmall)]
