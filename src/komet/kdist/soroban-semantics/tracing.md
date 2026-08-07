@@ -32,13 +32,16 @@ It is currently equivalent to `Instr`, but defined as a separate sort to make th
 
 ## Internal Instructions
 
-Two internal instructions drive the tracing mechanism:
+Three internal instructions drive the tracing mechanism:
 
 - `#traceInstr(I, POS)` -- performs the actual logging of instruction `I` at binary offset `POS` (`.Int` when no offset is available, e.g. for text format programs).
+- `#collectGlobals(I, POS, TODO, ACC)` -- an intermediate state of `#traceInstr`: it reads the executing module's globals one at a time (see *Collecting Globals*) before emitting the record. `TODO` is the not-yet-read part of `<globalAddrs>` (module index |-> `<gAddr>`), `ACC` the globals read so far (module index |-> `Val`).
 - `#resetAlreadyTraced` -- resets `<alreadyTraced>` to `false` after an instruction has been traced and executed, re-enabling tracing for the next instruction.
 
 ```k
     syntax InternalInstr ::= #traceInstr(Instr, OptionalInt)         [symbol("#traceInstr")]
+                          | #collectGlobals(Instr, OptionalInt, todo: Map, acc: Map)
+                                                                    [symbol("#collectGlobals")]
     syntax HelperInstr   ::= "#resetAlreadyTraced"                   [symbol(resetAlreadyTraced)]
 ```
 
@@ -46,15 +49,43 @@ Two internal instructions drive the tracing mechanism:
 
 ### Logging
 
-The `traceInstr` rule performs the actual logging. It:
+Logging takes two phases, because the globals cannot be read in a single match (see
+*Collecting Globals* below):
 
-1. Generates the trace data for instruction `I` using the current value stack and locals.
-2. Appends it as a JSON record to the trace file.
+1. `traceInstr` picks up the executing module's `<globalAddrs>` and hands off to
+   `#collectGlobals`, which reads the globals one at a time.
+2. `collectGlobals-done` generates the trace data for instruction `I` from the current
+   value stack, locals, memory and collected globals, and appends it as a JSON record to
+   the trace file.
+
+Everything but the globals is read in phase 2. That is safe because the intervening steps
+only rewrite `#collectGlobals` at the top of `<instrs>`: no wasm instruction runs in
+between, so the value stack, locals and memory are the same as when `#traceInstr` was
+reached.
 
 ```k
     rule [traceInstr]:
-        <instrs> #traceInstr(I, POS)
-              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS, MEM, PM, GADDRS, GVALS))
+        <instrs> #traceInstr(I, POS) => #collectGlobals(I, POS, GADDRS, .Map) ... </instrs>
+        <curModIdx> CUR </curModIdx>
+        <moduleInst>
+          <modIdx> CUR </modIdx>
+          <globalAddrs> GADDRS </globalAddrs>
+          ...
+        </moduleInst>
+
+    // Fallback for when there is no module instance to read globals from. Reports no
+    // globals rather than getting stuck, keeping `#traceInstr` total.
+    rule [traceInstr-nomodule]:
+        <instrs> #traceInstr(I, POS) => #collectGlobals(I, POS, .Map, .Map) ... </instrs>
+      [owise]
+```
+
+Once every global has been read, the record is emitted.
+
+```k
+    rule [collectGlobals-done]:
+        <instrs> #collectGlobals(I, POS, .Map, GLOBALS)
+              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS, MEM, PM, GLOBALS))
                  ...
         </instrs>
         <ioDir> PATH </ioDir>
@@ -64,7 +95,6 @@ The `traceInstr` rule performs the actual logging. It:
         <moduleInst>
           <modIdx> CUR </modIdx>
           <memAddrs> 0 |-> MADDR </memAddrs>
-          <globalAddrs> GADDRS </globalAddrs>
           ...
         </moduleInst>
         <memInst>
@@ -73,17 +103,14 @@ The `traceInstr` rule performs the actual logging. It:
           ...
         </memInst>
         <prevMem> PM => MEM </prevMem>
-        <globalValues> GVALS </globalValues>
 
     // Fallback for programs without a linear memory (e.g. text-format tests): still
-    // trace, with an empty memory so `mem` is always `null`. Guarantees `#traceInstr`
-    // is always consumed even when the memory-matching rule above cannot fire.
-    // Globals are reported as `{}` here rather than risking a second unmatched
-    // cell: this path exists to keep tracing total, and the debugger's targets
-    // (real contracts) always have a linear memory.
-    rule [traceInstr-nomem]:
-        <instrs> #traceInstr(I, POS)
-              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS, .SparseBytes, .SparseBytes, .Map, .Map))
+    // trace, with an empty memory so `mem` is always `null`. Guarantees `#collectGlobals`
+    // is always consumed even when the memory-matching rule above cannot fire. Globals
+    // are still reported here — they are collected before this rule is reached.
+    rule [collectGlobals-done-nomem]:
+        <instrs> #collectGlobals(I, POS, .Map, GLOBALS)
+              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS, .SparseBytes, .SparseBytes, GLOBALS))
                  ...
         </instrs>
         <ioDir> PATH </ioDir>
@@ -192,84 +219,51 @@ The `#resetAlreadyTraced` appended by `insert-traceInstr` after the `#block`/`#l
       [priority(20)]
 ```
 
-### Tracking Global Values
+### Collecting Globals
 
-Trace records report the executing module's wasm globals, but `<globals>` is a *cell
-collection*: a rule can match one `<globalInst>`, and a function cannot take the
-collection as an argument at all, so there is no way to serialize it the way `Locals2JSON`
-serializes the locals map. Instead the `<globalValues>` shadow map (configuration.md)
-mirrors every global's value, keyed by its store-level `<gAddr>`, and these two rules keep
-it current at the only two places a global's value is established.
+Trace records report the executing module's wasm globals, but `<globals>` is a K *cell
+collection*, and those cannot be serialized the way `ValMap2JSON` serializes the locals
+map: a cell collection's generated sort (`GlobalInstCellMap`) is not usable in a
+hand-written `syntax` declaration, so no function can take the collection as an argument
+(`Could not find sorts: [GlobalInstCellMap]`).
 
-Keying by `<gAddr>` rather than by module index is what keeps this simple: addresses are
-unique across every instantiated module, so one flat map serves all of them and nothing
-needs saving or restoring across a contract call. The tracer recovers the module-relative
-indices a consumer wants by composing the executing module's `<globalAddrs>` with this map
-(see `Globals2JSON` below).
+Rules have no such restriction — they just cannot match a *variable number* of
+`<globalInst>` cells at once. So `#collectGlobals` reads the globals one per rewrite step,
+draining the executing module's `<globalAddrs>` (module index |-> `<gAddr>`) into a plain
+`Map` of module index |-> `Val` and looking up each `<globalInst>` as it goes. The result
+is keyed by module index — the index space DWARF's `DW_OP_WASM_location` global operand
+uses, so a debugger can index it directly — and reads live state, so no rule outside this
+section needs to know that tracing exists.
 
-**WARNING**: both rules duplicate the state transition of a rule in `wasm-semantics`
-(`allocglobal` and `#global.set` in `wasm.md`) so they can update `<globalValues>` in the
-same step. If those rules change, these must change with them — the same coupling
-`tracing-block`/`tracing-loop` and the `callContract`/`#endWasm` tracing rules already
-carry. Both sit at priority 20, ahead of the wasm-semantics originals at the default 50,
-and both fire only when tracing is enabled so the untraced build is untouched.
-
-`allocglobal` seeds a newly created global. It is sort `Alloc`, not `Instr`, so it is never
-intercepted by `insert-traceInstr` and does not interact with `<alreadyTraced>`.
+The cost is one rewrite step per global per traced instruction. A module has only a handful
+of globals, and this is dwarfed by the file append each record already performs.
 
 ```k
-    rule [tracing-allocglobal]:
-        <instrs> allocglobal(OID:OptionalId, MUT:Mut TYP:ValType) => .K ... </instrs>
-        <valstack> VAL : STACK => STACK </valstack>
-        <curModIdx> CUR </curModIdx>
-        <moduleInst>
-          <modIdx> CUR </modIdx>
-          <globIds> IDS => #saveId(IDS, OID, NEXTIDX) </globIds>
-          <nextGlobIdx> NEXTIDX => NEXTIDX +Int 1                </nextGlobIdx>
-          <globalAddrs> GLOBS   => GLOBS [ NEXTIDX <- NEXTADDR ] </globalAddrs>
-          ...
-        </moduleInst>
-        <nextGlobAddr> NEXTADDR => NEXTADDR +Int 1 </nextGlobAddr>
-        <globals>
-          ( .Bag
-         => <globalInst>
-              <gAddr>  NEXTADDR </gAddr>
-              <gValue> VAL      </gValue>
-              <gMut>   MUT      </gMut>
-            </globalInst>
-          )
-          ...
-        </globals>
-        <ioDir> PATH </ioDir>
-        <globalValues> GVALS => GVALS [ NEXTADDR <- VAL ] </globalValues>
-      requires PATH =/=String ""
-       andBool #typeMatches(TYP, VAL)
-      [priority(20), preserves-definedness]
-```
-
-`#global.set` writes an existing global. It *is* an `Instr`, so `insert-traceInstr` has
-already logged and requeued it by the time this fires; at priority 20 this shadows the
-wasm-semantics rule (priority 50) while still running after interception (priority 10/15).
-
-```k
-    rule [tracing-global.set]:
-        <instrs> #global.set(IDX) => .K ... </instrs>
-        <valstack> VALUE : VALSTACK => VALSTACK </valstack>
-        <curModIdx> CUR </curModIdx>
-        <moduleInst>
-          <modIdx> CUR </modIdx>
-          <globalAddrs> ... IDX |-> GADDR ... </globalAddrs>
-          ...
-        </moduleInst>
+    rule [collectGlobals-step]:
+        <instrs> #collectGlobals(I, POS, (IDX:Int |-> GADDR:Int) TODO, ACC)
+              => #collectGlobals(I, POS, TODO, ACC [ IDX <- VAL ])
+                 ...
+        </instrs>
         <globalInst>
-          <gAddr>  GADDR      </gAddr>
-          <gValue> _ => VALUE </gValue>
+          <gAddr>  GADDR </gAddr>
+          <gValue> VAL   </gValue>
           ...
         </globalInst>
-        <ioDir> PATH </ioDir>
-        <globalValues> GVALS => GVALS [ GADDR <- VALUE ] </globalValues>
-      requires PATH =/=String ""
-      [priority(20), preserves-definedness]
+      [preserves-definedness]
+```
+
+An address with no `<globalInst>` is skipped rather than reported as `null`, which a
+consumer would read as a value. `allocglobal` adds the address to `<globalAddrs>` and the
+`<globalInst>` to `<globals>` in a single step, so this rule should be unreachable; it
+exists so that a dangling address cannot wedge the tracer.
+
+```k
+    rule [collectGlobals-skip]:
+        <instrs> #collectGlobals(I, POS, (_IDX:Int |-> _GADDR:Int) TODO, ACC)
+              => #collectGlobals(I, POS, TODO, ACC)
+                 ...
+        </instrs>
+      [owise]
 ```
 
 ## Instruction Filter
@@ -492,18 +486,20 @@ Each instruction trace record is a JSON object with these fields:
 Records are written one per line to the trace file.
 
 ```k
-    syntax JSON ::= generateInstrTrace(Instr, OptionalInt, ValStack, Map, SparseBytes, SparseBytes, globalAddrs: Map, globalValues: Map)   [function]
+    syntax JSON ::= generateInstrTrace(Instr, OptionalInt, ValStack, locals: Map, SparseBytes, SparseBytes, globals: Map)   [function]
  // ---------------------------------------------------------
-    rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map, MEM:SparseBytes, PM:SparseBytes, GADDRS:Map, GVALS:Map)
+    rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map, MEM:SparseBytes, PM:SparseBytes, GLOBALS:Map)
       => {
           "pos"    : #if OFFSET ==K .Int #then null #else {OFFSET}:>Int #fi ,
           "instr"  : Instr2JSON(I) ,
           "stack"  : ValStack2JSON(VS) ,
-          "locals" : Locals2JSON(LOCALS) ,
+          "locals" : ValMap2JSON(LOCALS) ,
           // Full sparse snapshot of linear memory when it changed since the previous
           // snapshot, else `null` (memory unchanged — reuse the most recent snapshot).
           "mem"    : #if MEM ==K PM #then null #else [ memRuns(MEM, 0) ] #fi ,
-          "globals": Globals2JSON(GADDRS, GVALS)
+          // Collected by `#collectGlobals`, already keyed by module-relative index; the
+          // same index |-> Val shape as `locals`, so the same serializer applies.
+          "globals": ValMap2JSON(GLOBALS)
       }
 
     // Serializes a SparseBytes memory as a JSON array of `{ "addr", "bytes" }` runs, one
@@ -516,35 +512,6 @@ Records are written one per line to the trace file.
     rule memRuns(SBChunk(#empty(N)) REST, OFF) => memRuns(REST, OFF +Int N)
     rule memRuns(SBChunk(#bytes(BS)) REST, OFF)
       => ({ "addr" : OFF , "bytes" : Bytes2Hex(BS) }, memRuns(REST, OFF +Int lengthBytes(BS)))
-```
-
-`Globals2JSON` composes the executing module's `<globalAddrs>` (module index |-> gAddr)
-with the `<globalValues>` shadow map (gAddr |-> Val) to produce an object keyed by module
-index — the index space DWARF's `DW_OP_WASM_location` global operand uses, so a debugger
-can index it directly. Both inputs are plain `Map`s, which is what makes this expressible
-as a function at all.
-
-An address with no recorded value is skipped rather than rendered as null: that can only
-happen for a global created before tracing was enabled, and a missing key reads as "unknown"
-to a consumer while a null would read as a value.
-
-```k
-    syntax JSON  ::= Globals2JSON(globalAddrs: Map, globalValues: Map)    [function]
-    syntax JSONs ::= Globals2JSONs(globalAddrs: Map, globalValues: Map)   [function]
- // ----------------------------------------------------------------------------------
-    rule Globals2JSON(GADDRS, GVALS) => { Globals2JSONs(GADDRS, GVALS) }
-
-    rule Globals2JSONs(.Map, _GVALS) => .JSONs
-
-    rule Globals2JSONs((IDX:Int |-> GADDR:Int) REST:Map, GVALS:Map)
-      => Int2String(IDX) : Val2JSON({GVALS[GADDR]}:>Val) , Globals2JSONs(REST, GVALS)
-      requires GADDR in_keys(GVALS)
-       andBool isVal(GVALS[GADDR])
-      [preserves-definedness]
-
-    rule Globals2JSONs((_IDX:Int |-> _GADDR:Int) REST:Map, GVALS:Map)
-      => Globals2JSONs(REST, GVALS)
-      [owise]
 ```
 
 `generateLedgerTrace` builds the whole-transaction **ledger baseline** record: the ledger
@@ -578,6 +545,11 @@ collection sort is not usable as a declared function argument in a hand-written 
 (`Could not find sorts: [AccountCellMap]`), so tracing mirrors the balances into a plain
 `Map` keyed by the account's own `Address` term — see `Tracking Account Balances` below.
 
+The globals escape that mirror by being walked one at a time in `<instrs>` (see
+*Collecting Globals*), which works because `<globalAddrs>` enumerates them. The accounts
+have no such index — nothing lists the `<accountId>`s to look up — so this one stays a
+shadow map, and `komet-node`'s `#traceLedger` reads it.
+
 ```k
     syntax JSONs ::= AccountBalances2JSONs(Map)   [function]
  // ----------------------------------------------------------
@@ -597,7 +569,7 @@ collection sort is not usable as a declared function argument in a hand-written 
       => {
           "pos"    : null ,
           "instr"  : [ "hostCall" , MOD , FUNC ] ,
-          "locals" : Locals2JSON(LOCALS)
+          "locals" : ValMap2JSON(LOCALS)
       }
 
     syntax JSON ::= generateContractDataTrace(ContractId, StorageType, String, List)   [function]

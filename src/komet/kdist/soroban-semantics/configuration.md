@@ -23,21 +23,14 @@ module CONFIG
          // `null` otherwise. Seeded empty so the first traced instruction snapshots the
          // initial (data-segment) memory.
          <prevMem> .SparseBytes </prevMem>
-         // Values of every wasm global, keyed by its STORE-LEVEL address (the
-         // `<gAddr>` of a `<globalInst>`), which is unique across all
-         // instantiated modules. A cell collection like `<globals>` cannot be
-         // serialized by a function, so tracing keeps this shadow map instead,
-         // updated wherever a global is created or written (see tracing.md).
-         // Trace records key globals by MODULE-relative index, which the tracer
-         // recovers by composing the executing module's `<globalAddrs>`
-         // (index |-> gAddr) with this map — so no per-module bookkeeping and no
-         // save/restore across contract calls is needed here.
-         <globalValues> .Map </globalValues>
          // Every account's balance, keyed by the account's own Address term. The
-         // `<accounts>` cell collection has the same problem as `<globals>` — its
+         // `<accounts>` cell collection cannot be serialized by a function — its
          // generated sort cannot be a function argument in a hand-written module —
          // so tracing mirrors the balances here to serialize them for the ledger
          // baseline record. `setAccount` is the only writer (see tracing.md).
+         // Unlike the globals, which `#collectGlobals` reads live by walking the
+         // executing module's `<globalAddrs>`, the accounts have no such index to
+         // walk, so this mirror stays.
          <accountBalances> .Map </accountBalances>
         </trace>
 ```

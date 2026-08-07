@@ -52,9 +52,9 @@ Every instruction record carries the executing module's globals. Unlike `mem` th
 
 The keys are **module-relative** global indices — the index space DWARF's `DW_OP_WASM_location` global operand uses — not the store-level global addresses the semantics allocate. A debugger can therefore index the object directly with a DWARF global index. This is what lets it resolve Rust variables whose location, or whose frame base, reads a global instead of the shadow stack in linear memory; at `-O0` that is `__stack_pointer`, so without this field those variables read as `<optimized out>`.
 
-The object is `{}` while a global does not yet exist — notably for the records that evaluate a module's own global *initializers*, which run before the globals they define are allocated. It is also `{}` for a program with no linear memory (the text-format tests), which takes a fallback tracing rule that does not read the module's globals.
+The object is `{}` while a global does not yet exist — notably for the records that evaluate a module's own global *initializers*, which run before the globals they define are allocated.
 
-Because `<globals>` is a K *cell collection* — which a function cannot take as an argument — the tracer cannot serialize it directly. A `<globalValues>` shadow map keyed by store-level `<gAddr>` mirrors the values instead, and the tracer composes it with the executing module's `<globalAddrs>` to recover module-relative indices. See `tracing.md`'s *Tracking Global Values* for the two rules that maintain it, and the warning about their coupling to `wasm-semantics`.
+Because `<globals>` is a K *cell collection* — whose generated sort cannot appear in a hand-written `syntax` declaration, so no function can take it as an argument — the tracer cannot serialize it the way it serializes the locals map. Rules have no such restriction, so the values are read live, one global per rewrite step, by walking the executing module's `<globalAddrs>` and looking up each `<globalInst>`. See `tracing.md`'s *Collecting Globals*. Nothing is mirrored and no `wasm-semantics` rule is shadowed, so the reported values cannot drift from the real ones.
 
 ### Example
 
