@@ -99,49 +99,7 @@ module KASMER
           </account>
         )
       [priority(55)]
-```
 
-When tracing is enabled these two rules shadow the pair above, additionally mirroring the
-balance into the `<accountBalances>` map so the ledger baseline record can serialize it (the
-`<accounts>` cell collection cannot be passed to a function — see `tracing.md`'s
-*Trace Format*). `setAccount` is the only rule in the semantics that writes a balance, so
-these are the complete set of write sites.
-
-They live here rather than in `tracing.md` because `setAccount` is declared in this module,
-and `KASMER` imports `TRACING`, not the other way round.
-
-**WARNING**: they duplicate the transitions of `setAccount-existing`/`setAccount-new` above,
-preserving their relative order (an existing account is updated before a new one is created).
-Keep them in sync.
-
-```k-tracing
-    rule [tracing-setAccount-existing]:
-        <k> setAccount(ADDR, BAL) => .K ... </k>
-        <account>
-           <accountId> ADDR </accountId>
-           <balance> _ => BAL </balance>
-           ...
-        </account>
-        <ioDir> PATH </ioDir>
-        <accountBalances> AB => AB [ ADDR <- BAL ] </accountBalances>
-      requires PATH =/=String ""
-      [priority(20)]
-
-    rule [tracing-setAccount-new]:
-        <k> setAccount(ADDR, BAL) => .K ... </k>
-        ( .Bag =>
-          <account>
-            <accountId> ADDR </accountId>
-            <balance> BAL </balance>
-          </account>
-        )
-        <ioDir> PATH </ioDir>
-        <accountBalances> AB => AB [ ADDR <- BAL ] </accountBalances>
-      requires PATH =/=String ""
-      [priority(25)]
-```
-
-```k
 //  ----------------------------------------------------------------------------
 
     rule [uploadWasm-exists]:

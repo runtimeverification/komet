@@ -52,7 +52,7 @@ Every instruction record carries the executing module's globals. Unlike `mem` th
 
 The keys are **module-relative** global indices — the index space DWARF's `DW_OP_WASM_location` global operand uses — not the store-level global addresses the semantics allocate. A debugger can therefore index the object directly with a DWARF global index. This is what lets it resolve Rust variables whose location, or whose frame base, reads a global instead of the shadow stack in linear memory; at `-O0` that is `__stack_pointer`, so without this field those variables read as `<optimized out>`.
 
-The object is `{}` while a global does not yet exist — notably for the records that evaluate a module's own global *initializers*, which run before the globals they define are allocated.
+A global appears only once it has been allocated, which happens after its own *initializer* has been evaluated. So the records that evaluate a module's initializers report the globals declared before them and not the one being defined: the first such record carries `{}`, the second carries global 0, and so on.
 
 Because `<globals>` is a K *cell collection* — whose generated sort cannot appear in a hand-written `syntax` declaration, so no function can take it as an argument — the tracer cannot serialize it the way it serializes the locals map. Rules have no such restriction, so the values are read live, one global per rewrite step, by walking the executing module's `<globalAddrs>` and looking up each `<globalInst>`. See `tracing.md`'s *Collecting Globals*. Nothing is mirrored and no `wasm-semantics` rule is shadowed, so the reported values cannot drift from the real ones.
 
