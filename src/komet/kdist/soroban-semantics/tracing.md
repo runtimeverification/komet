@@ -498,55 +498,10 @@ Records are written one per line to the trace file.
       => ({ "addr" : OFF , "bytes" : Bytes2Hex(BS) }, memRuns(REST, OFF +Int lengthBytes(BS)))
 ```
 
-`generateLedgerTrace` builds the whole-transaction **ledger baseline** record: the ledger
-scalars plus every account's balance. A debugger seeds its ledger view from this and then
-replays the per-operation events (storage writes, contract calls) on top, so it can show
-chain state at any point of a recorded execution — not just the parts a contract touched.
-
-komet-node emits it once, before a transaction's steps run (see its `#traceLedger`).
-`contracts` and `codes` are reserved for the contract-instance and uploaded-code metadata
-(wasm hash, instance/code TTLs); they are emitted empty for now, and a consumer must treat
-an empty list as "not reported" rather than "none exist".
-
-```k
-    syntax JSON ::= generateLedgerTrace(sequence: Int, timestamp: Int, accounts: Map)   [function]
- // ---------------------------------------------------------------------------------------------
-    rule generateLedgerTrace(SEQ, TS, ACCTS)
-      => {
-          "pos"       : null ,
-          "instr"     : [ "ledger" ] ,
-          "sequence"  : SEQ ,
-          "timestamp" : TS ,
-          "accounts"  : [ AccountBalances2JSONs(ACCTS) ] ,
-          "contracts" : [ .JSONs ] ,
-          "codes"     : [ .JSONs ]
-      }
-```
-
-`AccountBalances2JSONs` serializes a plain `Map` of account `Address` |-> balance. The
-`<accounts>` cell collection cannot be read here for the same reason `<globals>` cannot:
-its generated collection sort is not usable as a declared function argument in a
-hand-written module (`Could not find sorts: [AccountCellMap]`).
-
-The caller builds that `Map` by walking the `<account>` cells one per rewrite step. That
-walk lives in `komet-node`'s `#collectAccounts`, beside the `#traceLedger` step that needs
-it, because the ledger scalars it reports (`<ledgerSequenceNumber>`, `<ledgerTimestamp>`)
-are komet-node's cells. Unlike the globals there is no index map to resolve, so the walk
-instead skips accounts already in the accumulator. It could be folded into a function the
-same way `moduleGlobals` was (see *Reading Globals*), which would remove those rewrite
-steps too.
-
-```k
-    syntax JSONs ::= AccountBalances2JSONs(Map)   [function]
- // ----------------------------------------------------------
-    rule AccountBalances2JSONs(.Map) => .JSONs
-
-    rule AccountBalances2JSONs((ADDR:Address |-> BAL:Int) REST:Map)
-      => { "account" : Address2JSON(ADDR) , "balance" : BAL } , AccountBalances2JSONs(REST)
-
-    rule AccountBalances2JSONs((_K |-> _V) REST:Map) => AccountBalances2JSONs(REST)
-      [owise]
-```
+The **ledger baseline** record (`instr: ["ledger"]`) is built by `generateLedgerTrace` in
+komet-node's `node.md`, beside the `#traceLedger` step that emits it. komet itself never
+emits one: a baseline opening every trace is a statement about how komet-node lays out a
+transaction's trace file, and nothing here produces it.
 
 ```k
     syntax JSON ::= generateHostCallTrace(String, String, Map)   [function]
