@@ -386,9 +386,11 @@ Their priorities (35, 45) run them ahead of `endWasm-error` (40) and `endWasm` (
       [priority(45)]
 ```
 
-## Trace Format
+## JSON Record Format
 
-Each instruction trace record is a JSON object with these fields:
+Every trace record is a JSON object with a `kind` field identifying its type — `"instr"` for an instruction record, or the operation name for a Soroban VM operation (see `## Soroban VM Tracing` above).
+
+Instruction records (`kind: "instr"`) have four further fields:
 
 - `pos` — the byte offset of the instruction in the binary, or `null` for text format programs.
 - `instr` — a JSON representation of the instruction.
@@ -400,6 +402,8 @@ Each instruction trace record is a JSON object with these fields:
   reconstructs memory by taking the most recent non-`null` snapshot at or before the
   record and treating unwritten bytes as `0`.
 
+Each Soroban VM operation has its own set of fields, built by its own `generate*Trace` function below; see `docs/tracing.md` for the full format of each.
+
 Records are written one per line to the trace file.
 
 ```k
@@ -407,6 +411,7 @@ Records are written one per line to the trace file.
  // ---------------------------------------------------------
     rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map, MEM:SparseBytes, PM:SparseBytes)
       => {
+          "kind"   : "instr" ,
           "pos"    : #if OFFSET ==K .Int #then null #else {OFFSET}:>Int #fi ,
           "instr"  : Instr2JSON(I) ,
           "stack"  : ValStack2JSON(VS) ,
@@ -431,27 +436,28 @@ Records are written one per line to the trace file.
  // -------------------------------------------------------------------------
     rule generateHostCallTrace(MOD, FUNC, LOCALS)
       => {
-          "pos"    : null ,
-          "instr"  : [ "hostCall" , MOD , FUNC ] ,
-          "locals" : Locals2JSON(LOCALS)
+          "kind"     : "hostCall" ,
+          "module"   : MOD ,
+          "function" : FUNC ,
+          "locals"   : Locals2JSON(LOCALS)
       }
 
     syntax JSON ::= generateContractDataTrace(ContractId, StorageType, String, List)   [function]
  // --------------------------------------------------------------------------------------------------
     rule generateContractDataTrace(CONTRACT, S_TYPE, OP, ARGS)
       => {
-          "pos"      : null ,
-          "instr"    : ["contractData", OP, StorageType2JSON(S_TYPE)] ,
-          "contract" : Address2JSON(CONTRACT) ,
-          "args"     : [ ScVec2JSONs(ARGS) ]
+          "kind"       : "contractData" ,
+          "operation"  : OP ,
+          "durability" : StorageType2JSON(S_TYPE) ,
+          "contract"   : Address2JSON(CONTRACT) ,
+          "args"       : [ ScVec2JSONs(ARGS) ]
       }
 
     syntax JSON ::= generateAddObjectTrace(ScVal, Int)   [function]
  // ---------------------------------------------------------------
     rule generateAddObjectTrace(SCV, INDEX)
       => {
-          "pos"   : null ,
-          "instr" : ["addObject"] ,
+          "kind"  : "addObject" ,
           "value" : ScVal2JSON(SCV) ,
           "index" : INDEX
       }
@@ -460,8 +466,7 @@ Records are written one per line to the trace file.
  // ---------------------------------------------------------------------------------------------------------------------------------------------------------
     rule generateCallContractTrace(FROM, TO, FUNCNAME, ARGS, DEPTH, INSTANCE, INSTANCE_LIVE_UNTIL, CTRDATA)
       => {
-          "pos"      : null ,
-          "instr"    : ["callContract"] ,
+          "kind"     : "callContract" ,
           "from"     : Address2JSON(FROM) ,
           "to"       : Address2JSON(TO) ,
           "function" : FUNCNAME ,
@@ -523,8 +528,7 @@ Records are written one per line to the trace file.
  // -------------------------------------------------------------------
     rule generateEndWasmTrace(SUCCESS, DEPTH, RESULT)
       => {
-          "pos"     : null ,
-          "instr"   : ["endWasm"] ,
+          "kind"    : "endWasm" ,
           "success" : SUCCESS ,
           "depth"   : DEPTH ,
           "result"  : RESULT
