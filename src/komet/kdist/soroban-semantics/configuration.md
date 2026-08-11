@@ -17,6 +17,12 @@ module CONFIG
         <trace>
          <ioDir> $TRACE:String </ioDir>
          <alreadyTraced> false </alreadyTraced>
+         // The current module's linear memory as of the last instruction whose trace
+         // record carried a `mem` snapshot. Per-step memory is emitted only when it
+         // differs from this, so the trace carries a full sparse snapshot on change and
+         // `null` otherwise. Seeded empty so the first traced instruction snapshots the
+         // initial (data-segment) memory.
+         <prevMem> .SparseBytes </prevMem>
         </trace>
 ```
 ```k

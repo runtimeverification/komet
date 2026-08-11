@@ -1,7 +1,7 @@
 # Tracing
 
 This module adds execution tracing to the WebAssembly semantics.
-When tracing is enabled, it logs the VM state at each source-level instruction: the instruction itself, its position in the binary (if available), the value stack, and the local variables.
+When tracing is enabled, it logs the VM state at each source-level instruction: the instruction itself, its position in the binary (if available), the value stack, the local variables, and a snapshot of linear memory when it has changed.
 The trace is written as newline-separated JSON records to the file specified by the `<ioDir>` cell.
 
 Tracing is enabled by setting `<ioDir>` to a non-empty file path. When `<ioDir>` is empty, all tracing rules are disabled and execution proceeds normally.
@@ -54,12 +54,37 @@ The `traceInstr` rule performs the actual logging. It:
 ```k
     rule [traceInstr]:
         <instrs> #traceInstr(I, POS)
-              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS))
+              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS, MEM, PM))
                  ...
         </instrs>
         <ioDir> PATH </ioDir>
         <valstack> STACK </valstack>
         <locals> LOCALS </locals>
+        <curModIdx> CUR </curModIdx>
+        <moduleInst>
+          <modIdx> CUR </modIdx>
+          <memAddrs> 0 |-> MADDR </memAddrs>
+          ...
+        </moduleInst>
+        <memInst>
+          <mAddr> MADDR </mAddr>
+          <mdata> MEM </mdata>
+          ...
+        </memInst>
+        <prevMem> PM => MEM </prevMem>
+
+    // Fallback for programs without a linear memory (e.g. text-format tests): still
+    // trace, with an empty memory so `mem` is always `null`. Guarantees `#traceInstr`
+    // is always consumed even when the memory-matching rule above cannot fire.
+    rule [traceInstr-nomem]:
+        <instrs> #traceInstr(I, POS)
+              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS, .SparseBytes, .SparseBytes))
+                 ...
+        </instrs>
+        <ioDir> PATH </ioDir>
+        <valstack> STACK </valstack>
+        <locals> LOCALS </locals>
+      [owise]
 ```
 
 ### The `<alreadyTraced>` Mechanism
@@ -371,22 +396,41 @@ Instruction records (`kind: "instr"`) have four further fields:
 - `instr` — a JSON representation of the instruction.
 - `stack` — the current value stack contents.
 - `locals` — the current local variable bindings.
+- `mem` — a full sparse snapshot of the current module's linear memory when it changed
+  since the previous snapshot (a JSON array of `{ "addr", "bytes" }` runs, `bytes`
+  lowercase hex), or `null` when memory is unchanged. Zero-gaps are omitted; a consumer
+  reconstructs memory by taking the most recent non-`null` snapshot at or before the
+  record and treating unwritten bytes as `0`.
 
 Each Soroban VM operation has its own set of fields, built by its own `generate*Trace` function below; see `docs/tracing.md` for the full format of each.
 
 Records are written one per line to the trace file.
 
 ```k
-    syntax JSON ::= generateInstrTrace(Instr, OptionalInt, ValStack, Map)   [function]
+    syntax JSON ::= generateInstrTrace(Instr, OptionalInt, ValStack, Map, SparseBytes, SparseBytes)   [function]
  // ---------------------------------------------------------
-    rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map)
+    rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map, MEM:SparseBytes, PM:SparseBytes)
       => {
           "kind"   : "instr" ,
           "pos"    : #if OFFSET ==K .Int #then null #else {OFFSET}:>Int #fi ,
           "instr"  : Instr2JSON(I) ,
           "stack"  : ValStack2JSON(VS) ,
-          "locals" : Locals2JSON(LOCALS)
+          "locals" : Locals2JSON(LOCALS) ,
+          // Full sparse snapshot of linear memory when it changed since the previous
+          // snapshot, else `null` (memory unchanged — reuse the most recent snapshot).
+          "mem"    : #if MEM ==K PM #then null #else [ memRuns(MEM, 0) ] #fi
       }
+
+    // Serializes a SparseBytes memory as a JSON array of `{ "addr", "bytes" }` runs, one
+    // per concrete (`#bytes`) chunk, tracking the running byte offset across gaps
+    // (`#empty`). `bytes` is lowercase hex (the `Bytes2Hex` hook). Zero-gaps are omitted:
+    // never-written memory reads as 0 on the consumer side.
+    syntax JSONs ::= memRuns(SparseBytes, Int)   [function]
+ // -------------------------------------------------------
+    rule memRuns(.SparseBytes, _) => .JSONs
+    rule memRuns(SBChunk(#empty(N)) REST, OFF) => memRuns(REST, OFF +Int N)
+    rule memRuns(SBChunk(#bytes(BS)) REST, OFF)
+      => ({ "addr" : OFF , "bytes" : Bytes2Hex(BS) }, memRuns(REST, OFF +Int lengthBytes(BS)))
 
     syntax JSON ::= generateHostCallTrace(String, String, Map)   [function]
  // -------------------------------------------------------------------------
