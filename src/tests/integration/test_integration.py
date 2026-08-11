@@ -118,7 +118,7 @@ def test_tracing_consecutive_nop(tmp_path: Path) -> None:
     _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
 
     records = [json.loads(line) for line in trace_file.read_text().splitlines()]
-    nop_count = sum(1 for r in records if r['instr'] == ['nop'])
+    nop_count = sum(1 for r in records if r['kind'] == 'instr' and r['instr'] == ['nop'])
     assert nop_count == 2, f'Expected 2 nop entries in trace, got {nop_count}'
 
 
@@ -141,7 +141,7 @@ def test_tracing_double_u256(tmp_path: Path) -> None:
     _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
 
     records = [json.loads(line) for line in trace_file.read_text().splitlines()]
-    instrs = [r['instr'] for r in records]
+    instrs = [r['instr'] for r in records if r['kind'] == 'instr']
 
     local_get_0_count = sum(1 for i in instrs if i == ['local.get', 0])
     assert local_get_0_count == 2, f'Expected 2 local.get 0 entries in trace, got {local_get_0_count}'
@@ -164,8 +164,8 @@ def test_tracing_call_contract_and_end_wasm(tmp_path: Path) -> None:
     _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
 
     records = [json.loads(line) for line in trace_file.read_text().splitlines()]
-    calls = [r for r in records if r['instr'] == ['callContract']]
-    ends = [r for r in records if r['instr'] == ['endWasm']]
+    calls = [r for r in records if r['kind'] == 'callContract']
+    ends = [r for r in records if r['kind'] == 'endWasm']
 
     assert len(calls) == 2, f'Expected 2 callContract entries, got {len(calls)}'
     assert len(ends) == 2, f'Expected 2 endWasm entries, got {len(ends)}'
@@ -198,7 +198,7 @@ def test_tracing_end_wasm_error(tmp_path: Path) -> None:
     _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
 
     records = [json.loads(line) for line in trace_file.read_text().splitlines()]
-    ends = [r for r in records if r['instr'] == ['endWasm']]
+    ends = [r for r in records if r['kind'] == 'endWasm']
 
     assert len(ends) == 4, f'Expected 4 endWasm entries (one per callTx), got {len(ends)}'
     assert [e['success'] for e in ends] == [True, True, False, True]
@@ -223,7 +223,7 @@ def test_tracing_call_contract_storage(tmp_path: Path) -> None:
     _krun(input_file=program, definition_dir=TRACING_DEFINITION_DIR, cmap=cmap, pmap=pmap, check=True)
 
     records = [json.loads(line) for line in trace_file.read_text().splitlines()]
-    calls = [r for r in records if r['instr'] == ['callContract']]
+    calls = [r for r in records if r['kind'] == 'callContract']
     storages = [(c['function'], c['storage']) for c in calls]
 
     expected_entry = {
@@ -246,17 +246,18 @@ def test_tracing_call_contract_storage(tmp_path: Path) -> None:
     contract = calls[0]['to']
     key_arg = {'type': 'symbol', 'value': 'foo'}
     value_arg = {'type': 'u32', 'value': 123456789}
-    contract_data_ops = [r['instr'][1] for r in records if r['instr'][0] == 'contractData']
+    contract_data = [r for r in records if r['kind'] == 'contractData']
+    contract_data_ops = [r['operation'] for r in contract_data]
     assert contract_data_ops == ['put', 'del', 'put'], f'Expected put, del, put in order, got {contract_data_ops}'
 
-    puts = [r for r in records if r['instr'][:2] == ['contractData', 'put']]
-    dels = [r for r in records if r['instr'][:2] == ['contractData', 'del']]
+    puts = [r for r in contract_data if r['operation'] == 'put']
+    dels = [r for r in contract_data if r['operation'] == 'del']
     for put in puts:
-        assert put['instr'][2] == 'temporary'
+        assert put['durability'] == 'temporary'
         assert put['contract'] == contract
         assert put['args'] == [key_arg, value_arg]
     for delete in dels:
-        assert delete['instr'][2] == 'temporary'
+        assert delete['durability'] == 'temporary'
         assert delete['contract'] == contract
         assert delete['args'] == [key_arg]
 
