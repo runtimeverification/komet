@@ -46,15 +46,17 @@ Two internal instructions drive the tracing mechanism:
 
 ### Logging
 
-The `traceInstr` rule performs the actual logging. It:
-
-1. Generates the trace data for instruction `I` using the current value stack and locals.
-2. Appends it as a JSON record to the trace file.
+`traceInstr` generates the trace data for instruction `I` from the current value stack,
+locals, memory and globals, and appends it as a JSON record to the trace file. Globals come
+from `moduleGlobals(CUR)` (see *Reading Globals*).
 
 ```k
     rule [traceInstr]:
         <instrs> #traceInstr(I, POS)
-              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS, MEM, PM))
+              => #appendFileJSONLn(
+                    PATH,
+                    generateInstrTrace(I, POS, STACK, LOCALS, MEM, PM, moduleGlobals(CUR))
+                 )
                  ...
         </instrs>
         <ioDir> PATH </ioDir>
@@ -74,16 +76,21 @@ The `traceInstr` rule performs the actual logging. It:
         <prevMem> PM => MEM </prevMem>
 
     // Fallback for programs without a linear memory (e.g. text-format tests): still
-    // trace, with an empty memory so `mem` is always `null`. Guarantees `#traceInstr`
-    // is always consumed even when the memory-matching rule above cannot fire.
+    // trace, with an empty memory so `mem` is always `null`. Guarantees `#traceInstr` is
+    // always consumed even when the memory-matching rule above cannot fire. Globals are
+    // still reported: `moduleGlobals` does not depend on there being a linear memory.
     rule [traceInstr-nomem]:
         <instrs> #traceInstr(I, POS)
-              => #appendFileJSONLn(PATH, generateInstrTrace(I, POS, STACK, LOCALS, .SparseBytes, .SparseBytes))
+              => #appendFileJSONLn(
+                    PATH,
+                    generateInstrTrace(I, POS, STACK, LOCALS, .SparseBytes, .SparseBytes, moduleGlobals(CUR))
+                 )
                  ...
         </instrs>
         <ioDir> PATH </ioDir>
         <valstack> STACK </valstack>
         <locals> LOCALS </locals>
+        <curModIdx> CUR </curModIdx>
       [owise]
 ```
 
@@ -185,6 +192,60 @@ The `#resetAlreadyTraced` appended by `insert-traceInstr` after the `#block`/`#l
         </instrs>
         <valstack> VALSTACK => .ValStack </valstack>
       [priority(20)]
+```
+
+### Reading Globals
+
+`moduleGlobals(MODIDX)` returns module `MODIDX`'s globals as a `Map` of module-relative
+index |-> `Val` — the same shape as `locals`, so `ValMap2JSON` serializes both. Module index
+is the index space DWARF's `DW_OP_WASM_location` global operand uses, so a debugger can
+index the object directly.
+
+These rules read `<moduleInst>` and `<globalInst>` as [function
+context](https://github.com/runtimeverification/k/blob/master/docs/user_manual.md#matching-global-context-in-function-rules).
+
+The argument is an `OptionalInt` so a caller can pass `<curModIdx>` through unchanged.
+Constraining it to `Int` would stop `traceInstr-nomem`'s `owise` from matching when no
+module is current, wedging `#traceInstr` instead of tracing it.
+
+```k
+    syntax Map ::= moduleGlobals(modIdx: OptionalInt)   [function]
+ // --------------------------------------------------------------
+    rule [[ moduleGlobals(MODIDX:Int) => globalVals(GADDRS) ]]
+         <moduleInst>
+           <modIdx> MODIDX </modIdx>
+           <globalAddrs> GADDRS </globalAddrs>
+           ...
+         </moduleInst>
+
+    // No module instance to read globals from: `<curModIdx>` is `.Int`, or names a module
+    // with no `<moduleInst>`. Reports no globals rather than leaving the record unevaluated.
+    rule moduleGlobals(_) => .Map   [owise]
+```
+
+`globalVals` resolves `<globalAddrs>` (module index |-> `<gAddr>`) to module index |-> `Val`,
+looking up each `<globalInst>` by its address.
+
+```k
+    syntax Map ::= globalVals(addrs: Map)   [function]
+ // --------------------------------------------------
+    rule globalVals(.Map) => .Map
+
+    rule [[ globalVals((IDX:Int |-> GADDR:Int) REST) => (IDX |-> VAL) globalVals(REST) ]]
+         <globalInst>
+           <gAddr>  GADDR </gAddr>
+           <gValue> VAL   </gValue>
+           ...
+         </globalInst>
+```
+
+An address with no `<globalInst>` is skipped rather than reported as `null`, which a
+consumer would read as a value. `allocglobal` adds the address to `<globalAddrs>` and the
+`<globalInst>` to `<globals>` in a single step, so this should be unreachable; it exists so
+that a dangling address cannot wedge the tracer.
+
+```k
+    rule globalVals((_IDX |-> _GADDR) REST) => globalVals(REST)   [owise]
 ```
 
 ## Instruction Filter
@@ -401,24 +462,31 @@ Instruction records (`kind: "instr"`) have four further fields:
   lowercase hex), or `null` when memory is unchanged. Zero-gaps are omitted; a consumer
   reconstructs memory by taking the most recent non-`null` snapshot at or before the
   record and treating unwritten bytes as `0`.
+- `globals` — the executing module's wasm globals, keyed by MODULE-RELATIVE index (a
+  decimal string, as with `locals`), each value a `[type, value]` pair. Unlike `mem` this
+  is repeated in full on every record and never `null`: a module has only a handful of
+  globals, so a consumer reads them off the current record with no scan.
 
 Each Soroban VM operation has its own set of fields, built by its own `generate*Trace` function below; see `docs/tracing.md` for the full format of each.
 
 Records are written one per line to the trace file.
 
 ```k
-    syntax JSON ::= generateInstrTrace(Instr, OptionalInt, ValStack, Map, SparseBytes, SparseBytes)   [function]
+    syntax JSON ::= generateInstrTrace(Instr, OptionalInt, ValStack, locals: Map, SparseBytes, SparseBytes, globals: Map)   [function]
  // ---------------------------------------------------------
-    rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map, MEM:SparseBytes, PM:SparseBytes)
+    rule generateInstrTrace(I:Instr, OFFSET, VS:ValStack, LOCALS:Map, MEM:SparseBytes, PM:SparseBytes, GLOBALS:Map)
       => {
           "kind"   : "instr" ,
           "pos"    : #if OFFSET ==K .Int #then null #else {OFFSET}:>Int #fi ,
           "instr"  : Instr2JSON(I) ,
           "stack"  : ValStack2JSON(VS) ,
-          "locals" : Locals2JSON(LOCALS) ,
+          "locals" : ValMap2JSON(LOCALS) ,
           // Full sparse snapshot of linear memory when it changed since the previous
           // snapshot, else `null` (memory unchanged — reuse the most recent snapshot).
-          "mem"    : #if MEM ==K PM #then null #else [ memRuns(MEM, 0) ] #fi
+          "mem"    : #if MEM ==K PM #then null #else [ memRuns(MEM, 0) ] #fi ,
+          // Read by `moduleGlobals`, already keyed by module-relative index; the same
+          // index |-> Val shape as `locals`, so the same serializer applies.
+          "globals": ValMap2JSON(GLOBALS)
       }
 
     // Serializes a SparseBytes memory as a JSON array of `{ "addr", "bytes" }` runs, one
@@ -431,7 +499,9 @@ Records are written one per line to the trace file.
     rule memRuns(SBChunk(#empty(N)) REST, OFF) => memRuns(REST, OFF +Int N)
     rule memRuns(SBChunk(#bytes(BS)) REST, OFF)
       => ({ "addr" : OFF , "bytes" : Bytes2Hex(BS) }, memRuns(REST, OFF +Int lengthBytes(BS)))
+```
 
+```k
     syntax JSON ::= generateHostCallTrace(String, String, Map)   [function]
  // -------------------------------------------------------------------------
     rule generateHostCallTrace(MOD, FUNC, LOCALS)
@@ -439,7 +509,7 @@ Records are written one per line to the trace file.
           "kind"     : "hostCall" ,
           "module"   : MOD ,
           "function" : FUNC ,
-          "locals"   : Locals2JSON(LOCALS)
+          "locals"   : ValMap2JSON(LOCALS)
       }
 
     syntax JSON ::= generateContractDataTrace(ContractId, StorageType, String, List)   [function]

@@ -46,6 +46,21 @@ For the formal specification of how each value and type is serialized, see [`jso
 | `instr`  | array            | The instruction and its operands encoded as a JSON array. The first element is the instruction name, followed by its operands, e.g. `i64.const 255` is encoded as `["const", "i64", 255]`. |
 | `stack`  | array            | The value stack at the time of execution. Each entry is a `[type, value]` pair, e.g. `["i64", 4]`. |
 | `locals` | object           | The local variable bindings at the time of execution, keyed by index. Each value is a `[type, value]` pair. |
+| `globals`| object           | The executing module's WebAssembly globals, keyed by **module-relative index**. Each value is a `[type, value]` pair, like `locals`. See [Globals](#globals) below. |
+
+### Globals
+
+Every instruction record carries the executing module's globals. Unlike `mem` this is repeated in full on every record and is never `null`: a module has only a handful of globals, so a consumer reads them off the current record with no scan.
+
+```json
+{"pos": 605, "instr": ["local.get", 0], "stack": [], "locals": {}, "globals": {"0": ["i32", 1048560]}}
+```
+
+The keys are **module-relative** global indices — the index space DWARF's `DW_OP_WASM_location` global operand uses — not the store-level global addresses the semantics allocate. A debugger can therefore index the object directly with a DWARF global index. This is what lets it resolve Rust variables whose location, or whose frame base, reads a global instead of the shadow stack in linear memory; at `-O0` that is `__stack_pointer`, so without this field those variables read as `<optimized out>`.
+
+A global appears only once it has been allocated, which happens after its own *initializer* has been evaluated. So the records that evaluate a module's initializers report the globals declared before them and not the one being defined: the first such record carries `{}`, the second carries global 0, and so on.
+
+The values are read live from the `<globalInst>` cells at each traced instruction — see `tracing.md`'s *Reading Globals*. Nothing is mirrored and no `wasm-semantics` rule is shadowed, so the reported values cannot drift from the real ones.
 
 ### Example
 

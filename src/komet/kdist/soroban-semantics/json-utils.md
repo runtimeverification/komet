@@ -244,17 +244,17 @@ Additional elements carry the instruction's operands — types, operator names (
 
 These functions serialize the runtime state captured at each trace point.
 
-`Locals2JSON` serializes the local variable map as a JSON object, with local indices as string keys and their values serialized with `Val2JSON`.
+`ValMap2JSON` serializes an index-keyed map of wasm values as a JSON object, with the indices as string keys and the values serialized with `Val2JSON`. It serves both the `locals` and the `globals` fields of a trace record — locals are keyed by local index, globals by module-relative global index.
 
 `ValStack2JSON` serializes the value stack as a JSON array, preserving the stack order from top to bottom.
 
 ```k
-    syntax JSON  ::= Locals2JSON(Map)    [function]
-    syntax JSONs ::= Locals2JSONs(Map)   [function]
+    syntax JSON  ::= ValMap2JSON(Map)    [function]
+    syntax JSONs ::= ValMap2JSONs(Map)   [function]
  // --------------------------------------------------
-    rule Locals2JSON( M:Map ) => { Locals2JSONs(M) }
-    rule Locals2JSONs( .Map) => .JSONs
-    rule Locals2JSONs( (I:Int |-> V:Val) REST:Map ) => Int2String(I) : Val2JSON(V), Locals2JSONs( REST )
+    rule ValMap2JSON( M:Map ) => { ValMap2JSONs(M) }
+    rule ValMap2JSONs( .Map) => .JSONs
+    rule ValMap2JSONs( (I:Int |-> V:Val) REST:Map ) => Int2String(I) : Val2JSON(V), ValMap2JSONs( REST )
 
     syntax JSON  ::= ValStack2JSON(ValStack)    [function, total]
     syntax JSONs ::= ValStack2JSONs(ValStack)   [function, total]
