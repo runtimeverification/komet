@@ -498,11 +498,6 @@ Records are written one per line to the trace file.
       => ({ "addr" : OFF , "bytes" : Bytes2Hex(BS) }, memRuns(REST, OFF +Int lengthBytes(BS)))
 ```
 
-The **ledger baseline** record (`instr: ["ledger"]`) is built by `generateLedgerTrace` in
-komet-node's `node.md`, beside the `#traceLedger` step that emits it. komet itself never
-emits one: a baseline opening every trace is a statement about how komet-node lays out a
-transaction's trace file, and nothing here produces it.
-
 ```k
     syntax JSON ::= generateHostCallTrace(String, String, Map)   [function]
  // -------------------------------------------------------------------------
