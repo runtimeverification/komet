@@ -202,9 +202,7 @@ is the index space DWARF's `DW_OP_WASM_location` global operand uses, so a debug
 index the object directly.
 
 These rules read `<moduleInst>` and `<globalInst>` as [function
-context](https://github.com/runtimeverification/k/blob/master/docs/user_manual.md#matching-global-context-in-function-rules),
-because `<globals>` is a cell collection and its generated sort (`GlobalInstCellMap`) cannot
-appear in a `syntax` declaration — so no function can take the collection as an argument.
+context](https://github.com/runtimeverification/k/blob/master/docs/user_manual.md#matching-global-context-in-function-rules).
 
 The argument is an `OptionalInt` so a caller can pass `<curModIdx>` through unchanged.
 Constraining it to `Int` would stop `traceInstr-nomem`'s `owise` from matching when no
