@@ -61,6 +61,7 @@ various contexts:
         | U128(Int)                                [symbol(SCVal:U128)]
         | I128(Int)                                [symbol(SCVal:I128)]
         | U256(Int)                                [symbol(SCVal:U256)]
+        | I256(Int)                                [symbol(SCVal:I256)]
         | ScVec(List)                              [symbol(SCVal:Vec)]      // List<HostVal> or List<ScVal>
         | ScMap(Map)                               [symbol(SCVal:Map)]      // Map<ScVal, HostVal> or Map<ScVal, ScVal>
         | ScAddress(Address)                       [symbol(SCVal:Address)]
@@ -162,6 +163,8 @@ module HOST-OBJECT
     rule getTag(I128(I))       => 69    requires notBool( #minI64small <=Int I andBool I <=Int #maxI64small )
     rule getTag(U256(I))       => 12    requires          I <=Int #maxU64small
     rule getTag(U256(I))       => 70    requires notBool( I <=Int #maxU64small ) // U64small and U128small have the same width
+    rule getTag(I256(I))       => 13    requires          #minI64small <=Int I andBool I <=Int #maxI64small
+    rule getTag(I256(I))       => 71    requires notBool( #minI64small <=Int I andBool I <=Int #maxI64small )
     rule getTag(ScVec(_))      => 75
     rule getTag(ScMap(_))      => 76
     rule getTag(ScAddress(_))  => 77
@@ -285,6 +288,10 @@ module HOST-OBJECT
 
     rule fromSmall(VAL) => U256(getBody(VAL))      requires getTag(VAL) ==Int 12
 
+    rule fromSmall(VAL) => I256(#signed(i56, getBody(VAL)))
+      requires getTag(VAL) ==Int 13
+       andBool definedSigned(i56, getBody(VAL))
+
     rule fromSmall(VAL) => Symbol(decode6bit(getBody(VAL)))
                                                    requires getTag(VAL) ==Int 14
 
@@ -315,6 +322,9 @@ module HOST-OBJECT
       requires #minI64small <=Int I andBool I <=Int #maxI64small
        andBool definedUnsigned(i56, I)
     rule toSmall(U256(I))       => fromBodyAndTag(I, 12)              requires I <=Int #maxU64small
+    rule toSmall(I256(I))       => fromBodyAndTag(#unsigned(i56, I), 13)
+      requires #minI64small <=Int I andBool I <=Int #maxI64small
+       andBool definedUnsigned(i56, I)
     rule toSmall(Symbol(S))     => fromBodyAndTag(encode6bit(S), 14)  requires lengthString(S) <=Int 9
     rule toSmall(_)             => HostVal(-1)                        [owise]
 
@@ -449,6 +459,7 @@ For scalar types the comparison is straightforward.
     rule compare(U128(A), U128(B)) => compareInt(A, B)
     rule compare(I128(A), I128(B)) => compareInt(A, B)
     rule compare(U256(A), U256(B)) => compareInt(A, B)
+    rule compare(I256(A), I256(B)) => compareInt(A, B)
     rule compare(ScAddress(A), ScAddress(B)) => compareAddress(A, B)
     rule compare(Symbol(A), Symbol(B))       => compareString(A, B)
     rule compare(ScBytes(A), ScBytes(B))     => compareBytes(A, B)
@@ -570,6 +581,7 @@ corresponding values.
     rule ScValTypeOrd(U128(_))       => 9
     rule ScValTypeOrd(I128(_))       => 10
     rule ScValTypeOrd(U256(_))       => 11
+    rule ScValTypeOrd(I256(_))       => 12
     rule ScValTypeOrd(ScBytes(_))    => 13
     rule ScValTypeOrd(ScString(_))   => 14
     rule ScValTypeOrd(Symbol(_))     => 15

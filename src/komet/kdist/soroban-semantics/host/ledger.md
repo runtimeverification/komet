@@ -334,6 +334,22 @@ module HOST-LEDGER
 
 ```
 
+## get_max_live_until_ledger
+
+The last ledger an entry created now can live to, inclusive. This is a context
+host function (`x.8`), but it lives here with the other TTL rules because that
+is where `maxLiveUntil` and the max-entry-TTL constant are defined.
+
+```k
+    rule [hostfun-get-max-live-until-ledger]:
+        <instrs> hostCall ( "x" , "8" , [ .ValTypes ] -> [ i64  .ValTypes ] )
+              => toSmall(U32(maxLiveUntil(SEQ_NUM)))
+                 ...
+        </instrs>
+        <locals> .Map </locals>
+        <ledgerSequenceNumber> SEQ_NUM </ledgerSequenceNumber>
+```
+
 ## Helpers
 
 ```k
