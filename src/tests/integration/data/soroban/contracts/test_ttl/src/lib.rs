@@ -26,6 +26,9 @@ fn set_ledger_timestamp(env: &Env, x: u64) {
 }
 
 const MAX_ENTRY_TTL: u32 = 6312000;
+// A freshly deployed contract instance (and its code) is a persistent entry, so
+// it already carries the minimum persistent TTL before anything extends it.
+const MIN_PERSISTENT_ENTRY_TTL: u32 = 4096;
 
 #[contractimpl]
 impl TtlContract {
@@ -43,19 +46,24 @@ impl TtlContract {
             return true;
         }
 
-        // Set the initial TTL and ledger sequence number
-        env.storage().instance().extend_ttl(threshold, ttl);
-        let init_ttl = u32::min(ttl, MAX_ENTRY_TTL);
+        // Track where the entry's live-until bound stands, mirroring the host:
+        // it starts at the minimum persistent TTL, and an extension applies only
+        // while the remaining TTL is at or below the threshold, never reaching
+        // past the maximum entry TTL.
         let init_seq = env.ledger().sequence();
-        let init_live_until = init_seq.checked_add(init_ttl - 1); // the sequence number at the beginning is 0
-        
+        let mut live_until = init_seq.saturating_add(MIN_PERSISTENT_ENTRY_TTL - 1);
+        let requested = init_seq.saturating_add(ttl);
+        if live_until - init_seq <= threshold && live_until < requested {
+            live_until = u32::min(requested, init_seq.saturating_add(MAX_ENTRY_TTL - 1));
+        }
+        env.storage().instance().extend_ttl(threshold, ttl);
+
         set_ledger_sequence(seq);
-        
-        if let Some(live_until) = init_live_until {
-            // If the contract is still alive extend the instance ttl
-            if seq <= live_until {
-                env.storage().instance().extend_ttl(threshold, extend_to);
-            }
+
+        // Extending an entry that has already expired is an error, so only
+        // extend while the contract is still alive.
+        if seq <= live_until {
+            env.storage().instance().extend_ttl(threshold, extend_to);
         }
 
         // Since there is no getter function for the TTL value, we cannot verify 

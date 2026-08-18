@@ -294,6 +294,15 @@ module HOST-LEDGER
       requires THRESHOLD <=Int EXTEND_TO   // input is valid
        andBool SEQ <=Int LIVE_UNTIL        // entry is still alive
 
+  // An invalid threshold or an expired instance leaves nothing to extend. Fail
+  // the host call the way `extendContractDataTtl-err` fails the data-entry case,
+  // rather than getting stuck: a stuck interpreter surfaces as an opaque node
+  // error with no position, while a thrown error is a debuggable host trap.
+    rule [extendContractTtl-err]:
+        <instrs> extendContractTtl(_CONTRACT) => #throw(ErrStorage, InvalidAction) ... </instrs>
+        <hostStack> U32(_THRESHOLD) : U32(_EXTEND_TO) : S => S </hostStack>
+      [owise]
+
     syntax Int ::= extendedLiveUntil(Int, Int, Int, Int)    [function, total]
  // -----------------------------------------------------------------------------------
     rule extendedLiveUntil(SEQ, LIVE_UNTIL, THRESHOLD, EXTEND_TO)
@@ -331,6 +340,11 @@ module HOST-LEDGER
         <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
       requires THRESHOLD <=Int EXTEND_TO   // input is valid
        andBool SEQ <=Int LIVE_UNTIL        // entry is still alive
+
+    rule [extendCodeTtl-err]:
+        <instrs> extendCodeTtl(_HASH) => #throw(ErrStorage, InvalidAction) ... </instrs>
+        <hostStack> U32(_THRESHOLD) : U32(_EXTEND_TO) : S => S </hostStack>
+      [owise]
 
 ```
 

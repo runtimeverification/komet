@@ -106,13 +106,20 @@ module KASMER
         <k> uploadWasm(HASH, _MOD) => .K ... </k>
         <codeHash> HASH </codeHash>  
       
+  // Contract code is a persistent ledger entry, so an upload starts it with the
+  // minimum persistent TTL, exactly as `putContractData` does for a new
+  // persistent entry. Leaving `codeLiveUntil` at its 0 default would mark the
+  // entry expired at every ledger past 0, and
+  // `extend_current_contract_instance_and_code_ttl` only extends a live entry.
     rule [uploadWasm]:
         <k> uploadWasm(HASH, MOD) => .K ... </k>
         (.Bag => <contractCode>
           <codeHash> HASH </codeHash>
+          <codeLiveUntil> minLiveUntil(#persistent, SEQ) </codeLiveUntil>
           <codeWasm> MOD </codeWasm>
           ...
         </contractCode>)
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
       [priority(51)]
 
  // -----------------------------------------------------------------------------------------------------------------------
@@ -126,15 +133,19 @@ module KASMER
 
     syntax HostCell
 
+  // The contract instance is a persistent entry too (and `<instanceStorage>`
+  // shares its TTL), so it starts at the minimum persistent TTL as well.
     rule [deployContract]:
         <k> deployContract(_OWNER, ADDR, WASM_HASH) => .K ... </k>
         ( .Bag =>
           <contract>
             <contractId> ADDR </contractId>
             <wasmHash> WASM_HASH </wasmHash>
+            <contractLiveUntil> minLiveUntil(#persistent, SEQ) </contractLiveUntil>
             ...
           </contract>
         )
+        <ledgerSequenceNumber> SEQ </ledgerSequenceNumber>
       [priority(55)]
 
     syntax InternalCmd ::= callContractFromStack(Address, ContractId, WasmString)      [symbol(callContractFromStack)]
