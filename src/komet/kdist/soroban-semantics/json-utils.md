@@ -323,6 +323,7 @@ Bytes are encoded with the builtin `Bytes2Hex` hook, which is the inverse of `He
     rule ScVal2JSON(U128(I))            => {"type" : "u128",    "value" : I}
     rule ScVal2JSON(I128(I))            => {"type" : "i128",    "value" : I}
     rule ScVal2JSON(U256(I))            => {"type" : "u256",    "value" : I}
+    rule ScVal2JSON(I256(I))            => {"type" : "i256",    "value" : I}
     rule ScVal2JSON(Symbol(S))          => {"type" : "symbol",  "value" : S}
     rule ScVal2JSON(ScString(S))        => {"type" : "string",  "value" : S}
     rule ScVal2JSON(ScBytes(B))         => {"type" : "bytes",   "value" : Bytes2Hex(B)}

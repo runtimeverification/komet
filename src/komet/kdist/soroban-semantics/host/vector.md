@@ -242,6 +242,43 @@ Returns a slice of the `Vec` object from the given start index (inclusive) to th
        andBool END   <=Int size(VEC)
 ```
 
+## vec_first_index_of
+
+Returns the `U32` index of the first element equal to `X`, or `Void` when there
+is none.
+
+The vector's items are `HostVal`s, so an element that holds an object and an
+equal needle allocated separately have different handles: the elements have to
+be resolved to `ScVal`s and compared by value, which is what `compare` does
+(the same ordering `obj_cmp` exposes to contracts). `X` is resolved too, since
+`loadArgs` only decodes the outermost level of a container.
+
+```k
+    rule [hostCallAux-vec-first-index-of]:
+        <instrs> hostCallAux ( "v" , "d" )
+              => toSmall(firstIndexOf(VEC, HostVal2ScValRec(X, OBJS, RELS), OBJS, RELS, 0))
+                 ...
+        </instrs>
+        <hostStack> ScVec(VEC) : X : S => S </hostStack>
+        <hostObjects>     OBJS </hostObjects>
+        <relativeObjects> RELS </relativeObjects>
+
+    syntax ScVal ::= firstIndexOf(List, ScVal, objs: List, rels: List, idx: Int)
+        [function, total, symbol(firstIndexOf)]
+ // -------------------------------------------------------------------------------
+    rule firstIndexOf(ListItem(V:HostVal) _REST, X, OBJS, RELS, IDX) => U32(IDX)
+      requires compare(HostVal2ScVal(V, OBJS, RELS), X) ==K Equal
+
+    rule firstIndexOf(ListItem(V:ScVal)  _REST, X, OBJS, RELS, IDX) => U32(IDX)
+      requires compare(HostVal2ScValRec(V, OBJS, RELS), X) ==K Equal
+
+    rule firstIndexOf(ListItem(_) REST, X, OBJS, RELS, IDX)
+      => firstIndexOf(REST, X, OBJS, RELS, IDX +Int 1)
+      [owise]
+
+    rule firstIndexOf(.List, _, _, _, _) => Void
+```
+
 ## vec_unpack_to_linear_memory
 
 ```k
