@@ -83,5 +83,5 @@ def run_functional_claim(
 def simplify(kast: KInner, bug_report: BugReport | None = None) -> KInner:
     pat = kast_to_kore(symbolic_definition().kdefinition, kast)
     with _explore_context('', bug_report=bug_report) as kcfg_explore:
-        simplified, _ = kcfg_explore.cterm_symbolic._kore_client.simplify(pat)
+        simplified, _, _ = kcfg_explore.cterm_symbolic._kore_client.simplify(pat)
         return kore_to_kast(symbolic_definition().kdefinition, simplified)
