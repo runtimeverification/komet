@@ -16,17 +16,17 @@ git submodule update --init
 
 ### stellar-cli
 
-Some tests require `stellar` CLI. The project pins to **v23.1.3** — `stellar contract bindings json` was removed in v26. Download the pre-built binary:
+Some tests require `stellar` CLI. Since [#112](https://github.com/runtimeverification/komet/pull/112), Komet uses `stellar contract info interface` instead of the deprecated `stellar contract bindings json`. Install **v26.0.0 or later**:
 
 ```sh
-curl -fsSL https://github.com/stellar/stellar-cli/releases/download/v23.1.3/stellar-cli-23.1.3-x86_64-unknown-linux-gnu.tar.gz | tar xz -C ~/.cargo/bin/
+curl -fsSL https://github.com/stellar/stellar-cli/releases/download/v28.1.0/stellar-cli-28.1.0-x86_64-unknown-linux-gnu.tar.gz | tar xz -C ~/.cargo/bin/
 ```
 
 Verify with:
 
 ```sh
-stellar --version  # should show 23.1.3
-stellar contract bindings json --help
+stellar --version
+stellar contract info interface --help
 ```
 
 ## Building the semantics
