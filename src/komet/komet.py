@@ -191,7 +191,8 @@ def _exec_test(
         kasmer.deploy_and_run(wasm, child_wasms, max_examples, id)
         emit_event('komet_test_complete')
         sys.exit(0)
-    except KSorobanError:
+    except KSorobanError as e:
+        print(str(e), file=sys.stderr)
         emit_event('komet_test_complete')
         sys.exit(1)
 
